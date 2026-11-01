@@ -320,8 +320,8 @@ internal static class PipelineCli
     }
 
     /// <summary>
-    /// Persists winning takes when AUDITION_OUTPUT_DIR is set (same contract as the
-    /// server). AudioBytes are JsonIgnore, so the report JSON alone would drop them.
+    /// Persists every synthesized take and the manifest when AUDITION_OUTPUT_DIR is set (same
+    /// contract as the server). AudioBytes are JsonIgnore, so the report JSON alone would drop them.
     /// </summary>
     private static async Task TryWriteAuditionOutputsAsync(AuditionReport report)
     {
@@ -331,31 +331,8 @@ internal static class PipelineCli
             return;
         }
 
-        string auditionDir = Path.Combine(outputDir, "media", "audition");
-        Directory.CreateDirectory(auditionDir);
-        foreach (AuditionSegmentReport segment in report.Segments)
-        {
-            AuditionTakeReport? winner = segment.Takes.FirstOrDefault(t => t.IsWinner);
-            if (winner?.AudioBytes is null || segment.WinnerFileName is null)
-            {
-                continue;
-            }
-
-            string root = Path.GetFullPath(auditionDir) + Path.DirectorySeparatorChar;
-            string target = Path.GetFullPath(Path.Combine(auditionDir, segment.WinnerFileName));
-            if (!target.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ArgumentException($"Winning take file name resolves outside the audition directory: {segment.WinnerFileName}");
-            }
-
-            await File.WriteAllBytesAsync(target, winner.AudioBytes).ConfigureAwait(false);
-        }
-
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true };
-        await File.WriteAllTextAsync(
-            Path.Combine(outputDir, "audition-manifest.json"),
-            JsonSerializer.Serialize(report, options)).ConfigureAwait(false);
-        Console.WriteLine($"Audition winners written under {auditionDir}");
+        await AuditionOutputWriter.WriteAsync(report, outputDir).ConfigureAwait(false);
+        Console.WriteLine($"Audition takes written under {Path.Combine(outputDir, "media", "audition")}");
     }
 
     public static void PrintHelp()
@@ -386,7 +363,7 @@ internal static class PipelineCli
         Console.WriteLine("Environment:");
         Console.WriteLine("  META_API_KEY (or META_MODEL_API_KEY)   Required.");
         Console.WriteLine("  ELEVENLABS_API_KEY                      Required only for --audition.");
-        Console.WriteLine("  AUDITION_OUTPUT_DIR                     When set with --audition, write winning WAVs + manifest.");
+        Console.WriteLine("  AUDITION_OUTPUT_DIR                     When set with --audition, write every synthesized take (winners and losers) + manifest.");
         Console.WriteLine("  META_TRANSCRIBE_MODEL                   Default: muse-voice-transcribe-1.0");
         Console.WriteLine("  META_MODEL_API_BASE_URL                 Default: https://api.meta.ai/v1");
     }

@@ -26,7 +26,8 @@ public enum AuditionTimingVerdict
 /// <summary>
 /// One candidate take with every verdict preserved, win or lose.
 /// <see cref="AudioBytes"/> is transport-only (never serialized): the caller
-/// persists winning bytes to files; reports and manifests carry names only.
+/// persists every synthesized take, winners and losers, to files; reports and
+/// manifests carry names only (see <see cref="AuditionOutputWriter"/>).
 /// </summary>
 public sealed record AuditionTakeReport(
     [property: JsonPropertyName("take_number")] int TakeNumber,
@@ -47,6 +48,8 @@ public sealed record AuditionTakeReport(
     [property: JsonPropertyName("elevenlabs_characters")] int ElevenLabsCharacters,
     // Set only on the speed-variant take: the provider speed setting used for its synthesis.
     [property: JsonPropertyName("speed_factor")] double? SpeedFactor = null,
+    // Set by AuditionOutputWriter when it writes the take: SHA-256 of the file as written (lowercase hex).
+    [property: JsonPropertyName("audio_sha256"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AudioSha256 = null,
     [property: JsonIgnore] byte[]? AudioBytes = null);
 
 public sealed record AuditionSegmentReport(

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verify-only receipt: voa10</title>
+<style>
+:root{color-scheme:light dark;--bg:#f6f7f9;--fg:#15181d;--card:#fff;--line:#d5d9e0;--muted:#5b6472;--ok:#0b7a3b;--ok-bg:#e3f4ea;--bad:#a4261a;--bad-bg:#fbe7e4}
+@media(prefers-color-scheme:dark){:root{--bg:#101318;--fg:#e8ebf0;--card:#181c23;--line:#2c333f;--muted:#99a3b3;--ok:#5fd18b;--ok-bg:#12301f;--bad:#ff8d7e;--bad-bg:#3a1a16}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:960px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:1.4rem;margin:0 0 4px}h2{font-size:1.05rem;margin:28px 0 10px}
+.muted{color:var(--muted)}.mono{font-family:ui-monospace,Consolas,monospace;font-size:.85em;word-break:break-all}
+.banner{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:16px 0;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.banner.ok{background:var(--ok-bg);border-color:var(--ok)}.banner.bad{background:var(--bad-bg);border-color:var(--bad)}
+.verdict{font-size:1.25rem;font-weight:700}.ok .verdict,.pill.ok{color:var(--ok)}.bad .verdict,.pill.bad{color:var(--bad)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:12px 0}
+.card header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline}
+.pill{font-weight:600;font-size:.85rem}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:10px 0 0}dt{color:var(--muted)}dd{margin:0}
+ul{margin:6px 0 0;padding-left:20px}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:600}</style>
+</head>
+<body>
+<main>
+<h1>Verify-only receipt</h1>
+<p class="muted">Run folder <span class="mono">voa10</span> · schema <span class="mono">trackdub-director.verify-only/v1</span> · tolerance 10% · media folder <span class="mono">media/audition</span></p>
+<div class="banner ok"><span class="verdict">Verified</span><span>Exit status <strong>0</strong></span><span>6 of 6 lines verified</span></div>
+<p class="muted">Hash-sealed: every consumed input artifact and every present winning media file is listed with its SHA-256 and how that hash was obtained. Verdicts are recomputed from recorded numbers; no summary field is trusted.</p>
+<h2>Voices</h2>
+<table><thead><tr><th>Speaker</th><th>Voice</th><th>Voice id</th></tr></thead><tbody>
+<tr><td>anna</td><td>Alice - Clear, Engaging Educator</td><td class="mono">Xb7hH8MSUJpSbSDYk0k2</td></tr>
+<tr><td>ashley</td><td>Bella - Professional, Bright, Warm</td><td class="mono">hpp4J3VqNfWAUOO0d1Us</td></tr>
+</tbody></table>
+<h2>Input hashes</h2>
+<table><thead><tr><th>Artifact</th><th>SHA-256</th><th>How obtained</th></tr></thead><tbody>
+<tr><td class="mono">audition-manifest.json</td><td class="mono">b3986bd63d41973b6721e89bb758e00a694495c7326f6ead93b9f8e7eca849b3</td><td>recomputed</td></tr>
+<tr><td class="mono">audition-media-hashes.json</td><td class="mono">b13e0f88bac3b43a7b7784a32268e499d663be66a0fe8488c55823a1dbf254a4</td><td>recomputed</td></tr>
+</tbody></table>
+<h2>Lines</h2>
+<section class="card">
+<header><strong class="mono">voa10-001</strong><span class="pill ok">Verified</span></header>
+<dl>
+<dt>Source line</dt><dd>Hi, Ashley.</dd>
+<dt>Spanish</dt><dd>Hola, Ashley.</dd>
+<dt>Winning voice</dt><dd>Alice - Clear, Engaging Educator <span class="mono">(anna)</span></dd>
+<dt>Measured vs window</dt><dd>1.1146 s against window 1.2 s (allowed up to 1.3200 s): <strong>Pass</strong></dd>
+<dt>Meaning</dt><dd><strong>Pass</strong>: Greeting to Ashley preserved with equivalent meaning in Spanish.</dd>
+<dt>Media</dt><dd><span class="mono">voa10-001-take1.wav</span>, present on disk; SHA-256 <span class="mono">b53199e9c35d8b853b11f58a4bc7f3d9fc1f21957ff5aa67fa000dec716580bb</span> (recomputed)</dd>
+</dl>
+</section>
+<section class="card">
+<header><strong class="mono">voa10-002</strong><span class="pill ok">Verified</span></header>
+<dl>
+<dt>Source line</dt><dd>Anna, Which coffee shop? There are three coffee shops.</dd>
+<dt>Spanish</dt><dd>Anna, &#191;cu&#225;l cafeter&#237;a? Hay tres cafeter&#237;as.</dd>
+<dt>Winning voice</dt><dd>Bella - Professional, Bright, Warm <span class="mono">(ashley)</span></dd>
+<dt>Measured vs window</dt><dd>3.1579 s against window 4.4 s (allowed up to 4.8400 s): <strong>Pass</strong></dd>
+<dt>Meaning</dt><dd><strong>Pass</strong>: Candidate directly translates source: asks which coffee shop and states there are three, preserving subject, quantity, and intent.</dd>
+<dt>Media</dt><dd><span class="mono">voa10-002-take1.wav</span>, present on disk; SHA-256 <span class="mono">ead1a682ef3f6becebff64637635cc96a3f70a2ef036afd578688bb64bda8357</span> (recomputed)</dd>
+</dl>
+</section>
+<section class="card">
+<header><strong class="mono">voa10-003</strong><span class="pill ok">Verified</span></header>
+<dl>
+<dt>Source line</dt><dd>Okay, my apartment is across from a big department store.</dd>
+<dt>Spanish</dt><dd>Vale, mi apartamento est&#225; enfrente de unos grandes almacenes.</dd>
+<dt>Winning voice</dt><dd>Alice - Clear, Engaging Educator <span class="mono">(anna)</span></dd>
+<dt>Measured vs window</dt><dd>3.9474 s against window 4.4 s (allowed up to 4.8400 s): <strong>Pass</strong></dd>
+<dt>Meaning</dt><dd><strong>Pass</strong>: Candidate preserves subject (my apartment), location relation (across from / enfrente de), and object (big department store / unos grandes almacenes) with no change in polarity or entities.</dd>
+<dt>Media</dt><dd><span class="mono">voa10-003-take1.wav</span>, present on disk; SHA-256 <span class="mono">395eee58069f5f6de5cbbb4f268977de66cd2db6150bcc6a52f07cbbadfc3ac8</span> (recomputed)</dd>
+</dl>
+</section>
+<section class="card">
+<header><strong class="mono">voa10-004</strong><span class="pill ok">Verified</span></header>
+<dl>
+<dt>Source line</dt><dd>A big department store? Ah, I see it!</dd>
+<dt>Spanish</dt><dd>&#191;Una tienda departamental grande? &#161;Ah, la veo!</dd>
+<dt>Winning voice</dt><dd>Bella - Professional, Bright, Warm <span class="mono">(ashley)</span></dd>
+<dt>Measured vs window</dt><dd>2.9257 s against window 3.6 s (allowed up to 3.9600 s): <strong>Pass</strong></dd>
+<dt>Meaning</dt><dd><strong>Pass</strong>: Candidate preserves both parts: questioning a big department store and exclaiming that it is seen, with no material meaning added or lost.</dd>
+<dt>Media</dt><dd><span class="mono">voa10-004-take1.wav</span>, present on disk; SHA-256 <span class="mono">9c889cde92b94755ff924c3582696a7198742b052581468e87bbf8a14f730503</span> (recomputed)</dd>
+</dl>
+</section>
+<section class="card">
+<header><strong class="mono">voa10-005</strong><span class="pill ok">Verified</span></header>
+<dl>
+<dt>Source line</dt><dd>Okay! Bye, Ashley. See you soon!</dd>
+<dt>Spanish</dt><dd>&#161;Adi&#243;s, Ashley! &#161;Nos vemos pronto!</dd>
+<dt>Winning voice</dt><dd>Alice - Clear, Engaging Educator <span class="mono">(anna)</span></dd>
+<dt>Measured vs window</dt><dd>2.3220 s against window 2.2 s (allowed up to 2.4200 s): <strong>Pass</strong></dd>
+<dt>Meaning</dt><dd><strong>Pass</strong>: Candidate preserves the farewell to Ashley and the &#39;see you soon&#39; intent; omission of filler &#39;Okay!&#39; does not alter material meaning.</dd>
+<dt>Media</dt><dd><span class="mono">voa10-005-take2.wav</span>, present on disk; SHA-256 <span class="mono">dce21e4d1944db89dced6c11d68a527ebde6ffcc0449b3445b9f043246113494</span> (recomputed)</dd>
+</dl>
+<p class="muted">Other takes</p>
+<ul>
+<li>Take 1 (Initial): &#161;Ok! &#161;Adi&#243;s, Ashley! &#161;Nos vemos pronto! <strong>[TimingFail]</strong> Measured 2.4613 s against 2.4200 s allowed (window 2.2 s, tolerance 10%). Meaning gate: Candidate accurately preserves all material meaning: farewell to named entity Ashley and statement of seeing each other soon, with natural idiomatic translation.</li>
+</ul>
+</section>
+<section class="card">
+<header><strong class="mono">voa10-006</strong><span class="pill ok">Verified</span></header>
+<dl>
+<dt>Source line</dt><dd>Okay. See you soon.</dd>
+<dt>Spanish</dt><dd>Vale. Nos vemos pronto.</dd>
+<dt>Winning voice</dt><dd>Bella - Professional, Bright, Warm <span class="mono">(ashley)</span></dd>
+<dt>Measured vs window</dt><dd>1.4861 s against window 1.9 s (allowed up to 2.0900 s): <strong>Pass</strong></dd>
+<dt>Meaning</dt><dd><strong>Pass</strong>: Candidate &#39;Vale. Nos vemos pronto.&#39; accurately conveys &#39;Okay. See you soon.&#39; with no material meaning loss.</dd>
+<dt>Media</dt><dd><span class="mono">voa10-006-take1.wav</span>, present on disk; SHA-256 <span class="mono">b0eed0879159ca8fe632c6b5aa230200778c38a64cb82217865a1a2ef039ee1f</span> (recomputed)</dd>
+</dl>
+</section>
+</main>
+</body>
+</html>

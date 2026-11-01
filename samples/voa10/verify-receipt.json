@@ -1,0 +1,248 @@
+{
+  "schema": "trackdub-director.verify-only/v1",
+  "seal": "Hash-sealed: every consumed input artifact and every present winning media file is listed with its SHA-256 and how that hash was obtained. Verdicts are recomputed from recorded numbers; no summary field is trusted.",
+  "run_folder": "voa10",
+  "media_folder": "media/audition",
+  "tolerance_fraction": 0.1,
+  "verdict": "Verified",
+  "exit_status": 0,
+  "segments_total": 6,
+  "segments_verified": 6,
+  "voices": [
+    {
+      "speaker_id": "anna",
+      "voice_id": "Xb7hH8MSUJpSbSDYk0k2",
+      "voice_name": "Alice - Clear, Engaging Educator"
+    },
+    {
+      "speaker_id": "ashley",
+      "voice_id": "hpp4J3VqNfWAUOO0d1Us",
+      "voice_name": "Bella - Professional, Bright, Warm"
+    }
+  ],
+  "inputs": [
+    {
+      "path": "audition-manifest.json",
+      "sha256": "b3986bd63d41973b6721e89bb758e00a694495c7326f6ead93b9f8e7eca849b3",
+      "label": "recomputed"
+    },
+    {
+      "path": "audition-media-hashes.json",
+      "sha256": "b13e0f88bac3b43a7b7784a32268e499d663be66a0fe8488c55823a1dbf254a4",
+      "label": "recomputed"
+    }
+  ],
+  "segments": [
+    {
+      "id": "voa10-001",
+      "source_line": "Hi, Ashley.",
+      "spanish": "Hola, Ashley.",
+      "window_seconds": 1.2,
+      "winning_voice": {
+        "speaker_id": "anna",
+        "voice_id": "Xb7hH8MSUJpSbSDYk0k2",
+        "voice_name": "Alice - Clear, Engaging Educator"
+      },
+      "winning_take_number": 1,
+      "timing": {
+        "measured_seconds": 1.1145625,
+        "window_seconds": 1.2,
+        "tolerance_fraction": 0.1,
+        "allowed_seconds": 1.32,
+        "verdict": "Pass"
+      },
+      "meaning": {
+        "verdict": "Pass",
+        "reason": "Greeting to Ashley preserved with equivalent meaning in Spanish.",
+        "issues": []
+      },
+      "media": {
+        "file_name": "voa10-001-take1.wav",
+        "present": true,
+        "sha256": "b53199e9c35d8b853b11f58a4bc7f3d9fc1f21957ff5aa67fa000dec716580bb",
+        "hash_label": "recomputed"
+      },
+      "refusals": [],
+      "verdict": "Verified",
+      "reasons": []
+    },
+    {
+      "id": "voa10-002",
+      "source_line": "Anna, Which coffee shop? There are three coffee shops.",
+      "spanish": "Anna, \u00BFcu\u00E1l cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+      "window_seconds": 4.4,
+      "winning_voice": {
+        "speaker_id": "ashley",
+        "voice_id": "hpp4J3VqNfWAUOO0d1Us",
+        "voice_name": "Bella - Professional, Bright, Warm"
+      },
+      "winning_take_number": 1,
+      "timing": {
+        "measured_seconds": 3.1579375,
+        "window_seconds": 4.4,
+        "tolerance_fraction": 0.1,
+        "allowed_seconds": 4.840000000000001,
+        "verdict": "Pass"
+      },
+      "meaning": {
+        "verdict": "Pass",
+        "reason": "Candidate directly translates source: asks which coffee shop and states there are three, preserving subject, quantity, and intent.",
+        "issues": []
+      },
+      "media": {
+        "file_name": "voa10-002-take1.wav",
+        "present": true,
+        "sha256": "ead1a682ef3f6becebff64637635cc96a3f70a2ef036afd578688bb64bda8357",
+        "hash_label": "recomputed"
+      },
+      "refusals": [],
+      "verdict": "Verified",
+      "reasons": []
+    },
+    {
+      "id": "voa10-003",
+      "source_line": "Okay, my apartment is across from a big department store.",
+      "spanish": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+      "window_seconds": 4.4,
+      "winning_voice": {
+        "speaker_id": "anna",
+        "voice_id": "Xb7hH8MSUJpSbSDYk0k2",
+        "voice_name": "Alice - Clear, Engaging Educator"
+      },
+      "winning_take_number": 1,
+      "timing": {
+        "measured_seconds": 3.947375,
+        "window_seconds": 4.4,
+        "tolerance_fraction": 0.1,
+        "allowed_seconds": 4.840000000000001,
+        "verdict": "Pass"
+      },
+      "meaning": {
+        "verdict": "Pass",
+        "reason": "Candidate preserves subject (my apartment), location relation (across from / enfrente de), and object (big department store / unos grandes almacenes) with no change in polarity or entities.",
+        "issues": []
+      },
+      "media": {
+        "file_name": "voa10-003-take1.wav",
+        "present": true,
+        "sha256": "395eee58069f5f6de5cbbb4f268977de66cd2db6150bcc6a52f07cbbadfc3ac8",
+        "hash_label": "recomputed"
+      },
+      "refusals": [],
+      "verdict": "Verified",
+      "reasons": []
+    },
+    {
+      "id": "voa10-004",
+      "source_line": "A big department store? Ah, I see it!",
+      "spanish": "\u00BFUna tienda departamental grande? \u00A1Ah, la veo!",
+      "window_seconds": 3.6,
+      "winning_voice": {
+        "speaker_id": "ashley",
+        "voice_id": "hpp4J3VqNfWAUOO0d1Us",
+        "voice_name": "Bella - Professional, Bright, Warm"
+      },
+      "winning_take_number": 1,
+      "timing": {
+        "measured_seconds": 2.9256875,
+        "window_seconds": 3.6,
+        "tolerance_fraction": 0.1,
+        "allowed_seconds": 3.9600000000000004,
+        "verdict": "Pass"
+      },
+      "meaning": {
+        "verdict": "Pass",
+        "reason": "Candidate preserves both parts: questioning a big department store and exclaiming that it is seen, with no material meaning added or lost.",
+        "issues": []
+      },
+      "media": {
+        "file_name": "voa10-004-take1.wav",
+        "present": true,
+        "sha256": "9c889cde92b94755ff924c3582696a7198742b052581468e87bbf8a14f730503",
+        "hash_label": "recomputed"
+      },
+      "refusals": [],
+      "verdict": "Verified",
+      "reasons": []
+    },
+    {
+      "id": "voa10-005",
+      "source_line": "Okay! Bye, Ashley. See you soon!",
+      "spanish": "\u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+      "window_seconds": 2.2,
+      "winning_voice": {
+        "speaker_id": "anna",
+        "voice_id": "Xb7hH8MSUJpSbSDYk0k2",
+        "voice_name": "Alice - Clear, Engaging Educator"
+      },
+      "winning_take_number": 2,
+      "timing": {
+        "measured_seconds": 2.322,
+        "window_seconds": 2.2,
+        "tolerance_fraction": 0.1,
+        "allowed_seconds": 2.4200000000000004,
+        "verdict": "Pass"
+      },
+      "meaning": {
+        "verdict": "Pass",
+        "reason": "Candidate preserves the farewell to Ashley and the \u0027see you soon\u0027 intent; omission of filler \u0027Okay!\u0027 does not alter material meaning.",
+        "issues": []
+      },
+      "media": {
+        "file_name": "voa10-005-take2.wav",
+        "present": true,
+        "sha256": "dce21e4d1944db89dced6c11d68a527ebde6ffcc0449b3445b9f043246113494",
+        "hash_label": "recomputed"
+      },
+      "refusals": [
+        {
+          "take_number": 1,
+          "kind": "Initial",
+          "text": "\u00A1Ok! \u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+          "meaning_verdict": "Pass",
+          "meaning_reason": "Candidate accurately preserves all material meaning: farewell to named entity Ashley and statement of seeing each other soon, with natural idiomatic translation.",
+          "measured_seconds": 2.4613125,
+          "reasons": [
+            "TimingFail"
+          ],
+          "detail": "Measured 2.4613 s against 2.4200 s allowed (window 2.2 s, tolerance 10%)."
+        }
+      ],
+      "verdict": "Verified",
+      "reasons": []
+    },
+    {
+      "id": "voa10-006",
+      "source_line": "Okay. See you soon.",
+      "spanish": "Vale. Nos vemos pronto.",
+      "window_seconds": 1.9,
+      "winning_voice": {
+        "speaker_id": "ashley",
+        "voice_id": "hpp4J3VqNfWAUOO0d1Us",
+        "voice_name": "Bella - Professional, Bright, Warm"
+      },
+      "winning_take_number": 1,
+      "timing": {
+        "measured_seconds": 1.4860625,
+        "window_seconds": 1.9,
+        "tolerance_fraction": 0.1,
+        "allowed_seconds": 2.09,
+        "verdict": "Pass"
+      },
+      "meaning": {
+        "verdict": "Pass",
+        "reason": "Candidate \u0027Vale. Nos vemos pronto.\u0027 accurately conveys \u0027Okay. See you soon.\u0027 with no material meaning loss.",
+        "issues": []
+      },
+      "media": {
+        "file_name": "voa10-006-take1.wav",
+        "present": true,
+        "sha256": "b0eed0879159ca8fe632c6b5aa230200778c38a64cb82217865a1a2ef039ee1f",
+        "hash_label": "recomputed"
+      },
+      "refusals": [],
+      "verdict": "Verified",
+      "reasons": []
+    }
+  ]
+}

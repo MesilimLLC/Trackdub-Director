@@ -64,6 +64,7 @@ app.MapPost("/api/audition", ApiEndpoints.AuditionAsync);
 app.MapPost("/api/visual-localisation", ApiEndpoints.VisualLocalisationAsync);
 app.MapPost("/api/transcribe", ApiEndpoints.TranscribeAsync);
 app.MapPost("/api/pipeline", ApiEndpoints.PipelineAsync);
+app.MapPost("/api/verify-only", VerifyOnlyEndpoint.HandleAsync);
 app.MapFallback(ApiEndpoints.FallbackAsync);
 
 app.Run();
