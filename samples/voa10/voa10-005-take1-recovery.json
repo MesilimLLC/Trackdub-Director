@@ -1,0 +1,10 @@
+{
+  "recovered_from": "elevenlabs_history",
+  "history_item_id": "lwK1rZdHW8oei0AgPwrT",
+  "measured_seconds": 2.4613125,
+  "target_seconds_from_manifest": 2.4613125,
+  "date": "2026-11-01",
+  "filename": "voa10-005-take1.wav",
+  "content_type": "audio/pcm",
+  "note": "Recovered via GET /v1/history and GET /v1/history/{id}/audio only. No generation calls. Length matches manifest 2.4613s within one-sample tolerance."
+}

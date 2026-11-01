@@ -10,6 +10,19 @@ internal static class RequestParsing
         return new AuditionApiRequest(body.Segments, body.SourceLanguage, body.TargetLanguage);
     }
 
+    internal static async Task<VerifyOnlyApiRequest?> ReadVerifyOnlyRequestAsync(HttpRequest http, CancellationToken ct)
+    {
+        using var doc = await JsonDocument.ParseAsync(http.Body, cancellationToken: ct).ConfigureAwait(false);
+        JsonElement root = doc.RootElement;
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidOperationException("Request body must be a JSON object with 'run_dir' (captured run folder already on disk).");
+        }
+
+        string? runDir = ReadFirstPresentString(root, "run_dir", "runDir");
+        return new VerifyOnlyApiRequest(runDir);
+    }
+
     internal static async Task<TranslateRequest?> ReadTranslateRequestAsync(HttpRequest http, CancellationToken ct)
     {
         using var doc = await JsonDocument.ParseAsync(http.Body, cancellationToken: ct).ConfigureAwait(false);

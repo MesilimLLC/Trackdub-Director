@@ -98,7 +98,8 @@ src/Trackdub.Director.Server/    ASP.NET Core minimal API referencing Core (see 
                                   Serves the prebuilt web UI from wwwroot;
                                   no key required to start; key only gates live endpoints.
 src/Trackdub.Director.Cli/       Console app (trackdub-director):
-                                  smoke / translate / models / qa / sign-shot / meaning-eval.
+                                  smoke / translate / models / qa / pipeline / verify-only /
+                                  sign-shot / meaning-eval.
 web/                             React + Vite + TypeScript frontend. One screen:
                                   header (key status, model, QA summary), line list with
                                   per-line verdicts and expandable attempts, and Run Translate /
@@ -288,6 +289,7 @@ working; a final pass rate below 100% means at least one line was reported as
 | POST | `/api/scene-context` | key | Per-segment frames + concept phrases → `DirectorContext` per segment (sam-3.1 regions, vision fields) |
 | POST | `/api/director-adaptation` | key | Register adaptation from scene context; adapted lines re-run both gates |
 | POST | `/api/audition` | key + `ELEVENLABS_API_KEY` | Synthesizes takes, measures audio against each window, casts or refuses per line |
+| POST | `/api/verify-only` | none | Offline gate over a captured run already on disk → hash-sealed receipt JSON (no upload, no live calls) |
 | POST | `/api/visual-localisation` | key | Frame + box + source/target text → localised frame with `outside_box_diff` |
 
 `POST` bodies accept `segments` as `[{ id, text, duration_seconds? }]` plus
@@ -317,7 +319,7 @@ Frontend: one Vitest smoke test rendering the line list from a mocked API respon
 Trackdub.Director.slnx
 src/Trackdub.Director.Core/    Class library: Meta Model API client, translation, duration estimator, QA loop
 src/Trackdub.Director.Server/  ASP.NET Core host exposing Core over HTTP + serving the built frontend from wwwroot
-src/Trackdub.Director.Cli/     Console app: smoke / translate / models / qa / sign-shot / meaning-eval subcommands
+src/Trackdub.Director.Cli/     Console app: smoke / translate / models / qa / pipeline / verify-only / sign-shot / meaning-eval
 web/                           React + Vite + TypeScript frontend (one screen)
 tests/Trackdub.Director.Tests/ xUnit tests + server endpoint tests
 samples/segments.json           8-line sample input with duration_seconds for the qa command
@@ -347,6 +349,27 @@ Exit code 0 means composited (or passed, when `--output` is omitted), 2
 means refused. The report records per-frame SSIM and largest block shift, the first failing frame,
 and the largest outside-box pixel difference, counted on decoded frames
 before the lossy h264 encode.
+
+## Verify-only (hash-sealed receipt)
+
+`verify-only` is an offline CI-style gate over a captured run folder (default
+`samples/voa10`). It recomputes verdicts from recorded numbers, never trusts a
+summary field, and never counts a check that was not run as a pass. Zero live
+model or TTS calls. The receipt is hash-sealed (never called signed, certified,
+or attested). When winning media is present it is hashed as `recomputed`; when
+absent (the media folder is gitignored) the receipt keeps a
+`recorded-at-capture` hash and marks the segment `HumanReviewRequired` with
+`MediaNotPresent`.
+
+```bash
+dotnet run --project src/Trackdub.Director.Cli -- verify-only samples/voa10
+```
+
+Exit codes: `0` every segment Verified, `1` at least one HumanReviewRequired,
+`2` usage error or unreadable/invalid input. Writes
+`verify-only-receipt.json` and a standalone HTML page beside the run (committed
+for `samples/voa10`). Server: `POST /api/verify-only` with `{ "run_dir": "..." }`
+over a captured run already on disk (no upload).
 
 ## Meaning eval
 

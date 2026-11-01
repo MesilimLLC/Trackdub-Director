@@ -1,0 +1,23 @@
+{
+  "voa10-001-take1.wav": {
+    "sha256": "b53199e9c35d8b853b11f58a4bc7f3d9fc1f21957ff5aa67fa000dec716580bb"
+  },
+  "voa10-002-take1.wav": {
+    "sha256": "ead1a682ef3f6becebff64637635cc96a3f70a2ef036afd578688bb64bda8357"
+  },
+  "voa10-003-take1.wav": {
+    "sha256": "395eee58069f5f6de5cbbb4f268977de66cd2db6150bcc6a52f07cbbadfc3ac8"
+  },
+  "voa10-004-take1.wav": {
+    "sha256": "9c889cde92b94755ff924c3582696a7198742b052581468e87bbf8a14f730503"
+  },
+  "voa10-005-take1.wav": {
+    "sha256": "022ca987d7340d5c3501029adff64c99aae42f6726e36131489f19e30422b60d"
+  },
+  "voa10-005-take2.wav": {
+    "sha256": "dce21e4d1944db89dced6c11d68a527ebde6ffcc0449b3445b9f043246113494"
+  },
+  "voa10-006-take1.wav": {
+    "sha256": "b0eed0879159ca8fe632c6b5aa230200778c38a64cb82217865a1a2ef039ee1f"
+  }
+}

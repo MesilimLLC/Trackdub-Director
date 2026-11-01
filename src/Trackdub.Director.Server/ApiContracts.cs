@@ -52,3 +52,7 @@ internal sealed record PipelineApiRequest(
     string? SourceLanguage,
     string? TargetLanguage,
     QaOptionsDto? Options);
+
+/// <summary>Offline verify-only over a captured run already on disk. No upload, no live calls.</summary>
+internal sealed record VerifyOnlyApiRequest(
+    [property: JsonPropertyName("run_dir")] string? RunDir);

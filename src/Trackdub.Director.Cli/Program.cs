@@ -29,6 +29,7 @@ static async Task<int> RunAsync(string[] args)
         "qa" => await QaCli.RunAsync(args[1..]).ConfigureAwait(false),
         "ingest" => await IngestCli.RunAsync(args[1..]).ConfigureAwait(false),
         "pipeline" => await PipelineCli.RunAsync(args[1..]).ConfigureAwait(false),
+        "verify-only" => await VerifyOnlyCli.RunAsync(args[1..]).ConfigureAwait(false),
         _ => await RunEvidenceCommandAsync(verb, args).ConfigureAwait(false),
     };
 }
@@ -45,7 +46,7 @@ static async Task<int> RunEvidenceCommandAsync(string verb, string[] args)
 
 static int UnknownCommand(string raw)
 {
-    Console.Error.WriteLine($"Unknown command '{raw}'. Expected 'smoke', 'translate', 'models', 'qa', 'ingest', 'pipeline', 'sign-shot', or 'meaning-eval'.");
+    Console.Error.WriteLine($"Unknown command '{raw}'. Expected 'smoke', 'translate', 'models', 'qa', 'ingest', 'pipeline', 'verify-only', 'sign-shot', or 'meaning-eval'.");
     PrintUsage();
     return 1;
 }
@@ -248,6 +249,7 @@ static void PrintUsage()
     Console.WriteLine("  qa         Translate + timing QA loop (bounce-back revisions with report).");
     Console.WriteLine("  ingest     Transcribe a WAV file (ASR diarization) into a segments JSON.");
     Console.WriteLine("  pipeline   Run the lanes in order: transcribe (with --audio), translation + QA, scene, audition (opt-in).");
+    Console.WriteLine("  verify-only  Offline gate over a captured run (hash-sealed receipt; zero live calls).");
     Console.WriteLine("  sign-shot  Extend a localised sign frame across a shot, gated on the shot being static.");
     Console.WriteLine("  meaning-eval  Score the meaning gate on labeled cases (catch rate, false alarms).");
     Console.WriteLine();

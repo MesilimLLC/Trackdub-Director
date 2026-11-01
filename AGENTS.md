@@ -10,8 +10,9 @@ in the product code (`HttpClient` + `System.Text.Json` only). SDK pinned by
   `MetaClient` (OpenAI-compatible `POST /chat/completions` against
   `https://api.meta.ai/v1`), `MetaApiException`. API keys are never read from
   files and never logged; preserve that invariant.
-- `src/Trackdub.Director.Cli/` — console app (`trackdub-director`). Single
-  subcommand today (`smoke`); Director Lane stages land here as new commands.
+- `src/Trackdub.Director.Cli/` — console app (`trackdub-director`). Subcommands
+  include `smoke`, lane commands, and `verify-only` (offline hash-sealed
+  receipt over a captured run; zero live calls).
 - `tests/Trackdub.Director.Tests/` — xUnit tests. Live smoke test is skipped
   (not failed) when no Meta API key is set. It asserts Spanish markers rather
   than exact text because model output varies.

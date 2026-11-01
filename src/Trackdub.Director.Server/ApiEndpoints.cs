@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Trackdub.Director.Core;
 using static ApiResults;
 using static AuditionOutputs;
@@ -300,6 +301,40 @@ internal static class ApiEndpoints
 
         return await ApiHandlers.RunSerializedAsync(
             () => ApiHandlers.RunPipelineWithReasoningAsync(client, transcribeClient, tts, options, pipelineRequest, ct), ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Offline verify-only over a captured run already on disk. Returns the
+    /// hash-sealed receipt JSON. No upload path, no live calls.
+    /// </summary>
+    internal static async Task<IResult> VerifyOnlyAsync(HttpRequest request, CancellationToken ct)
+    {
+        var (req, readError) = await ApiHandlers.ReadOrBadRequestAsync(() => ReadVerifyOnlyRequestAsync(request, ct));
+        if (readError is not null)
+        {
+            return readError;
+        }
+
+        string? runDir = req?.RunDir;
+        if (string.IsNullOrWhiteSpace(runDir))
+        {
+            return Results.BadRequest(new { error = "Request must include a non-empty 'run_dir' pointing at a captured run already on disk." });
+        }
+
+        try
+        {
+            var service = new VerifyOnlyService();
+            VerifyOnlyResult result = service.VerifyRun(runDir);
+            return Results.Json(result.Receipt);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+        catch (JsonException ex)
+        {
+            return Results.BadRequest(new { error = $"Unreadable or invalid input: {ex.Message}" });
+        }
     }
 
     // SPA fallback: for non-/api routes, serve index.html if it exists (after a prod build).

@@ -26,7 +26,8 @@ public enum AuditionTimingVerdict
 /// <summary>
 /// One candidate take with every verdict preserved, win or lose.
 /// <see cref="AudioBytes"/> is transport-only (never serialized): the caller
-/// persists winning bytes to files; reports and manifests carry names only.
+/// persists every synthesized take's bytes to files; reports and manifests
+/// carry names only for files that were actually written.
 /// </summary>
 public sealed record AuditionTakeReport(
     [property: JsonPropertyName("take_number")] int TakeNumber,

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verify-only receipt (hash-sealed)</title>
+<style>
+:root { color-scheme: light; --ink:#1c1917; --muted:#57534e; --line:#d6d3d1; --ok:#166534; --review:#9a3412; --bg:#fafaf9; --card:#fff; }
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.5 "Segoe UI", "Helvetica Neue", sans-serif; color: var(--ink); background: linear-gradient(180deg,#f5f5f4,var(--bg)); }
+main { max-width: 920px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+h1,h2,h3,h4 { line-height: 1.2; margin: 0 0 0.6rem; }
+.eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; color: var(--muted); margin: 0 0 0.4rem; }
+.lede { color: var(--muted); max-width: 42rem; }
+.summary { display: grid; grid-template-columns: 10rem 1fr; gap: 0.35rem 1rem; margin: 1.25rem 0 0; }
+.summary dt { color: var(--muted); }
+.summary dd { margin: 0; font-weight: 600; }
+section { margin-top: 2rem; }
+table { width: 100%; border-collapse: collapse; background: var(--card); }
+th, td { border: 1px solid var(--line); padding: 0.55rem 0.65rem; text-align: left; vertical-align: top; }
+th { background: #f5f5f4; font-size: 0.85rem; }
+.mono { font-family: ui-monospace, Consolas, monospace; font-size: 0.78rem; word-break: break-all; }
+.segment { background: var(--card); border: 1px solid var(--line); border-left-width: 4px; padding: 1rem 1.1rem; margin: 1rem 0; }
+.segment.ok { border-left-color: var(--ok); }
+.segment.review { border-left-color: var(--review); }
+.segment dl { display: grid; grid-template-columns: 11rem 1fr; gap: 0.35rem 1rem; margin: 0.75rem 0 0; }
+.segment dt { color: var(--muted); }
+.segment dd { margin: 0; }
+.reasons { color: var(--review); font-weight: 600; }
+ul { padding-left: 1.2rem; }
+footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<main>
+<header class="top">
+<p class="eyebrow">Trackdub-Director verify-only</p>
+<h1>Hash-sealed receipt</h1>
+<p class="lede">Recomputed from recorded numbers. Hash-sealed only (not a signature / certificate / attestation). A check that was not run never counts as a pass.</p>
+<dl class="summary">
+<div><dt>Overall verdict</dt><dd>Verified</dd></div>
+<div><dt>Exit status</dt><dd>0</dd></div>
+<div><dt>Tolerance</dt><dd>10%</dd></div>
+<div><dt>Run directory</dt><dd>samples/voa10</dd></div>
+</dl>
+</header>
+<section>
+<h2>Input hashes</h2>
+<table>
+<thead><tr><th>Path</th><th>SHA-256</th><th>Label</th></tr></thead>
+<tbody>
+<tr>
+<td>audition-manifest.json</td>
+<td class="mono">b3986bd63d41973b6721e89bb758e00a694495c7326f6ead93b9f8e7eca849b3</td>
+<td>recomputed</td>
+</tr>
+<tr>
+<td>segments.json</td>
+<td class="mono">de2b7b9d0a183849aafeae4a8545e17b363c7e1d2c6f77538aaa2aed1d4a5ead</td>
+<td>recomputed</td>
+</tr>
+<tr>
+<td>audition-media-hashes.json</td>
+<td class="mono">e5da6c364cd5db20647dac0ff4acb1442621539351d460d8404615951acc22fc</td>
+<td>recomputed</td>
+</tr>
+</tbody></table>
+</section>
+<section>
+<h2>Segments</h2>
+<article class="segment ok">
+<h3>voa10-001 · Verified</h3>
+<dl>
+<div><dt>Source</dt><dd>Hi, Ashley.</dd></div>
+<div><dt>Spanish</dt><dd>Hola, Ashley.</dd></div>
+<div><dt>Measured vs window</dt><dd>1.1146s vs 1.2s window (pass)</dd></div>
+<div><dt>Meaning verdict</dt><dd>Pass</dd></div>
+<div><dt>Meaning reason</dt><dd>Greeting to Ashley preserved with equivalent meaning in Spanish.</dd></div>
+<div><dt>Winning voice</dt><dd>Alice - Clear, Engaging Educator (anna / Xb7hH8MSUJpSbSDYk0k2)</dd></div>
+<div><dt>Winner file</dt><dd>voa10-001-take1.wav</dd></div>
+<div><dt>Media present</dt><dd>yes</dd></div>
+<div><dt>Winning media hash</dt><dd>b53199e9c35d8b853b11f58a4bc7f3d9fc1f21957ff5aa67fa000dec716580bb (recomputed)</dd></div>
+</dl>
+</article>
+<article class="segment ok">
+<h3>voa10-002 · Verified</h3>
+<dl>
+<div><dt>Source</dt><dd>Anna, Which coffee shop? There are three coffee shops.</dd></div>
+<div><dt>Spanish</dt><dd>Anna, &#191;cu&#225;l cafeter&#237;a? Hay tres cafeter&#237;as.</dd></div>
+<div><dt>Measured vs window</dt><dd>3.1579s vs 4.4s window (pass)</dd></div>
+<div><dt>Meaning verdict</dt><dd>Pass</dd></div>
+<div><dt>Meaning reason</dt><dd>Candidate directly translates source: asks which coffee shop and states there are three, preserving subject, quantity, and intent.</dd></div>
+<div><dt>Winning voice</dt><dd>Bella - Professional, Bright, Warm (ashley / hpp4J3VqNfWAUOO0d1Us)</dd></div>
+<div><dt>Winner file</dt><dd>voa10-002-take1.wav</dd></div>
+<div><dt>Media present</dt><dd>yes</dd></div>
+<div><dt>Winning media hash</dt><dd>ead1a682ef3f6becebff64637635cc96a3f70a2ef036afd578688bb64bda8357 (recomputed)</dd></div>
+</dl>
+</article>
+<article class="segment ok">
+<h3>voa10-003 · Verified</h3>
+<dl>
+<div><dt>Source</dt><dd>Okay, my apartment is across from a big department store.</dd></div>
+<div><dt>Spanish</dt><dd>Vale, mi apartamento est&#225; enfrente de unos grandes almacenes.</dd></div>
+<div><dt>Measured vs window</dt><dd>3.9474s vs 4.4s window (pass)</dd></div>
+<div><dt>Meaning verdict</dt><dd>Pass</dd></div>
+<div><dt>Meaning reason</dt><dd>Candidate preserves subject (my apartment), location relation (across from / enfrente de), and object (big department store / unos grandes almacenes) with no change in polarity or entities.</dd></div>
+<div><dt>Winning voice</dt><dd>Alice - Clear, Engaging Educator (anna / Xb7hH8MSUJpSbSDYk0k2)</dd></div>
+<div><dt>Winner file</dt><dd>voa10-003-take1.wav</dd></div>
+<div><dt>Media present</dt><dd>yes</dd></div>
+<div><dt>Winning media hash</dt><dd>395eee58069f5f6de5cbbb4f268977de66cd2db6150bcc6a52f07cbbadfc3ac8 (recomputed)</dd></div>
+</dl>
+</article>
+<article class="segment ok">
+<h3>voa10-004 · Verified</h3>
+<dl>
+<div><dt>Source</dt><dd>A big department store? Ah, I see it!</dd></div>
+<div><dt>Spanish</dt><dd>&#191;Una tienda departamental grande? &#161;Ah, la veo!</dd></div>
+<div><dt>Measured vs window</dt><dd>2.9257s vs 3.6s window (pass)</dd></div>
+<div><dt>Meaning verdict</dt><dd>Pass</dd></div>
+<div><dt>Meaning reason</dt><dd>Candidate preserves both parts: questioning a big department store and exclaiming that it is seen, with no material meaning added or lost.</dd></div>
+<div><dt>Winning voice</dt><dd>Bella - Professional, Bright, Warm (ashley / hpp4J3VqNfWAUOO0d1Us)</dd></div>
+<div><dt>Winner file</dt><dd>voa10-004-take1.wav</dd></div>
+<div><dt>Media present</dt><dd>yes</dd></div>
+<div><dt>Winning media hash</dt><dd>9c889cde92b94755ff924c3582696a7198742b052581468e87bbf8a14f730503 (recomputed)</dd></div>
+</dl>
+</article>
+<article class="segment ok">
+<h3>voa10-005 · Verified</h3>
+<dl>
+<div><dt>Source</dt><dd>Okay! Bye, Ashley. See you soon!</dd></div>
+<div><dt>Spanish</dt><dd>&#161;Adi&#243;s, Ashley! &#161;Nos vemos pronto!</dd></div>
+<div><dt>Measured vs window</dt><dd>2.322s vs 2.2s window (pass)</dd></div>
+<div><dt>Meaning verdict</dt><dd>Pass</dd></div>
+<div><dt>Meaning reason</dt><dd>Candidate preserves the farewell to Ashley and the &#39;see you soon&#39; intent; omission of filler &#39;Okay!&#39; does not alter material meaning.</dd></div>
+<div><dt>Winning voice</dt><dd>Alice - Clear, Engaging Educator (anna / Xb7hH8MSUJpSbSDYk0k2)</dd></div>
+<div><dt>Winner file</dt><dd>voa10-005-take2.wav</dd></div>
+<div><dt>Media present</dt><dd>yes</dd></div>
+<div><dt>Winning media hash</dt><dd>dce21e4d1944db89dced6c11d68a527ebde6ffcc0449b3445b9f043246113494 (recomputed)</dd></div>
+</dl>
+<h4>Refusals</h4>
+<ul>
+<li><strong>take 1</strong>: &#161;Ok! &#161;Adi&#243;s, Ashley! &#161;Nos vemos pronto! · TimingFail · Candidate accurately preserves all material meaning: farewell to named entity Ashley and statement of seeing each other soon, with natural idiomatic translation.</li>
+</ul>
+</article>
+<article class="segment ok">
+<h3>voa10-006 · Verified</h3>
+<dl>
+<div><dt>Source</dt><dd>Okay. See you soon.</dd></div>
+<div><dt>Spanish</dt><dd>Vale. Nos vemos pronto.</dd></div>
+<div><dt>Measured vs window</dt><dd>1.4861s vs 1.9s window (pass)</dd></div>
+<div><dt>Meaning verdict</dt><dd>Pass</dd></div>
+<div><dt>Meaning reason</dt><dd>Candidate &#39;Vale. Nos vemos pronto.&#39; accurately conveys &#39;Okay. See you soon.&#39; with no material meaning loss.</dd></div>
+<div><dt>Winning voice</dt><dd>Bella - Professional, Bright, Warm (ashley / hpp4J3VqNfWAUOO0d1Us)</dd></div>
+<div><dt>Winner file</dt><dd>voa10-006-take1.wav</dd></div>
+<div><dt>Media present</dt><dd>yes</dd></div>
+<div><dt>Winning media hash</dt><dd>b0eed0879159ca8fe632c6b5aa230200778c38a64cb82217865a1a2ef039ee1f (recomputed)</dd></div>
+</dl>
+</article>
+</section>
+<footer><p>
+Hash-sealed verify-only receipt (not a signature / certificate / attestation). A check that was not run never counts as a pass.</p></footer>
+</main>
+</body>
+</html>
