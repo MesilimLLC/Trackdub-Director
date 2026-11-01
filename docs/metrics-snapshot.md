@@ -1,8 +1,11 @@
 # Metrics Snapshot: Trackdub-Director (Nov 2 freeze)
 
-Date: 2026-10-31 (freeze pass for the Nov 2 submission).
-Main SHA: `e9b3dffb12c0b259a82a673f08557461b2ceb7b0` (PR #14 merged; tree clean
-except the then-untracked `samples/voa10-scale/`).
+Date: 2026-10-31 (freeze pass for the Nov 2 submission; test counts and the
+static-shot and meaning-eval lanes refreshed the same day).
+Main SHA at the first freeze pass: `e9b3dffb12c0b259a82a673f08557461b2ceb7b0`
+(PR #14 merged; tree clean except the then-untracked `samples/voa10-scale/`).
+Test counts below were re-measured at `82959c7`, the PR #16 head that merged
+as `eddfd94`; the two later `main` commits touch only LICENSE and README.
 Method: `docs/metrics-definitions.md`. Every figure is captured from merged main
 and a named report file; nothing is estimated. Token arithmetic below was
 re-added from per-attempt/per-take fields and matches each report's own totals.
@@ -11,14 +14,19 @@ re-added from per-attempt/per-take fields and matches each report's own totals.
 
 ### Test snapshot (supersedes every earlier stage figure)
 
-Captured 2026-10-31 on merged main `e9b3dff`. **This snapshot supersedes all
-earlier stage figures** — including "36 passed", "66 cases / 48 methods",
-"76 / 54", "93 / 69", and "104 cases / 79 methods" — none of which describe
-merged main at freeze.
+Captured 2026-10-31 at `82959c7` (merged to main in PR #16, `eddfd94`).
+**This snapshot supersedes all earlier stage figures** — including "36 passed",
+"66 cases / 48 methods", "76 / 54", "93 / 69", "104 cases / 79 methods", and
+the earlier freeze figure of 229 cases on `e9b3dff` — none of which describe
+current main.
 
 - .NET (`dotnet test --list-tests`, then a full `dotnet test` in the same
-  session): **229 cases / 164 methods** discovered; executed run:
-  **229 passed, 0 failed, 0 skipped** (total 229).
+  session): **259 cases discovered; executed run: 261 passed, 0 failed,
+  0 skipped** (total 261). The two differ because one theory over
+  record-typed data (`LocalisationBox`) is discovered as a single case and
+  runs three rows. The quotable figure is **259 automated test cases**
+  (discovered); 261 is the executed row count. The method count was not
+  re-measured.
 - Web (`npm test`, vitest): **11 tests passed** (1 test file).
 
 ### Cold start (first measurement of this metric)
@@ -252,10 +260,11 @@ captured by `trackdub-director sign-shot` over `media/demo/demo-dub.mp4`
   would have meant 260 image calls.
 - outside_box_diff is counted on decoded RGB before the h264 encode; the
   output video is lossy everywhere, including outside the box.
-- Tests on the branch: `dotnet test --list-tests` **246 cases discovered**
-  (229 at freeze + 17); the full run executed **248 passed, 0 failed**, because
-  the invalid-box theory over `LocalisationBox` data is discovered as one case
-  and runs three rows.
+- Tests when this stage landed (PR #15): `dotnet test --list-tests` **246 cases
+  discovered** (229 at the first freeze + 17); the full run executed **248
+  passed, 0 failed**, because the invalid-box theory over `LocalisationBox`
+  data is discovered as one case and runs three rows. Current totals are in
+  the Test snapshot above.
 
 ### Transcription (muse-voice-transcribe-1.0)
 

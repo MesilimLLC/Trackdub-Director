@@ -1,0 +1,638 @@
+{
+  "model": "muse-voice-transcribe-1.0",
+  "endpoint_host": "api.meta.ai",
+  "timestamp_utc": "2026-11-01T03:32:54.0342478Z",
+  "session_id": "voyager/transcribe/4B7890233919482A94F6946A6ACDE107",
+  "transcript": "Hi, today my friend Ashley is coming over. I am showing her my new apartment. That\u0027s Ashley calling. Hi Ashley. Hi Anna. I\u0027m coming to your apartment. Where is your apartment? My apartment is near the Columbia Heights Metro. Listen. Where is your apartment? Speak. Listen. My apartment is near the Columbia Heights Metro. Speak. It is near the Columbia Heights Metro? Yes. Exit the metro and turn right. Then at the bus station turn left. Then walk straight ahead. Listen. Yes. Exit the metro and turn right. Speak. Then at the bus station turn left. left. Then walk straight ahead. Okay. exit metro turn right turn left then go straight ahead Yes my apartment is near a coffee shop Okay see you soon Hi Ashley Hello Anna which coffee shop there there are three coffee shops Okay my apartment is across from a big department store A big department store ah I see it okay bye Ashley see you soon Okay, see you soon. Ashley! Ashley! Ashley! over here Santa Donna oh I love having my friends over come on Hi today my friend Ashley is coming over I am showing her my new apartment oh that\u0027s Ashley calling Hi Ashley Hi Anna I\u0027m coming to your apartment Where is your apartment? My apartment is near the Columbia Heights Metro It is near the Columbia Heights Metro? Yes. Exit the metro and metro and turn right then at the bus station turn left then walk straight ahead Okay exit metro metro turn right turn left then go straight ahead Yes my apartment is near a coffee shop Okay see you soon Hi Ashley Hello Anna Which coffee shop? There are three coffee shops Okay, my apartment is across from a big department store A big department store? Ah, I see see it. Okay, bye Ashley. See you soon. Okay, see you soon. Ashley! Ashley! Ashley Ashley! Over here! Donna! Donna! Hi! Oh. I love having my friends over. Come on.",
+  "audio_duration_ms": 300160,
+  "segments": [
+    {
+      "id": "seg-001",
+      "text": "Hi, today my friend Ashley is coming over. I am showing her my new apartment.",
+      "duration_seconds": 8.5,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-002",
+      "text": "That\u0027s Ashley calling.",
+      "duration_seconds": 3.1,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-003",
+      "text": "Hi Ashley.",
+      "duration_seconds": 0.5,
+      "speaker": "B"
+    },
+    {
+      "id": "seg-004",
+      "text": "Hi Anna. I\u0027m coming to your apartment. Where is your apartment?",
+      "duration_seconds": 4.7,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-005",
+      "text": "My apartment is near the Columbia Heights Metro.",
+      "duration_seconds": 5.8,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-006",
+      "text": "Listen.",
+      "duration_seconds": 2.4,
+      "speaker": "D"
+    },
+    {
+      "id": "seg-007",
+      "text": "Where is your apartment?",
+      "duration_seconds": 3.8,
+      "speaker": "E"
+    },
+    {
+      "id": "seg-008",
+      "text": "Speak. Listen. My apartment is near the Columbia Heights Metro.",
+      "duration_seconds": 16.4,
+      "speaker": "D"
+    },
+    {
+      "id": "seg-009",
+      "text": "Speak.",
+      "duration_seconds": 9.8,
+      "speaker": "D"
+    },
+    {
+      "id": "seg-010",
+      "text": "It is near the Columbia Heights Metro?",
+      "duration_seconds": 2.6,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-011",
+      "text": "Yes. Exit the metro and turn right. Then at the bus station turn left. Then walk straight ahead.",
+      "duration_seconds": 9.7,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-012",
+      "text": "Listen.",
+      "duration_seconds": 1.9,
+      "speaker": "D"
+    },
+    {
+      "id": "seg-013",
+      "text": "Yes. Exit the metro and turn right.",
+      "duration_seconds": 6.2,
+      "speaker": "E"
+    },
+    {
+      "id": "seg-014",
+      "text": "Speak.",
+      "duration_seconds": 9.7,
+      "speaker": "E"
+    },
+    {
+      "id": "seg-015",
+      "text": "Then at the bus station turn left. left.",
+      "duration_seconds": 5.3,
+      "speaker": "D"
+    },
+    {
+      "id": "seg-016",
+      "text": "Then walk straight ahead.",
+      "duration_seconds": 3.6,
+      "speaker": "E"
+    },
+    {
+      "id": "seg-017",
+      "text": "Okay. exit metro turn right turn left then go straight ahead",
+      "duration_seconds": 6.7,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-018",
+      "text": "Yes my apartment is near a coffee shop",
+      "duration_seconds": 3.1,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-019",
+      "text": "Okay see you soon",
+      "duration_seconds": 3.5,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-020",
+      "text": "Hi Ashley",
+      "duration_seconds": 0.9,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-021",
+      "text": "Hello Anna",
+      "duration_seconds": 1.4,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-022",
+      "text": "which coffee shop there there are three coffee shops",
+      "duration_seconds": 3.4,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-023",
+      "text": "Okay my apartment is across from a big department store",
+      "duration_seconds": 4.3,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-024",
+      "text": "A big department store ah I see it",
+      "duration_seconds": 3.8,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-025",
+      "text": "okay bye Ashley see you soon",
+      "duration_seconds": 2.3,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-026",
+      "text": "Okay, see you soon.",
+      "duration_seconds": 3.2,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-027",
+      "text": "Ashley! Ashley! Ashley! over here Santa Donna",
+      "duration_seconds": 8.8,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-028",
+      "text": "oh I love having my friends over come on",
+      "duration_seconds": 8.5,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-029",
+      "text": "Hi today my friend Ashley is coming over I am showing her my new apartment",
+      "duration_seconds": 7.9,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-030",
+      "text": "oh that\u0027s Ashley calling",
+      "duration_seconds": 3.4,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-031",
+      "text": "Hi Ashley",
+      "duration_seconds": 1,
+      "speaker": "B"
+    },
+    {
+      "id": "seg-032",
+      "text": "Hi Anna I\u0027m coming to your apartment Where is your apartment?",
+      "duration_seconds": 4.6,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-033",
+      "text": "My apartment is near the Columbia Heights Metro",
+      "duration_seconds": 4,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-034",
+      "text": "It is near the Columbia Heights Metro?",
+      "duration_seconds": 2.7,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-035",
+      "text": "Yes. Exit the metro and metro and turn right then at the bus station turn left then walk straight ahead",
+      "duration_seconds": 7.8,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-036",
+      "text": "Okay exit metro metro turn right turn left then go straight ahead",
+      "duration_seconds": 6.5,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-037",
+      "text": "Yes my apartment is near a coffee shop",
+      "duration_seconds": 3.3,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-038",
+      "text": "Okay see you soon",
+      "duration_seconds": 3.4,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-039",
+      "text": "Hi Ashley",
+      "duration_seconds": 1,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-040",
+      "text": "Hello Anna",
+      "duration_seconds": 0.9,
+      "speaker": "B"
+    },
+    {
+      "id": "seg-041",
+      "text": "Which coffee shop? There are three coffee shops",
+      "duration_seconds": 3.5,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-042",
+      "text": "",
+      "duration_seconds": 0.2,
+      "speaker": null
+    },
+    {
+      "id": "seg-043",
+      "text": "Okay, my apartment is across from a big department store",
+      "duration_seconds": 4.6,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-044",
+      "text": "A big department store? Ah, I see see it.",
+      "duration_seconds": 3.5,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-045",
+      "text": "Okay, bye Ashley. See you soon.",
+      "duration_seconds": 2.6,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-046",
+      "text": "Okay, see you soon.",
+      "duration_seconds": 3.5,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-047",
+      "text": "Ashley! Ashley! Ashley Ashley! Over here! Donna! Donna! Hi! Oh.",
+      "duration_seconds": 10.6,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-048",
+      "text": "I love having my friends over. Come on.",
+      "duration_seconds": 5.7,
+      "speaker": "A"
+    }
+  ],
+  "turns": [
+    {
+      "turnId": 0,
+      "startMs": 19980,
+      "endMs": 28460,
+      "transcript": "Hi, today my friend Ashley is coming over. I am showing her my new apartment.",
+      "speaker": "A"
+    },
+    {
+      "turnId": 1,
+      "startMs": 29020,
+      "endMs": 32140,
+      "transcript": "That\u0027s Ashley calling.",
+      "speaker": "A"
+    },
+    {
+      "turnId": 2,
+      "startMs": 32540,
+      "endMs": 33020,
+      "transcript": "Hi Ashley.",
+      "speaker": "B"
+    },
+    {
+      "turnId": 3,
+      "startMs": 33100,
+      "endMs": 37820,
+      "transcript": "Hi Anna. I\u0027m coming to your apartment. Where is your apartment?",
+      "speaker": "C"
+    },
+    {
+      "turnId": 4,
+      "startMs": 37980,
+      "endMs": 43740,
+      "transcript": "My apartment is near the Columbia Heights Metro.",
+      "speaker": "A"
+    },
+    {
+      "turnId": 5,
+      "startMs": 44380,
+      "endMs": 46780,
+      "transcript": "Listen.",
+      "speaker": "D"
+    },
+    {
+      "turnId": 6,
+      "startMs": 46780,
+      "endMs": 50620,
+      "transcript": "Where is your apartment?",
+      "speaker": "E"
+    },
+    {
+      "turnId": 7,
+      "startMs": 51500,
+      "endMs": 67900,
+      "transcript": "Speak. Listen. My apartment is near the Columbia Heights Metro.",
+      "speaker": "D"
+    },
+    {
+      "turnId": 8,
+      "startMs": 69420,
+      "endMs": 79180,
+      "transcript": "Speak.",
+      "speaker": "D"
+    },
+    {
+      "turnId": 9,
+      "startMs": 79260,
+      "endMs": 81820,
+      "transcript": "It is near the Columbia Heights Metro?",
+      "speaker": "C"
+    },
+    {
+      "turnId": 10,
+      "startMs": 81820,
+      "endMs": 91500,
+      "transcript": "Yes. Exit the metro and turn right. Then at the bus station turn left. Then walk straight ahead.",
+      "speaker": "A"
+    },
+    {
+      "turnId": 11,
+      "startMs": 92300,
+      "endMs": 94220,
+      "transcript": "Listen.",
+      "speaker": "D"
+    },
+    {
+      "turnId": 12,
+      "startMs": 94460,
+      "endMs": 100620,
+      "transcript": "Yes. Exit the metro and turn right.",
+      "speaker": "E"
+    },
+    {
+      "turnId": 13,
+      "startMs": 100700,
+      "endMs": 110380,
+      "transcript": "Speak.",
+      "speaker": "E"
+    },
+    {
+      "turnId": 14,
+      "startMs": 110700,
+      "endMs": 115980,
+      "transcript": "Then at the bus station turn left. left.",
+      "speaker": "D"
+    },
+    {
+      "turnId": 15,
+      "startMs": 128060,
+      "endMs": 131660,
+      "transcript": "Then walk straight ahead.",
+      "speaker": "E"
+    },
+    {
+      "turnId": 16,
+      "startMs": 140140,
+      "endMs": 146860,
+      "transcript": "Okay. exit metro turn right turn left then go straight ahead",
+      "speaker": "C"
+    },
+    {
+      "turnId": 17,
+      "startMs": 147180,
+      "endMs": 150300,
+      "transcript": "Yes my apartment is near a coffee shop",
+      "speaker": "A"
+    },
+    {
+      "turnId": 18,
+      "startMs": 150620,
+      "endMs": 154140,
+      "transcript": "Okay see you soon",
+      "speaker": "C"
+    },
+    {
+      "turnId": 19,
+      "startMs": 155820,
+      "endMs": 156700,
+      "transcript": "Hi Ashley",
+      "speaker": "A"
+    },
+    {
+      "turnId": 20,
+      "startMs": 156860,
+      "endMs": 158220,
+      "transcript": "Hello Anna",
+      "speaker": "C"
+    },
+    {
+      "turnId": 21,
+      "startMs": 158220,
+      "endMs": 161580,
+      "transcript": "which coffee shop there there are three coffee shops",
+      "speaker": "C"
+    },
+    {
+      "turnId": 22,
+      "startMs": 161980,
+      "endMs": 166300,
+      "transcript": "Okay my apartment is across from a big department store",
+      "speaker": "A"
+    },
+    {
+      "turnId": 23,
+      "startMs": 166460,
+      "endMs": 170220,
+      "transcript": "A big department store ah I see it",
+      "speaker": "C"
+    },
+    {
+      "turnId": 24,
+      "startMs": 170540,
+      "endMs": 172860,
+      "transcript": "okay bye Ashley see you soon",
+      "speaker": "A"
+    },
+    {
+      "turnId": 25,
+      "startMs": 173260,
+      "endMs": 176460,
+      "transcript": "Okay, see you soon.",
+      "speaker": "C"
+    },
+    {
+      "turnId": 26,
+      "startMs": 181020,
+      "endMs": 189820,
+      "transcript": "Ashley! Ashley! Ashley! over here Santa Donna",
+      "speaker": "A"
+    },
+    {
+      "turnId": 27,
+      "startMs": 189820,
+      "endMs": 198300,
+      "transcript": "oh I love having my friends over come on",
+      "speaker": "A"
+    },
+    {
+      "turnId": 28,
+      "startMs": 207340,
+      "endMs": 215260,
+      "transcript": "Hi today my friend Ashley is coming over I am showing her my new apartment",
+      "speaker": "A"
+    },
+    {
+      "turnId": 29,
+      "startMs": 215580,
+      "endMs": 218940,
+      "transcript": "oh that\u0027s Ashley calling",
+      "speaker": "A"
+    },
+    {
+      "turnId": 30,
+      "startMs": 219100,
+      "endMs": 220060,
+      "transcript": "Hi Ashley",
+      "speaker": "B"
+    },
+    {
+      "turnId": 31,
+      "startMs": 220060,
+      "endMs": 224700,
+      "transcript": "Hi Anna I\u0027m coming to your apartment Where is your apartment?",
+      "speaker": "C"
+    },
+    {
+      "turnId": 32,
+      "startMs": 224780,
+      "endMs": 228780,
+      "transcript": "My apartment is near the Columbia Heights Metro",
+      "speaker": "A"
+    },
+    {
+      "turnId": 33,
+      "startMs": 228860,
+      "endMs": 231580,
+      "transcript": "It is near the Columbia Heights Metro?",
+      "speaker": "C"
+    },
+    {
+      "turnId": 34,
+      "startMs": 231580,
+      "endMs": 239420,
+      "transcript": "Yes. Exit the metro and metro and turn right then at the bus station turn left then walk straight ahead",
+      "speaker": "A"
+    },
+    {
+      "turnId": 35,
+      "startMs": 239500,
+      "endMs": 245980,
+      "transcript": "Okay exit metro metro turn right turn left then go straight ahead",
+      "speaker": "C"
+    },
+    {
+      "turnId": 36,
+      "startMs": 246300,
+      "endMs": 249580,
+      "transcript": "Yes my apartment is near a coffee shop",
+      "speaker": "A"
+    },
+    {
+      "turnId": 37,
+      "startMs": 249660,
+      "endMs": 253020,
+      "transcript": "Okay see you soon",
+      "speaker": "C"
+    },
+    {
+      "turnId": 38,
+      "startMs": 254700,
+      "endMs": 255660,
+      "transcript": "Hi Ashley",
+      "speaker": "A"
+    },
+    {
+      "turnId": 39,
+      "startMs": 255820,
+      "endMs": 256700,
+      "transcript": "Hello Anna",
+      "speaker": "B"
+    },
+    {
+      "turnId": 40,
+      "startMs": 257020,
+      "endMs": 260540,
+      "transcript": "Which coffee shop? There are three coffee shops",
+      "speaker": "C"
+    },
+    {
+      "turnId": 41,
+      "startMs": 260620,
+      "endMs": 260780,
+      "transcript": "",
+      "speaker": null
+    },
+    {
+      "turnId": 42,
+      "startMs": 260780,
+      "endMs": 265340,
+      "transcript": "Okay, my apartment is across from a big department store",
+      "speaker": "A"
+    },
+    {
+      "turnId": 43,
+      "startMs": 265660,
+      "endMs": 269180,
+      "transcript": "A big department store? Ah, I see see it.",
+      "speaker": "C"
+    },
+    {
+      "turnId": 44,
+      "startMs": 269260,
+      "endMs": 271820,
+      "transcript": "Okay, bye Ashley. See you soon.",
+      "speaker": "A"
+    },
+    {
+      "turnId": 45,
+      "startMs": 271980,
+      "endMs": 275500,
+      "transcript": "Okay, see you soon.",
+      "speaker": "C"
+    },
+    {
+      "turnId": 46,
+      "startMs": 280380,
+      "endMs": 290940,
+      "transcript": "Ashley! Ashley! Ashley Ashley! Over here! Donna! Donna! Hi! Oh.",
+      "speaker": "A"
+    },
+    {
+      "turnId": 47,
+      "startMs": 291580,
+      "endMs": 297260,
+      "transcript": "I love having my friends over. Come on.",
+      "speaker": "A"
+    }
+  ],
+  "usage": null,
+  "usage_reported": false
+}
