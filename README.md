@@ -374,8 +374,8 @@ winning take, that take re-passes the QA lane duration check against the
 stamped window, a meaning Pass is recorded for its text, and the winning
 media file is on disk. Anything else is **HumanReviewRequired** with
 reasons per line (`Uncast`, `TimingFail`, `MeaningFail`,
-`MeaningNotEvaluated`, `MediaNotPresent`; `MediaHashMismatch` when the
-manifest recorded a hash the file no longer matches). Not evaluated is a
+`MeaningNotEvaluated`, `MediaNotPresent`; `MediaHashMismatch` when a recorded hash, from the
+manifest or the sidecar below, differs from the file). Not evaluated is a
 review reason, never a pass.
 
 ```bash
@@ -390,14 +390,20 @@ no scripts, no external assets), rendered from the receipt JSON alone. The
 server exposes the same gate as `POST /api/verify-only` with
 `{ "run": "voa10" }`: it reads a run folder already on disk inside the
 captured-runs root (`samples/`, or the `VerifyOnly:RunsRoot` setting) and
-returns the receipt JSON. There is no upload path.
+returns the receipt JSON. There is no upload path. The server has no client
+authentication, so keep it on the local machine, and do not point
+`VerifyOnly:RunsRoot` at nonpublic runs while it is reachable
+from elsewhere. Run folders that are, or sit behind, a symbolic link are refused.
 
 The receipt is hash-sealed: the manifest and every present winning media
 file are listed with their SHA-256, labelled `recomputed`. Media is
 gitignored, so on a clean clone the winning files are absent: each line is
-then HumanReviewRequired with `MediaNotPresent`, and the hash is shown only
-if the manifest recorded one (`recorded-at-capture`); otherwise it says
-`not-recorded-in-manifest`. A recorded hash is never shown as recomputed.
+then HumanReviewRequired with `MediaNotPresent`. The hash shown comes from
+the manifest if it recorded one (`recorded-at-capture`); otherwise from the
+optional `audition-media-hashes.json` sidecar beside the manifest
+(`recorded-in-sidecar`, computed after capture, so not claimed as capture
+time); otherwise it says `not-recorded-in-manifest`. A recorded hash is never
+shown as recomputed. The committed voa10 run uses the sidecar.
 Audition runs now save every synthesized take (winners and losers) and
 record each take's SHA-256 in the manifest; the older captured manifests
 predate that and are kept as evidence, unchanged.

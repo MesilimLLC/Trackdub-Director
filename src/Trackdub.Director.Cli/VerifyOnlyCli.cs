@@ -45,6 +45,7 @@ internal static class VerifyOnlyCli
     {
         string jsonPath = Path.GetFullPath(options.Out ?? Path.Combine(options.RunFolder, ReceiptJsonName));
         string htmlPath = Path.GetFullPath(options.Html ?? Path.ChangeExtension(jsonPath, ".html"));
+        RejectInputOverwrite(options, jsonPath, htmlPath);
         string json = receipt.ToJson();
         WriteAtomically(jsonPath, json);
         // The page is rendered from the JSON that was just written, so it can never show more than the receipt says.
@@ -52,10 +53,31 @@ internal static class VerifyOnlyCli
         return (jsonPath, htmlPath);
     }
 
+    // Refuses outputs that would replace the receipt with itself or overwrite an input of this run.
+    private static void RejectInputOverwrite(Options options, string jsonPath, string htmlPath)
+    {
+        if (string.Equals(jsonPath, htmlPath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new VerifyInputException("--out and --html must be different paths.");
+        }
+
+        string runDir = Path.GetFullPath(options.RunFolder);
+        string mediaDir = Path.GetFullPath(options.MediaDir ?? Path.Combine(runDir, "media", "audition"));
+        string[] inputs = [Path.Combine(runDir, AuditionOutputWriter.ManifestFileName), Path.Combine(runDir, VerifyOnlyService.MediaHashSidecarFileName)];
+        foreach (string output in new[] { jsonPath, htmlPath })
+        {
+            bool underMedia = output.StartsWith(mediaDir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+            if (underMedia || inputs.Contains(output, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new VerifyInputException($"Refusing to overwrite a run input: {output}");
+            }
+        }
+    }
+
     private static void WriteAtomically(string path, string content)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        string temp = path + ".tmp";
+        string temp = $"{path}.{Guid.NewGuid():N}.tmp";
         try
         {
             File.WriteAllText(temp, content);

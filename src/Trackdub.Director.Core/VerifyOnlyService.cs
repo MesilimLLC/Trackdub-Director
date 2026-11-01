@@ -21,6 +21,11 @@ public static class VerifyOnlyService
     public static VerifyReceipt Verify(string runDir, VerifyOnlyOptions? options = null)
     {
         options ??= new VerifyOnlyOptions();
+        if (!double.IsFinite(options.ToleranceFraction) || options.ToleranceFraction < 0)
+        {
+            throw new VerifyInputException("Tolerance must be a finite, non-negative fraction.");
+        }
+
         if (!Directory.Exists(runDir))
         {
             throw new VerifyInputException($"Run folder not found: {runDir}");
@@ -100,7 +105,7 @@ public static class VerifyOnlyService
                 .ToDictionary(p => p.Name, p => p.Value.GetString()!, StringComparer.Ordinal);
             return (files, new InputHash(MediaHashSidecarFileName, HexSha256(bytes), HashLabels.Recomputed));
         }
-        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException or IOException or UnauthorizedAccessException or ArgumentNullException)
+        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException or IOException or UnauthorizedAccessException or ArgumentException)
         {
             throw new VerifyInputException($"Media hash sidecar unreadable: {ex.Message}");
         }
@@ -139,6 +144,12 @@ public static class VerifyOnlyService
         }
 
         TimingCheck timing = CheckTiming(winner.MeasuredSeconds, winner.Synthesized, segment.WindowSeconds, context.Tolerance);
+        if (Math.Abs(winner.WindowSeconds - segment.WindowSeconds) > 1e-9)
+        {
+            // The take was judged against a different window than the stamped one: its recorded timing cannot be trusted.
+            timing = timing with { Verdict = AuditionTimingVerdict.Fail };
+        }
+
         var meaning = new MeaningCheck(winner.MeaningVerdict, winner.MeaningExplanation, winner.MeaningIssues);
         MediaCheck media = CheckMedia(winner, context);
         return BuildSegment(segment, winner, timing, meaning, media, refusals, WinnerReasons(timing, meaning, media, winner, context));
@@ -154,7 +165,8 @@ public static class VerifyOnlyService
         }
 
         AuditionTakeReport[] named = segment.Takes.Where(t => t.TakeNumber == number).ToArray();
-        return named is [{ IsWinner: true } only] && segment.WinnerFileName == only.AudioFileName ? only : null;
+        bool singleFlag = segment.Takes.Count(t => t.IsWinner) == 1;
+        return singleFlag && named is [{ IsWinner: true } only] && segment.WinnerFileName == only.AudioFileName ? only : null;
     }
 
     private static SegmentReceipt BuildSegment(
@@ -232,7 +244,7 @@ public static class VerifyOnlyService
         string? path = IsPlainFileName(name) ? Path.Combine(context.MediaDir, name!) : null;
         if (path is not null && File.Exists(path))
         {
-            return new MediaCheck(name, true, HexSha256(File.ReadAllBytes(path)), HashLabels.Recomputed);
+            return new MediaCheck(name, true, HexSha256File(path), HashLabels.Recomputed);
         }
 
         string? recorded = RecordedHash(winner, context);
@@ -258,7 +270,7 @@ public static class VerifyOnlyService
     {
         TimingCheck timing = CheckTiming(take.MeasuredSeconds, take.Synthesized, windowSeconds, context.Tolerance);
         var reasons = MeaningReasons(take.MeaningVerdict).ToList();
-        if (timing.Verdict == AuditionTimingVerdict.Fail)
+        if (take.Synthesized && timing.Verdict != AuditionTimingVerdict.Pass)
         {
             reasons.Add(VerifyReason.TimingFail);
         }
@@ -287,6 +299,12 @@ public static class VerifyOnlyService
         string tolerance = Percent(timing.ToleranceFraction);
         string text = $"Measured {measured} s against {allowed} s allowed (window {window} s, tolerance {tolerance}).";
         return reasonCount == 0 ? $"{text} Passed both gates; not the winning take." : text;
+    }
+
+    private static string HexSha256File(string path)
+    {
+        using FileStream stream = File.OpenRead(path);
+        return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
     }
 
     public static string Percent(double fraction) => (fraction * 100).ToString("0.##", CultureInfo.InvariantCulture) + "%";

@@ -21,8 +21,8 @@ internal static class VerifyOnlyEndpoint
         }
 
         string root = ResolveRunsRoot(configuration, environment);
-        string runDir = Path.GetFullPath(Path.Combine(root, run));
-        if (Path.IsPathRooted(run) || run.IndexOfAny(['\\', ':']) >= 0 || !IsInside(root, runDir))
+        string? runDir = TryResolveRunDir(root, run);
+        if (runDir is null)
         {
             return Results.BadRequest(new { error = "'run' must name a folder inside the captured-runs root." });
         }
@@ -30,6 +30,11 @@ internal static class VerifyOnlyEndpoint
         if (!Directory.Exists(runDir))
         {
             return Results.NotFound(new { error = $"No captured run named '{run}'." });
+        }
+
+        if (ContainsLink(root, runDir))
+        {
+            return Results.BadRequest(new { error = "'run' must not be, or pass through, a symbolic link." });
         }
 
         try
@@ -72,6 +77,41 @@ internal static class VerifyOnlyEndpoint
         }
 
         return Path.GetFullPath("samples");
+    }
+
+    // Null for any run name that is not a plain relative folder name inside the root, including names
+    // that make path resolution throw (such as an embedded NUL).
+    private static string? TryResolveRunDir(string root, string run)
+    {
+        if (Path.IsPathRooted(run) || run.IndexOfAny(['\\', ':']) >= 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            string runDir = Path.GetFullPath(Path.Combine(root, run));
+            return IsInside(root, runDir) ? runDir : null;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    // Any link between the root and the run folder could point outside the root, so none is followed.
+    private static bool ContainsLink(string root, string runDir)
+    {
+        string rootFull = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        for (string? dir = Path.TrimEndingDirectorySeparator(runDir); dir is not null && dir.Length > rootFull.Length; dir = Path.GetDirectoryName(dir))
+        {
+            if (new DirectoryInfo(dir).LinkTarget is not null)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsInside(string root, string path)

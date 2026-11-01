@@ -38,14 +38,37 @@ public static class AuditionOutputWriter
             throw new ArgumentException("Two takes map to the same file name.", nameof(report));
         }
 
-        foreach ((string fileName, byte[] bytes) in takes)
+        // Everything is staged first, so a failure while writing leaves the previous run in place. Publishing
+        // then replaces files one at a time (manifest last): that narrows the window for a half-replaced run
+        // but is not atomic, and recorded hashes expose any mismatch.
+        string stagingDir = Path.Combine(outputDir, ".staging-" + Guid.NewGuid().ToString("N"));
+        try
         {
-            await WriteTakeAsync(auditionDir, fileName, bytes, cancellationToken).ConfigureAwait(false);
-        }
+            Directory.CreateDirectory(stagingDir);
+            foreach ((string fileName, byte[] bytes) in takes)
+            {
+                await WriteTakeAsync(stagingDir, fileName, bytes, cancellationToken).ConfigureAwait(false);
+            }
 
-        string manifestPath = Path.Combine(outputDir, ManifestFileName);
-        await File.WriteAllTextAsync(manifestPath, JsonSerializer.Serialize(ToManifest(report), ManifestJson), cancellationToken).ConfigureAwait(false);
-        return manifestPath;
+            string stagedManifest = Path.Combine(stagingDir, ManifestFileName);
+            await File.WriteAllTextAsync(stagedManifest, JsonSerializer.Serialize(ToManifest(report), ManifestJson), cancellationToken).ConfigureAwait(false);
+
+            foreach ((string fileName, _) in takes)
+            {
+                File.Move(Path.Combine(stagingDir, fileName), Path.Combine(auditionDir, fileName), overwrite: true);
+            }
+
+            string manifestPath = Path.Combine(outputDir, ManifestFileName);
+            File.Move(stagedManifest, manifestPath, overwrite: true);
+            return manifestPath;
+        }
+        finally
+        {
+            if (Directory.Exists(stagingDir))
+            {
+                Directory.Delete(stagingDir, recursive: true);
+            }
+        }
     }
 
     // The file name comes from AuditionService.TakeFileName, which keeps it inside one folder. The check

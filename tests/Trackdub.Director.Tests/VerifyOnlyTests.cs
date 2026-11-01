@@ -257,6 +257,79 @@ public sealed class VerifyOnlyTests : IDisposable
     }
 
     [Fact]
+    public void A_manifest_that_flags_two_winners_leaves_the_line_uncast()
+    {
+        string dir = RunFolder();
+        AuditionSegmentReport seg = Segment("seg", 2.0, Take(1, measured: 2.0), Take(2, measured: 2.0));
+        WriteManifest(dir, Report(seg));
+
+        Assert.Equal([VerifyReason.Uncast], VerifyOnlyService.Verify(dir).Segments[0].Reasons);
+    }
+
+    [Fact]
+    public void A_winner_judged_against_a_different_window_than_the_stamped_one_needs_review()
+    {
+        // The take was judged against a 1 s window; the segment stamp says 3 s, so 2.0 s would fit only the stamp.
+        string dir = RunFolder();
+        AuditionTakeReport take = Take(1, measured: 2.0, window: 1.0);
+        WriteManifest(dir, Report(Segment("seg", 3.0, take)));
+        WriteMedia(dir, take);
+
+        Assert.Equal([VerifyReason.TimingFail], VerifyOnlyService.Verify(dir).Segments[0].Reasons);
+    }
+
+    [Fact]
+    public void A_synthesized_losing_take_with_no_usable_measurement_is_refused_for_timing()
+    {
+        string dir = RunFolder();
+        AuditionTakeReport broken = Take(1, measured: 0.0, winner: false) with { Synthesized = true };
+        WriteManifest(dir, Report(Segment("seg", 2.0, broken)));
+
+        RefusedTake refusal = Assert.Single(VerifyOnlyService.Verify(dir).Segments[0].Refusals);
+
+        Assert.Contains(VerifyReason.TimingFail, refusal.Reasons);
+        Assert.DoesNotContain("Passed both gates", refusal.Detail, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NaN)]
+    [InlineData(-0.1)]
+    public void A_non_finite_or_negative_tolerance_is_an_input_error(double tolerance)
+    {
+        string dir = RunFolder();
+        WriteManifest(dir, Report(Segment("seg", 2.0, Take(1, measured: 2.0))));
+
+        Assert.Throws<VerifyInputException>(() => VerifyOnlyService.Verify(dir, new VerifyOnlyOptions(ToleranceFraction: tolerance)));
+    }
+
+    [Fact]
+    public void A_sidecar_with_a_repeated_file_name_is_an_input_error()
+    {
+        string dir = RunFolder();
+        WriteManifest(dir, Report(Segment("seg", 2.0, Take(1, measured: 2.0))));
+        File.WriteAllText(Path.Combine(dir, VerifyOnlyService.MediaHashSidecarFileName), """{"files":{"a.wav":"x","a.wav":"y"}}""");
+
+        Assert.Throws<VerifyInputException>(() => VerifyOnlyService.Verify(dir));
+    }
+
+    [Fact]
+    public async Task A_failed_write_leaves_the_previous_run_in_place_and_no_staging_folder()
+    {
+        string dir = RunFolder();
+        AuditionReport first = Report(Segment("seg", 2.0, Take(1, measured: 2.0)));
+        await AuditionOutputWriter.WriteAsync(first, dir);
+        string manifest = Path.Combine(dir, AuditionOutputWriter.ManifestFileName);
+        string before = await File.ReadAllTextAsync(manifest);
+        AuditionTakeReport escaping = Take(2, measured: 2.0) with { AudioFileName = "../escape.wav" };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => AuditionOutputWriter.WriteAsync(Report(Segment("seg", 2.0, escaping)), dir));
+
+        Assert.Equal(before, await File.ReadAllTextAsync(manifest));
+        Assert.Empty(Directory.GetDirectories(dir, ".staging-*"));
+    }
+
+    [Fact]
     public void A_present_file_that_differs_from_the_recorded_hash_is_flagged()
     {
         VerifyReceipt receipt = VerifyOne(Take(1, measured: 2.0, sha: new string('b', 64)));
@@ -434,6 +507,7 @@ public sealed class VerifyOnlyTests : IDisposable
     [InlineData("""{"run":""}""", HttpStatusCode.BadRequest)]
     [InlineData("""{}""", HttpStatusCode.BadRequest)]
     [InlineData("""not json""", HttpStatusCode.BadRequest)]
+    [InlineData("""{"run":"bad name"}""", HttpStatusCode.BadRequest)]
     [InlineData("""{"run":"no-such-run"}""", HttpStatusCode.NotFound)]
     public async Task The_endpoint_refuses_bad_or_escaping_run_names(string body, HttpStatusCode expected)
     {
