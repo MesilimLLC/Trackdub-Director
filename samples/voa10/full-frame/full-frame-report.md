@@ -33,8 +33,10 @@ calls (no Meta text/vision, no ElevenLabs).
 
 - `full-frame-0242-1920x1080.png`: raw return resampled to 1920x1080 with
   `PIL.Image.LANCZOS`, saved as PNG (1449224 bytes).
-- Every pixel comparison below runs on this **resampled** image vs the
-  source — not on the raw 2096x1184 WEBP.
+- The full-frame column compares this **resampled** PNG with the source,
+  not the raw 2096x1184 WEBP.
+- The crop-composite column compares `samples/voa10/frames/localised/hero-0242-cafeteria.png`
+  with the source. That file is not resampled.
 
 ## Method
 
@@ -91,3 +93,6 @@ crop-edit-composite localises the repaint; full-frame regeneration does not.
 - `full-frame-report.json`, `full-frame-report.md` (this file).
 - `analyze_full_frame.py` — standalone analysis script; usage line at top
   (`python samples/voa10/full-frame/analyze_full_frame.py` from repo root).
+- Inputs (referenced, not generated here): source
+  `samples/voa10/frames/hero-0242.jpg` and crop composite
+  `samples/voa10/frames/localised/hero-0242-cafeteria.png`.

@@ -95,6 +95,9 @@ def heatmap(diff, caption):
 
 
 def main():
+    """Run the full-frame vs source vs composite comparison; print metrics.
+    Returns 0 on success, 2 on source hash mismatch, and 1 when the crop
+    composite changes pixels outside the sign box."""
     src_bytes = open(SRC, "rb").read()
     if hashlib.sha256(src_bytes).hexdigest() != (
             "2f3e4cbba9adcb4d2afdd15eca1cfeb102ff8bd0b19e849e97ae05b764d64dd7"):
@@ -143,6 +146,10 @@ def main():
             np.any(outside, axis=2) & outside_mask)),
         "max_abs_diff_outside": float(np.max(outside[outside_mask]))}
     print(json.dumps(metrics, indent=1))
+    if metrics["composite_outside_box_integer_check"]["differing_pixels"] != 0:
+        print("composite changed pixels outside the sign box", file=sys.stderr)
+        return 1
+    return 0
 
 
 def _pad(shape, x1, y1, x2, y2):
@@ -151,4 +158,5 @@ def _pad(shape, x1, y1, x2, y2):
     return m
 
 
-main()
+if __name__ == "__main__":
+    sys.exit(main() or 0)
