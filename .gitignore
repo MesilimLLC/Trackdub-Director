@@ -20,3 +20,4 @@ IDEA.md
 src/Trackdub.Director.Server/wwwroot/index.html
 src/Trackdub.Director.Server/wwwroot/assets/*.js
 src/Trackdub.Director.Server/wwwroot/assets/*.css
+/.tmp-baseline
