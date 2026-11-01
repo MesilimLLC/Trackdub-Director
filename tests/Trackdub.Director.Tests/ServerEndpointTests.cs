@@ -980,6 +980,273 @@ public sealed class ServerEndpointTests
         Assert.DoesNotContain("test-fake-key", json.ToLowerInvariant());
     }
 
+    private const string CannedTranscribeBody = """{"sessionId":"voyager/transcribe/API","transcript":"Hi, Ashley. Anna, which coffee shop?","audioDurationMs":6060,"turns":[{"turnId":0,"startMs":60,"endMs":1260,"transcript":"Hi, Ashley.","speaker":"A"},{"turnId":1,"startMs":1660,"endMs":6060,"transcript":"Anna, which coffee shop?","speaker":"B"}]}""";
+
+    private static HttpMessageHandler TranscribeHandler()
+    {
+        return new DelegatingHandlerStub((request, _) =>
+        {
+            string? path = request.RequestUri?.AbsolutePath;
+            Assert.True(path is not null && path.EndsWith("/asr/transcribe", StringComparison.Ordinal), $"Expected /asr/transcribe, got {path}");
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(CannedTranscribeBody, Encoding.UTF8, "application/json"),
+            });
+        });
+    }
+
+    private static MultipartFormDataContent AudioForm(byte[] wav)
+    {
+        var form = new MultipartFormDataContent();
+        var content = new ByteArrayContent(wav);
+        content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("audio/wav");
+        form.Add(content, "audio", "clip.wav");
+        return form;
+    }
+
+    [Fact]
+    public async Task Transcribe_happy_path_returns_segments_with_verbatim_speakers_and_null_usage()
+    {
+        using var auth = FakeAuth();
+        using var factory = new ServerFactory(TranscribeHandler());
+        using HttpClient client = factory.CreateClient();
+
+        using var form = AudioForm([82, 73, 70, 70, 1, 0, 0, 0]);
+        HttpResponseMessage resp = await client.PostAsync("/api/transcribe", form);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        string json = await resp.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(json);
+        JsonElement root = doc.RootElement;
+
+        Assert.Equal(2, root.GetProperty("segments").GetArrayLength());
+        JsonElement first = root.GetProperty("segments")[0];
+        Assert.Equal("seg-001", first.GetProperty("id").GetString());
+        Assert.Equal("Hi, Ashley.", first.GetProperty("text").GetString());
+        Assert.Equal(1.2, first.GetProperty("duration_seconds").GetDouble());
+        Assert.Equal("A", first.GetProperty("speaker").GetString());
+        Assert.Equal("B", root.GetProperty("segments")[1].GetProperty("speaker").GetString());
+        // The server omits null properties (WhenWritingNull): usage absent means
+        // not reported; usage_reported=false is the explicit marker. Never zero.
+        Assert.False(root.TryGetProperty("usage", out _));
+        Assert.False(root.GetProperty("usage_reported").GetBoolean());
+        Assert.DoesNotContain("total_tokens", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("test-fake-key", json.ToLowerInvariant());
+    }
+
+    [Fact]
+    public async Task Transcribe_rejects_a_non_multipart_request()
+    {
+        using var auth = FakeAuth();
+        using var factory = new ServerFactory(TranscribeHandler());
+        using HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage resp = await client.PostAsync("/api/transcribe", new StringContent("{}", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Transcribe_rejects_a_form_without_audio()
+    {
+        using var auth = FakeAuth();
+        using var factory = new ServerFactory(TranscribeHandler());
+        using HttpClient client = factory.CreateClient();
+
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent("x"), "other");
+        HttpResponseMessage resp = await client.PostAsync("/api/transcribe", form);
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    private static HttpMessageHandler PipelineHandler(Queue<string> translations, Queue<string> meaningJsons, List<string> callOrder)
+    {
+        return new DelegatingHandlerStub(async (request, cancellationToken) =>
+        {
+            string? path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            if (path.EndsWith("/asr/transcribe", StringComparison.Ordinal))
+            {
+                callOrder.Add("transcribe");
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(CannedTranscribeBody, Encoding.UTF8, "application/json"),
+                };
+            }
+
+            if (path.EndsWith("/responses", StringComparison.Ordinal))
+            {
+                callOrder.Add("scene");
+                return JsonOk(new
+                {
+                    id = "resp_test",
+                    status = "completed",
+                    model = "sam-3.1",
+                    output = new[]
+                    {
+                        new
+                        {
+                            type = "message",
+                            role = "assistant",
+                            status = "completed",
+                            content = new[] { new { type = "output_text", text = string.Empty } },
+                        },
+                    },
+                    usage = new { input_tokens = 0, output_tokens = 0, total_tokens = 0, images_processed = 1 },
+                });
+            }
+
+            string body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (body.Contains(MeaningGate.MeaningMarker, StringComparison.Ordinal))
+            {
+                callOrder.Add("meaning");
+                string mj = meaningJsons.Count > 0 ? meaningJsons.Dequeue() : """{"verdict":"pass","issues":[],"explanation":"ok"}""";
+                return ChatOk("muse-spark-1.1", mj, 7, 4);
+            }
+
+            callOrder.Add("translate");
+            return ChatOk("muse-spark-1.1", translations.Count > 0 ? translations.Dequeue() : "Hola.");
+        });
+    }
+
+    private static string StageStatus(JsonElement root, string stage)
+    {
+        return root.GetProperty("stages").EnumerateArray().Single(s => s.GetProperty("stage").GetString() == stage).GetProperty("status").GetString()!;
+    }
+
+    [Fact]
+    public async Task Pipeline_happy_path_runs_lanes_in_order_with_audition_skipped_by_default()
+    {
+        using var auth = FakeAuth();
+        var callOrder = new List<string>();
+        using var factory = new ServerFactory(PipelineHandler(new Queue<string>(), new Queue<string>(), callOrder));
+        using HttpClient client = factory.CreateClient();
+
+        var body = new
+        {
+            segments = new[] { new { id = "seg-001", text = "Hi, Ashley.", duration_seconds = 1.2, speaker = "A" } },
+            scene_segments = new[]
+            {
+                new { id = "seg-001", text = "Hi, Ashley.", frame_image_data_url = "data:image/png;base64,iVBORw0KGgo=", concepts = new[] { "sign" } },
+            },
+        };
+
+        HttpResponseMessage resp = await client.PostAsJsonAsync("/api/pipeline", body);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        string json = await resp.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(json);
+        JsonElement root = doc.RootElement;
+
+        Assert.Equal("NotRun", StageStatus(root, "transcribe"));
+        Assert.Equal("Ran", StageStatus(root, "qa"));
+        Assert.Equal("Ran", StageStatus(root, "scene"));
+        Assert.Equal("SkippedByFlag", StageStatus(root, "audition"));
+        Assert.True(root.TryGetProperty("qa", out _));
+        Assert.True(root.TryGetProperty("scene", out _));
+        Assert.Equal(["translate", "meaning", "scene"], callOrder);
+    }
+
+    [Fact]
+    public async Task Pipeline_transcribes_audio_first_when_supplied()
+    {
+        using var auth = FakeAuth();
+        var callOrder = new List<string>();
+        using var factory = new ServerFactory(PipelineHandler(new Queue<string>(), new Queue<string>(), callOrder));
+        using HttpClient client = factory.CreateClient();
+
+        var body = new
+        {
+            audio_base64 = Convert.ToBase64String([82, 73, 70, 70, 1, 0, 0, 0]),
+            audio_file_name = "clip.wav",
+            scene = false,
+        };
+
+        HttpResponseMessage resp = await client.PostAsJsonAsync("/api/pipeline", body);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        string json = await resp.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(json);
+        JsonElement root = doc.RootElement;
+
+        Assert.Equal("Ran", StageStatus(root, "transcribe"));
+        Assert.Equal("Ran", StageStatus(root, "qa"));
+        Assert.Equal("SkippedByFlag", StageStatus(root, "scene"));
+        Assert.Equal("SkippedByFlag", StageStatus(root, "audition"));
+        Assert.Equal(2, root.GetProperty("segments").GetArrayLength());
+        Assert.Equal(["transcribe", "translate", "meaning", "translate", "meaning"], callOrder);
+    }
+
+    [Fact]
+    public async Task Pipeline_audition_flagged_without_elevenlabs_key_is_recorded_as_skipped()
+    {
+        using var auth = FakeAuth();
+        using var elevenLabs = EnvShim(ElevenLabsAuth.ApiKeyEnv, "");
+        var callOrder = new List<string>();
+        using var factory = new ServerFactory(PipelineHandler(new Queue<string>(), new Queue<string>(), callOrder));
+        using HttpClient client = factory.CreateClient();
+
+        var body = new
+        {
+            segments = new[] { new { id = "seg-001", text = "Hi, Ashley.", duration_seconds = 1.2, speaker = "A" } },
+            scene = false,
+            audition = true,
+        };
+
+        HttpResponseMessage resp = await client.PostAsJsonAsync("/api/pipeline", body);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        string json = await resp.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(json);
+        JsonElement root = doc.RootElement;
+
+        Assert.Equal("SkippedByFlag", StageStatus(root, "audition"));
+        Assert.DoesNotContain("test-fake-key", json.ToLowerInvariant());
+        Assert.Equal(["translate", "meaning"], callOrder);
+    }
+
+    [Fact]
+    public async Task Pipeline_failed_stage_records_downstream_as_not_run()
+    {
+        using var auth = FakeAuth();
+        var callOrder = new List<string>();
+        var failing = new DelegatingHandlerStub((_, _) => Task.FromResult(UpstreamError(HttpStatusCode.InternalServerError)));
+        using var factory = new ServerFactory(failing);
+        using HttpClient client = factory.CreateClient();
+
+        var body = new
+        {
+            segments = new[] { new { id = "seg-001", text = "Hi, Ashley.", duration_seconds = 1.2, speaker = "A" } },
+            audition = true,
+        };
+
+        HttpResponseMessage resp = await client.PostAsJsonAsync("/api/pipeline", body);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        string json = await resp.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(json);
+        JsonElement root = doc.RootElement;
+
+        Assert.Equal("Failed", StageStatus(root, "qa"));
+        Assert.Equal("NotRun", StageStatus(root, "scene"));
+        Assert.Equal("NotRun", StageStatus(root, "audition"));
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("""{"segments":[]}""")]
+    [InlineData("""{"audio_base64":"not base64!"}""")]
+    public async Task Pipeline_rejects_requests_without_audio_or_segments(string body)
+    {
+        using var auth = FakeAuth();
+        using var factory = new ServerFactory(new DelegatingHandlerStub((_, _) => Task.FromResult(UpstreamError(HttpStatusCode.InternalServerError))));
+        using HttpClient client = factory.CreateClient();
+
+        (HttpStatusCode status, _) = await PostRawAsync(client, "/api/pipeline", body);
+
+        Assert.Equal(HttpStatusCode.BadRequest, status);
+    }
+
     [Fact]
     public async Task SceneContext_accepts_a_raw_segment_array_without_frames()
     {

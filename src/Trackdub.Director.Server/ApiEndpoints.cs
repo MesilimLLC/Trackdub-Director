@@ -188,6 +188,120 @@ internal static class ApiEndpoints
         return await ApiHandlers.RunSerializedAsync(() => ApiHandlers.RunAuditionAsync(client, tts, req, ct), ct).ConfigureAwait(false);
     }
 
+    internal static async Task<IResult> TranscribeAsync(HttpRequest request, TranscribeService transcribeService, CancellationToken ct)
+    {
+        if (!request.HasFormContentType)
+        {
+            return Results.BadRequest(new { error = "Request must be multipart/form-data with a WAV file in the 'audio' field." });
+        }
+
+        IFormCollection form;
+        try
+        {
+            form = await request.ReadFormAsync(ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException)
+        {
+            return Results.BadRequest(new { error = $"Invalid form body: {ex.Message}" });
+        }
+
+        IFormFile? audio = form.Files.GetFile("audio");
+        if (audio is null || audio.Length == 0)
+        {
+            return Results.BadRequest(new { error = "Request must include a non-empty WAV file in the 'audio' field." });
+        }
+
+        return await ApiHandlers.GuardAsync(async () =>
+        {
+            await using Stream stream = audio.OpenReadStream();
+            TranscribeResult result = await transcribeService.TranscribeAsync(stream, audio.FileName, ct).ConfigureAwait(false);
+            return Results.Json(result);
+        }).ConfigureAwait(false);
+    }
+
+    internal static async Task<IResult> PipelineAsync(HttpRequest request, MetaClient client, IMuseTranscribeClient transcribeClient, ITtsProvider tts, CancellationToken ct)
+    {
+        var (req, readError) = await ApiHandlers.ReadOrBadRequestAsync(() => ReadPipelineRequestAsync(request, ct));
+        if (readError is not null)
+        {
+            return readError;
+        }
+
+        if (req is null)
+        {
+            return Results.BadRequest(new { error = "Request body must be a JSON object with 'audio_base64' or a 'segments' array." });
+        }
+
+        byte[]? audio = null;
+        if (!string.IsNullOrWhiteSpace(req.AudioBase64))
+        {
+            try
+            {
+                audio = Convert.FromBase64String(req.AudioBase64.Trim());
+            }
+            catch (FormatException)
+            {
+                return Results.BadRequest(new { error = "'audio_base64' is not valid base64." });
+            }
+
+            if (audio.Length == 0)
+            {
+                return Results.BadRequest(new { error = "'audio_base64' decoded to zero bytes." });
+            }
+        }
+
+        if (audio is null && req.Segments is not { Count: > 0 })
+        {
+            return Results.BadRequest(new { error = "Pipeline needs 'audio_base64' or a non-empty 'segments' array of { id, text, duration_seconds, speaker? }." });
+        }
+
+        if (audio is null && req.Segments!.Any(s => s is null))
+        {
+            return Results.BadRequest(new { error = "segments must not contain null elements." });
+        }
+
+        if (audio is null && req.Segments!.Any(s => string.IsNullOrWhiteSpace(s.Id) || s.Text is null))
+        {
+            return Results.BadRequest(new { error = "Each segment must have a non-empty 'id' and 'text'." });
+        }
+
+        if (audio is null && req.Segments!.Count > 100)
+        {
+            return Results.BadRequest(new { error = "At most 100 segments are allowed per request." });
+        }
+
+        if (req.SceneSegments is { Count: > 0 } sceneSegments)
+        {
+            string? sceneError = ValidateSceneSegments(sceneSegments.ToArray());
+            if (sceneError is not null)
+            {
+                return Results.BadRequest(new { error = sceneError });
+            }
+        }
+
+        string from = ResolveLanguage(req.SourceLanguage, "en");
+        string to = ResolveLanguage(req.TargetLanguage, "es");
+
+        var optionsReq = new QaApiRequest([], null, null, req.Options);
+        if (!TryBuildQaOptions(optionsReq, to, out QaOptions? options, out string? optionsError))
+        {
+            return Results.BadRequest(new { error = optionsError });
+        }
+
+        var pipelineRequest = new PipelineRequest(
+            audio,
+            audio is null ? req.Segments : null,
+            req.SceneSegments,
+            Scene: req.Scene ?? true,
+            Audition: req.Audition ?? false,
+            SourceLanguage: from,
+            TargetLanguage: to,
+            AudioFileName: req.AudioFileName);
+
+        return await ApiHandlers.RunSerializedAsync(
+            () => ApiHandlers.RunPipelineWithReasoningAsync(client, transcribeClient, tts, options, pipelineRequest, ct), ct).ConfigureAwait(false);
+    }
+
     // SPA fallback: for non-/api routes, serve index.html if it exists (after a prod build).
     internal static async Task FallbackAsync(HttpContext ctx)
     {

@@ -41,3 +41,14 @@ internal sealed record QaOptionsDto(
     double? ToleranceFraction,
     double? TargetCharactersPerSecond,
     string? ReasoningEffort);
+
+internal sealed record PipelineApiRequest(
+    string? AudioBase64,
+    string? AudioFileName,
+    IReadOnlyList<TranscribeSegment>? Segments,
+    IReadOnlyList<SceneSegmentInput>? SceneSegments,
+    bool? Scene,
+    bool? Audition,
+    string? SourceLanguage,
+    string? TargetLanguage,
+    QaOptionsDto? Options);

@@ -112,6 +112,49 @@ internal static class ApiHandlers
         }
     }
 
+    // Same reasoning-effort shim as QA: the pipeline's QA and audition lanes read it at call time.
+    internal static async Task<IResult> RunPipelineWithReasoningAsync(MetaClient client, IMuseTranscribeClient transcribeClient, ITtsProvider tts, QaOptions options, PipelineRequest req, CancellationToken ct)
+    {
+        string? prevReasoning = Environment.GetEnvironmentVariable(MetaAuth.ReasoningEffortEnv);
+        bool didSetReasoning = false;
+        if (options.ReasoningEffort is not null && !string.Equals(prevReasoning, options.ReasoningEffort, StringComparison.OrdinalIgnoreCase))
+        {
+            Environment.SetEnvironmentVariable(MetaAuth.ReasoningEffortEnv, options.ReasoningEffort);
+            didSetReasoning = true;
+        }
+
+        try
+        {
+            var service = new PipelineService(client, transcribeClient, tts, options);
+            PipelineReport report = await service.RunAsync(req, ct).ConfigureAwait(false);
+            if (report.Audition is not null)
+            {
+                await TryWriteAuditionOutputsAsync(report.Audition, ct).ConfigureAwait(false);
+            }
+
+            return Results.Json(report);
+        }
+        catch (TtsApiException ex)
+        {
+            return MapTtsException(ex);
+        }
+        catch (MetaApiException ex)
+        {
+            return MapMetaException(ex);
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+        finally
+        {
+            if (didSetReasoning)
+            {
+                Environment.SetEnvironmentVariable(MetaAuth.ReasoningEffortEnv, prevReasoning);
+            }
+        }
+    }
+
     internal static async Task<IResult> RunQaAsync(MetaClient client, QaOptions options, QaApiRequest req, string from, string to, CancellationToken ct)
     {
         try

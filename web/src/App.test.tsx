@@ -177,7 +177,7 @@ describe("App smoke", () => {
     const { container } = render(<App />);
     const file = new File([], "segments.json", { type: "application/json" });
     Object.defineProperty(file, "text", { value: async () => JSON.stringify([{ id: "same", text: "First" }, { id: "same", text: "Second" }]) });
-    fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [file] } });
+    fireEvent.change(container.querySelector('input[accept=".json,application/json"]')!, { target: { files: [file] } });
     await screen.findByText("First");
     fireEvent.click(screen.getByRole("button", { name: "Run Visual" }));
     await screen.findByText(/first result/);
@@ -631,6 +631,56 @@ describe("App smoke", () => {
     expect(within(seg2).getByText("Visual: Failed")).toBeInTheDocument();
     expect(within(seg2).getByText(/carried no image/)).toBeInTheDocument();
     expect(within(seg2).queryByAltText("Localised frame for seg-002")).not.toBeInTheDocument();
+  });
+
+  it("runs the pipeline and shows per-stage status with lane detail in the line views", async () => {
+    const pipelineMock = {
+      source_language: "en",
+      target_language: "es",
+      stages: [
+        { stage: "transcribe", status: "Ran" },
+        { stage: "qa", status: "Ran" },
+        { stage: "scene", status: "SkippedByFlag" },
+        { stage: "audition", status: "SkippedByFlag" },
+      ],
+      segments: [{ id: "seg-100", text: "Transcribed line.", duration_seconds: 1.2, speaker: "A" }],
+      transcribe: {
+        model: "muse-voice-transcribe-1.0",
+        endpoint_host: "api.meta.ai",
+        timestamp_utc: "2026-11-01T00:00:00Z",
+        session_id: "voyager/transcribe/TEST",
+        transcript: "Transcribed line.",
+        audio_duration_ms: 1200,
+        segments: [{ id: "seg-100", text: "Transcribed line.", duration_seconds: 1.2, speaker: "A" }],
+        usage_reported: false,
+      },
+      qa: qaMock,
+      scene: null,
+      audition: null,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/api/status")) return new Response(JSON.stringify(statusOk), { status: 200 });
+        if (url.includes("/api/pipeline")) return new Response(JSON.stringify(pipelineMock), { status: 200 });
+        return new Response("not found", { status: 404 });
+      }),
+    );
+    render(<App />);
+    screen.getByRole("button", { name: "Run Pipeline" }).click();
+
+    // Per-stage status pills: a flag-skipped stage reads as skipped, never a pass.
+    const statuses = await screen.findByLabelText("Pipeline stage status");
+    expect(statuses.textContent).toContain("transcribe: Ran");
+    expect(statuses.textContent).toContain("qa: Ran");
+    expect(statuses.textContent).toContain("scene: SkippedByFlag");
+    expect(statuses.textContent).toContain("audition: SkippedByFlag");
+
+    // The resulting segments replace the working set and reuse the QA lane view.
+    expect(await screen.findByText("seg-100")).toBeInTheDocument();
+    expect(screen.getByText("Transcribed line.")).toBeInTheDocument();
+    expect(screen.getByText("First-pass")).toBeInTheDocument();
   });
 
   it("shows read-only scene context after Run Scene", async () => {

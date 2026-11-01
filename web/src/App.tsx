@@ -3,10 +3,12 @@ import {
   fetchStatus,
   postAudition,
   postDirectorAdaptation,
+  postPipeline,
   postQa,
   postSceneContext,
   postTranslate,
   postVisualLocalisation,
+  type PipelineReport,
   type DirectorAdaptationBatch,
   type DirectorAdaptationInput,
   type DirectorAdaptationSegmentResult,
@@ -36,7 +38,7 @@ import sampleSegments from "./sampleSegments.json";
 const DEFAULT_FROM = "en";
 const DEFAULT_TO = "es";
 
-type BusyState = "translate" | "qa" | "scene" | "director" | "audition" | "visual" | null;
+type BusyState = "translate" | "qa" | "scene" | "director" | "audition" | "visual" | "pipeline" | null;
 
 function pct(n: number): string {
   return `${Math.round(n * 100)}%`;
@@ -68,13 +70,15 @@ function parseSegments(text: string): SegmentInput[] {
     throw new Error("JSON must be an array of { id, text, duration_seconds? }");
   }
 
-  const segments = parsed as SegmentInput[];
-  segments.forEach((segment, index) => {
+  return parsed.map((raw, index) => {
+    const segment = raw as SegmentInput & { speaker?: string | null };
     if (!segment?.id || typeof segment.text !== "string") {
       throw new Error(`Segment at index ${index} must have { id, text }`);
     }
+    // Ingest writes diarization under "speaker"; the web contract uses speaker_id.
+    const speakerId = segment.speaker_id ?? segment.speaker ?? null;
+    return { ...segment, speaker_id: speakerId };
   });
-  return segments;
 }
 
 interface LineCardProps {
@@ -702,6 +706,93 @@ function LineCard({ seg, q, translated, scene, director, audition, visual, isExp
   );
 }
 
+function PipelineStagePill({ stage }: { stage: PipelineReport["stages"][number] }) {
+  const cls =
+    stage.status === "Ran" ? "verdict-pass" : stage.status === "Failed" ? "verdict-fail" : "verdict-idle";
+  const detail = stage.error ?? stage.note ?? "";
+  return (
+    <span className={`verdict ${cls}`} title={detail}>
+      {stage.stage}: {stage.status}
+      {detail ? `: ${detail}` : ""}
+    </span>
+  );
+}
+
+function PipelinePanel({ busy, pipeline, resetGeneration, onRun }: {
+  busy: BusyState;
+  pipeline: PipelineReport | null;
+  resetGeneration: number;
+  onRun: (audio: File | null, flags: { scene: boolean; audition: boolean }) => Promise<void>;
+}) {
+  const [audio, setAudio] = useState<File | null>(null);
+  const [sceneOn, setSceneOn] = useState(true);
+  const [auditionOn, setAuditionOn] = useState(false);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setAudio(null);
+    if (audioInputRef.current) audioInputRef.current.value = "";
+  }, [resetGeneration]);
+
+  return (
+    <section className="pipeline-panel" aria-label="Pipeline">
+      <div className="pipeline-controls">
+        <label className="btn file-btn">
+          {audio ? audio.name : "Choose WAV"}
+          <input
+            ref={audioInputRef}
+            type="file"
+            accept=".wav,audio/wav,audio/x-wav"
+            hidden
+            onChange={(e) => {
+              setAudio(e.target.files?.[0] ?? null);
+              if (audioInputRef.current) audioInputRef.current.value = "";
+            }}
+          />
+        </label>
+        {audio && (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setAudio(null);
+              if (audioInputRef.current) audioInputRef.current.value = "";
+            }}
+          >
+            Clear WAV
+          </button>
+        )}
+        <label className="pipeline-flag">
+          <input type="checkbox" checked={sceneOn} onChange={(e) => setSceneOn(e.target.checked)} />
+          Scene
+        </label>
+        <label className="pipeline-flag">
+          <input type="checkbox" checked={auditionOn} onChange={(e) => setAuditionOn(e.target.checked)} />
+          Audition
+        </label>
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={busy !== null}
+          onClick={() => void onRun(audio, { scene: sceneOn, audition: auditionOn })}
+        >
+          {busy === "pipeline" ? "Running Pipeline…" : "Run Pipeline"}
+        </button>
+        <span className="toolbar-hint">
+          {audio ? "transcribe → translation + QA" : "translation + QA"} · scene {sceneOn ? "on" : "off"} · audition {auditionOn ? "on" : "off"}
+        </span>
+      </div>
+      {pipeline && (
+        <div className="line-meta" aria-label="Pipeline stage status">
+          {pipeline.stages.map((s) => (
+            <PipelineStagePill key={s.stage} stage={s} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function Brand() {
   return (
     <div className="brand">
@@ -852,6 +943,7 @@ interface LineListProps {
   qaById: Map<string, QaSegmentReport> | null;
   batchById: Map<string, string> | null;
   sceneById: Map<number, SceneSegmentResult> | null;
+  sceneBySegId: Map<string, SceneSegmentResult> | null;
   directorById: Map<string, DirectorAdaptationSegmentResult> | null;
   auditionById: Map<string, AuditionSegmentReport> | null;
   visualById: Map<number, VisualLocalisationSegmentResult> | null;
@@ -859,7 +951,12 @@ interface LineListProps {
   onToggle: (id: string) => void;
 }
 
-function LineList({ segments, qaById, batchById, sceneById, directorById, auditionById, visualById, expanded, onToggle }: LineListProps) {
+function LineList({ segments, qaById, batchById, sceneById, sceneBySegId, directorById, auditionById, visualById, expanded, onToggle }: LineListProps) {
+  // Prefer index when scene.segments length matches the working set (standalone
+  // lane, including duplicate ids). Otherwise resolve by id (pipeline returns
+  // only framed segments).
+  const useSceneIndex = sceneById != null && sceneById.size === segments.length;
+
   return (
     <div className="lines" role="list">
       {segments.map((seg, idx) => (
@@ -868,7 +965,7 @@ function LineList({ segments, qaById, batchById, sceneById, directorById, auditi
           seg={seg}
           q={qaById?.get(seg.id)}
           translated={batchById?.get(seg.id) ?? null}
-          scene={sceneById?.get(idx)}
+          scene={useSceneIndex ? sceneById?.get(idx) : sceneBySegId?.get(seg.id)}
           director={directorById?.get(seg.id)}
           audition={auditionById?.get(seg.id)}
           visual={visualById?.get(idx)}
@@ -929,6 +1026,7 @@ function useReports() {
   const [director, setDirector] = useState<DirectorAdaptationBatch | null>(null);
   const [audition, setAudition] = useState<AuditionReport | null>(null);
   const [visual, setVisual] = useState<VisualLocalisationBatch | null>(null);
+  const [pipeline, setPipeline] = useState<PipelineReport | null>(null);
 
   const reset = useCallback(() => {
     setQa(null);
@@ -937,8 +1035,10 @@ function useReports() {
     setDirector(null);
     setAudition(null);
     setVisual(null);
+    setPipeline(null);
   }, []);
   const sceneById = useMemo(() => (scene ? new Map(scene.segments.map((s, i) => [i, s] as const)) : null), [scene]);
+  const sceneBySegId = useMemo(() => (scene ? new Map(scene.segments.map((s) => [s.id, s] as const)) : null), [scene]);
   const qaById = useMemo(() => (qa ? new Map(qa.segments.map((s) => [s.id, s] as const)) : null), [qa]);
   const batchById = useMemo(() => (batch ? new Map(batch.segments.map((s) => [s.id, s.translation] as const)) : null), [batch]);
 
@@ -946,13 +1046,19 @@ function useReports() {
   const auditionById = useMemo(() => (audition ? new Map(audition.segments.map((s) => [s.id, s] as const)) : null), [audition]);
   const visualById = useMemo(() => (visual ? new Map(visual.segments.map((s, i) => [i, s] as const)) : null), [visual]);
 
-  return { qa, setQa, batch, setBatch, scene, setScene, director, setDirector, audition, setAudition, visual, setVisual, reset, qaById, sceneById, batchById, directorById, auditionById, visualById };
+  return { qa, setQa, batch, setBatch, scene, setScene, director, setDirector, audition, setAudition, visual, setVisual, pipeline, setPipeline, reset, qaById, sceneById, sceneBySegId, batchById, directorById, auditionById, visualById };
 }
 
 function useSegments(onReset: () => void, setError: React.Dispatch<React.SetStateAction<string | null>>) {
   const [segments, setSegments] = useState<SegmentInput[]>(() => sampleSegments as SegmentInput[]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const loadSegments = useCallback((next: SegmentInput[]) => {
+    setSegments(next);
+    setError(null);
+    onReset();
+  }, [onReset, setError]);
 
   const handleLoadSample = useCallback(() => {
     setSegments(sampleSegments as SegmentInput[]);
@@ -983,7 +1089,7 @@ function useSegments(onReset: () => void, setError: React.Dispatch<React.SetStat
     setExpanded((m) => ({ ...m, [id]: !m[id] }));
   }, []);
 
-  return { segments, expanded, fileInputRef, handleLoadSample, onFileChange, toggle };
+  return { segments, expanded, fileInputRef, handleLoadSample, onFileChange, toggle, loadSegments };
 }
 
 interface ActionsContext {
@@ -997,17 +1103,21 @@ interface ActionsContext {
   setDirector: (director: DirectorAdaptationBatch) => void;
   setAudition: (audition: AuditionReport) => void;
   setVisual: (visual: VisualLocalisationBatch) => void;
+  setPipeline: (report: PipelineReport) => void;
+  loadSegments: (segments: SegmentInput[]) => void;
   qaById: Map<string, QaSegmentReport> | null;
   batchById: Map<string, string> | null;
   sceneById: Map<number, SceneSegmentResult> | null;
+  sceneBySegId: Map<string, SceneSegmentResult> | null;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
-  sceneRequestRef: React.RefObject<number>;
-  directorRequestRef: React.RefObject<number>;
-  auditionRequestRef: React.RefObject<number>;
-  visualRequestRef: React.RefObject<number>;
+  sceneRequestRef: React.MutableRefObject<number>;
+  directorRequestRef: React.MutableRefObject<number>;
+  auditionRequestRef: React.MutableRefObject<number>;
+  visualRequestRef: React.MutableRefObject<number>;
+  pipelineRequestRef: React.MutableRefObject<number>;
 }
 
-function useActions({ segments, from, to, refreshStatus, setBatch, setQa, setScene, setDirector, setAudition, setVisual, qaById, batchById, sceneById, setError, sceneRequestRef, directorRequestRef, auditionRequestRef, visualRequestRef }: ActionsContext) {
+function useActions({ segments, from, to, refreshStatus, setBatch, setQa, setScene, setDirector, setAudition, setVisual, setPipeline, loadSegments, qaById, batchById, sceneById, sceneBySegId, setError, sceneRequestRef, directorRequestRef, auditionRequestRef, visualRequestRef, pipelineRequestRef }: ActionsContext) {
   const [busy, setBusy] = useState<BusyState>(null);
 
   const run = useCallback(async (kind: Exclude<BusyState, null>, action: () => Promise<void>) => {
@@ -1045,8 +1155,9 @@ function useActions({ segments, from, to, refreshStatus, setBatch, setQa, setSce
       // the plain translation. Context: explicit input wins, else the scene
       // lane's context for this segment. Segments without an opt-in are sent
       // as-is and come back NotRequested with no calls made for them.
+      const useSceneIndex = sceneById != null && sceneById.size === segments.length;
       const prepared: DirectorAdaptationInput[] = segments.map((seg, idx) => {
-        const sceneContext = sceneById?.get(idx)?.context;
+        const sceneContext = (useSceneIndex ? sceneById?.get(idx) : sceneBySegId?.get(seg.id))?.context;
         return {
           id: seg.id,
           text: seg.text,
@@ -1074,7 +1185,7 @@ function useActions({ segments, from, to, refreshStatus, setBatch, setQa, setSce
       const res = await postDirectorAdaptation(prepared, from, to);
       if (requestId === directorRequestRef.current) setDirector(res);
     });
-  }, [run, segments, from, to, setDirector, qaById, batchById, sceneById, directorRequestRef]);
+  }, [run, segments, from, to, setDirector, qaById, batchById, sceneById, sceneBySegId, directorRequestRef]);
 
   const runAudition = useCallback(async () => {
     const requestId = ++auditionRequestRef.current;
@@ -1096,7 +1207,38 @@ function useActions({ segments, from, to, refreshStatus, setBatch, setQa, setSce
     });
   }, [run, segments, setVisual, visualRequestRef]);
 
-  return { busy, runTranslate, runQa, runScene, runDirector, runAudition, runVisual };
+  const runPipeline = useCallback(
+    (audio: File | null, flags: { scene: boolean; audition: boolean }) =>
+      run("pipeline", async () => {
+        const requestId = ++pipelineRequestRef.current;
+        const priorById = new Map(segments.map((s) => [s.id, s] as const));
+        const report = await postPipeline(audio, segments, segments, flags, from, to);
+        if (requestId !== pipelineRequestRef.current) {
+          return;
+        }
+        // Audio runs replace the working set with ASR output. Segment-only runs
+        // keep frames / concepts / director opt-ins and only refresh transcript fields.
+        loadSegments(
+          report.segments.map((s) => {
+            const prior = audio ? undefined : priorById.get(s.id);
+            return {
+              ...(prior ?? {}),
+              id: s.id,
+              text: s.text,
+              duration_seconds: s.duration_seconds,
+              speaker_id: s.speaker ?? prior?.speaker_id ?? null,
+            };
+          }),
+        );
+        setPipeline(report);
+        if (report.qa) setQa(report.qa);
+        if (report.scene) setScene(report.scene);
+        if (report.audition) setAudition(report.audition);
+      }),
+    [run, segments, from, to, setPipeline, loadSegments, setQa, setScene, setAudition, pipelineRequestRef],
+  );
+
+  return { busy, runTranslate, runQa, runScene, runDirector, runAudition, runVisual, runPipeline };
 }
 
 export default function App() {
@@ -1107,12 +1249,16 @@ export default function App() {
   const directorRequestRef = useRef(0);
   const auditionRequestRef = useRef(0);
   const visualRequestRef = useRef(0);
+  const pipelineRequestRef = useRef(0);
+  const [resetGeneration, setResetGeneration] = useState(0);
   const onReset = useCallback(() => {
     reports.reset();
     sceneRequestRef.current += 1;
     directorRequestRef.current += 1;
     auditionRequestRef.current += 1;
     visualRequestRef.current += 1;
+    pipelineRequestRef.current += 1;
+    setResetGeneration((n) => n + 1);
   }, [reports]);
   const input = useSegments(onReset, setError);
   const actions = useActions({
@@ -1126,20 +1272,30 @@ export default function App() {
     setDirector: reports.setDirector,
     setAudition: reports.setAudition,
     setVisual: reports.setVisual,
+    setPipeline: reports.setPipeline,
+    loadSegments: input.loadSegments,
     qaById: reports.qaById,
     batchById: reports.batchById,
     sceneById: reports.sceneById,
+    sceneBySegId: reports.sceneBySegId,
     setError,
     sceneRequestRef,
     directorRequestRef,
     auditionRequestRef,
     visualRequestRef,
+    pipelineRequestRef,
   });
 
   return (
     <div className="app">
       <AppHeader status={status} statusError={statusError} error={error} qa={reports.qa} />
       <main className="main">
+        <PipelinePanel
+          busy={actions.busy}
+          pipeline={reports.pipeline}
+          resetGeneration={resetGeneration}
+          onRun={actions.runPipeline}
+        />
         <Toolbar
           segments={input.segments}
           from={DEFAULT_FROM}
@@ -1161,6 +1317,7 @@ export default function App() {
           qaById={reports.qaById}
           batchById={reports.batchById}
           sceneById={reports.sceneById}
+          sceneBySegId={reports.sceneBySegId}
           directorById={reports.directorById}
           auditionById={reports.auditionById}
           visualById={reports.visualById}

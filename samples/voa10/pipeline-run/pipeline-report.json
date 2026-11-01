@@ -1,0 +1,819 @@
+{
+  "source_language": "en",
+  "target_language": "es",
+  "stages": [
+    {
+      "stage": "transcribe",
+      "status": "NotRun",
+      "note": "no audio supplied",
+      "error": null
+    },
+    {
+      "stage": "qa",
+      "status": "Ran",
+      "note": null,
+      "error": null
+    },
+    {
+      "stage": "scene",
+      "status": "Ran",
+      "note": null,
+      "error": null
+    },
+    {
+      "stage": "audition",
+      "status": "Ran",
+      "note": null,
+      "error": null
+    }
+  ],
+  "segments": [
+    {
+      "id": "seg-001",
+      "text": "Hi, Ashley.",
+      "duration_seconds": 1.2,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-002",
+      "text": "Hello, Anna. Which coffee shop? There are three coffee shops.",
+      "duration_seconds": 4.9,
+      "speaker": "B"
+    },
+    {
+      "id": "seg-003",
+      "text": "Okay, my apartment is across from a big department store.",
+      "duration_seconds": 4.4,
+      "speaker": "C"
+    },
+    {
+      "id": "seg-004",
+      "text": "A big department store? Ah, I see it. see it.",
+      "duration_seconds": 3.7,
+      "speaker": "B"
+    },
+    {
+      "id": "seg-005",
+      "text": "Okay, bye Ashley. See you soon.",
+      "duration_seconds": 2.3,
+      "speaker": "A"
+    },
+    {
+      "id": "seg-006",
+      "text": "Okay, see you soon.",
+      "duration_seconds": 2,
+      "speaker": "B"
+    }
+  ],
+  "transcribe": null,
+  "qa": {
+    "source_language": "en",
+    "target_language": "es",
+    "qa_options": {
+      "max_attempts": 3,
+      "tolerance_fraction": 0.1,
+      "target_cps": 15,
+      "source_cps": 15,
+      "reasoning_effort": "low"
+    },
+    "segments": [
+      {
+        "id": "seg-001",
+        "text": "Hi, Ashley.",
+        "window_seconds": 1.2,
+        "first_attempt": {
+          "attempt_number": 1,
+          "kind": "Initial",
+          "translation": "Hola, Ashley.",
+          "estimated_seconds": 0.8666666666666667,
+          "window_seconds": 1.2,
+          "max_chars": 19,
+          "verdict": "Pass",
+          "prompt_tokens": 45,
+          "completion_tokens": 154,
+          "total_tokens": 199,
+          "model_id": "muse-spark-1.1",
+          "timing_verdict": "Pass",
+          "meaning_verdict": "Pass",
+          "meaning_issues": [],
+          "meaning_explanation": "Greeting and named entity \u0027Ashley\u0027 preserved exactly; \u0027Hi\u0027 -\u003E \u0027Hola\u0027 is equivalent.",
+          "meaning_model_id": "muse-spark-1.1",
+          "meaning_prompt_template_version": "meaning-v1",
+          "meaning_timestamp_utc": "2026-11-01T03:27:44.5371000Z",
+          "meaning_prompt_tokens": 349,
+          "meaning_completion_tokens": 184,
+          "meaning_total_tokens": 533,
+          "meaning_endpoint_host": "api.meta.ai"
+        },
+        "revisions": [],
+        "final_verdict": "Pass",
+        "final_translation": "Hola, Ashley.",
+        "token_usage": {
+          "prompt_tokens": 394,
+          "completion_tokens": 338,
+          "total_tokens": 732
+        }
+      },
+      {
+        "id": "seg-002",
+        "text": "Hello, Anna. Which coffee shop? There are three coffee shops.",
+        "window_seconds": 4.9,
+        "first_attempt": {
+          "attempt_number": 1,
+          "kind": "Initial",
+          "translation": "Hola, Anna. \u00BFQu\u00E9 cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+          "estimated_seconds": 3.2,
+          "window_seconds": 4.9,
+          "max_chars": 80,
+          "verdict": "Pass",
+          "prompt_tokens": 55,
+          "completion_tokens": 139,
+          "total_tokens": 194,
+          "model_id": "muse-spark-1.1",
+          "timing_verdict": "Pass",
+          "meaning_verdict": "Pass",
+          "meaning_issues": [],
+          "meaning_explanation": "Translation preserves greeting, name, question \u0027Which coffee shop?\u0027, and factual statement \u0027There are three coffee shops.\u0027",
+          "meaning_model_id": "muse-spark-1.1",
+          "meaning_prompt_template_version": "meaning-v1",
+          "meaning_timestamp_utc": "2026-11-01T03:27:46.8258598Z",
+          "meaning_prompt_tokens": 371,
+          "meaning_completion_tokens": 256,
+          "meaning_total_tokens": 627,
+          "meaning_endpoint_host": "api.meta.ai"
+        },
+        "revisions": [],
+        "final_verdict": "Pass",
+        "final_translation": "Hola, Anna. \u00BFQu\u00E9 cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+        "token_usage": {
+          "prompt_tokens": 426,
+          "completion_tokens": 395,
+          "total_tokens": 821
+        }
+      },
+      {
+        "id": "seg-003",
+        "text": "Okay, my apartment is across from a big department store.",
+        "window_seconds": 4.4,
+        "first_attempt": {
+          "attempt_number": 1,
+          "kind": "Initial",
+          "translation": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+          "estimated_seconds": 4.066666666666666,
+          "window_seconds": 4.4,
+          "max_chars": 72,
+          "verdict": "Pass",
+          "prompt_tokens": 53,
+          "completion_tokens": 215,
+          "total_tokens": 268,
+          "model_id": "muse-spark-1.1",
+          "timing_verdict": "Pass",
+          "meaning_verdict": "Pass",
+          "meaning_issues": [],
+          "meaning_explanation": "Candidate accurately preserves subject, location relation, and object; \u0027unos grandes almacenes\u0027 is idiomatic Spanish for \u0027a big department store\u0027.",
+          "meaning_model_id": "muse-spark-1.1",
+          "meaning_prompt_template_version": "meaning-v1",
+          "meaning_timestamp_utc": "2026-11-01T03:27:49.2000315Z",
+          "meaning_prompt_tokens": 366,
+          "meaning_completion_tokens": 204,
+          "meaning_total_tokens": 570,
+          "meaning_endpoint_host": "api.meta.ai"
+        },
+        "revisions": [],
+        "final_verdict": "Pass",
+        "final_translation": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+        "token_usage": {
+          "prompt_tokens": 419,
+          "completion_tokens": 419,
+          "total_tokens": 838
+        }
+      },
+      {
+        "id": "seg-004",
+        "text": "A big department store? Ah, I see it. see it.",
+        "window_seconds": 3.7,
+        "first_attempt": {
+          "attempt_number": 1,
+          "kind": "Initial",
+          "translation": "\u00BFUna tienda departamental grande? Ah, la veo. la veo.",
+          "estimated_seconds": 3.533333333333333,
+          "window_seconds": 3.7,
+          "max_chars": 61,
+          "verdict": "Pass",
+          "prompt_tokens": 55,
+          "completion_tokens": 295,
+          "total_tokens": 350,
+          "model_id": "muse-spark-1.1",
+          "timing_verdict": "Pass",
+          "meaning_verdict": "Pass",
+          "meaning_issues": [],
+          "meaning_explanation": "Candidate preserves subject, object and meaning: question about big department store and repeated \u0027I see it\u0027 accurately rendered as \u0027la veo\u0027.",
+          "meaning_model_id": "muse-spark-1.1",
+          "meaning_prompt_template_version": "meaning-v1",
+          "meaning_timestamp_utc": "2026-11-01T03:27:51.8566262Z",
+          "meaning_prompt_tokens": 370,
+          "meaning_completion_tokens": 216,
+          "meaning_total_tokens": 586,
+          "meaning_endpoint_host": "api.meta.ai"
+        },
+        "revisions": [],
+        "final_verdict": "Pass",
+        "final_translation": "\u00BFUna tienda departamental grande? Ah, la veo. la veo.",
+        "token_usage": {
+          "prompt_tokens": 425,
+          "completion_tokens": 511,
+          "total_tokens": 936
+        }
+      },
+      {
+        "id": "seg-005",
+        "text": "Okay, bye Ashley. See you soon.",
+        "window_seconds": 2.3,
+        "first_attempt": {
+          "attempt_number": 1,
+          "kind": "Initial",
+          "translation": "Ok, adi\u00F3s Ashley. Nos vemos pronto.",
+          "estimated_seconds": 2.3333333333333335,
+          "window_seconds": 2.3,
+          "max_chars": 37,
+          "verdict": "Pass",
+          "prompt_tokens": 50,
+          "completion_tokens": 232,
+          "total_tokens": 282,
+          "model_id": "muse-spark-1.1",
+          "timing_verdict": "Pass",
+          "meaning_verdict": "Pass",
+          "meaning_issues": [],
+          "meaning_explanation": "Translation preserves farewell to Ashley and promise to see soon with identical subject, action, and intent.",
+          "meaning_model_id": "muse-spark-1.1",
+          "meaning_prompt_template_version": "meaning-v1",
+          "meaning_timestamp_utc": "2026-11-01T03:27:54.1705528Z",
+          "meaning_prompt_tokens": 360,
+          "meaning_completion_tokens": 167,
+          "meaning_total_tokens": 527,
+          "meaning_endpoint_host": "api.meta.ai"
+        },
+        "revisions": [],
+        "final_verdict": "Pass",
+        "final_translation": "Ok, adi\u00F3s Ashley. Nos vemos pronto.",
+        "token_usage": {
+          "prompt_tokens": 410,
+          "completion_tokens": 399,
+          "total_tokens": 809
+        }
+      },
+      {
+        "id": "seg-006",
+        "text": "Okay, see you soon.",
+        "window_seconds": 2,
+        "first_attempt": {
+          "attempt_number": 1,
+          "kind": "Initial",
+          "translation": "Vale, nos vemos pronto.",
+          "estimated_seconds": 1.5333333333333334,
+          "window_seconds": 2,
+          "max_chars": 33,
+          "verdict": "Pass",
+          "prompt_tokens": 47,
+          "completion_tokens": 192,
+          "total_tokens": 239,
+          "model_id": "muse-spark-1.1",
+          "timing_verdict": "Pass",
+          "meaning_verdict": "Pass",
+          "meaning_issues": [],
+          "meaning_explanation": "Candidate accurately preserves the acknowledgement and future meeting intent of \u0027Okay, see you soon\u0027.",
+          "meaning_model_id": "muse-spark-1.1",
+          "meaning_prompt_template_version": "meaning-v1",
+          "meaning_timestamp_utc": "2026-11-01T03:27:56.5376659Z",
+          "meaning_prompt_tokens": 353,
+          "meaning_completion_tokens": 183,
+          "meaning_total_tokens": 536,
+          "meaning_endpoint_host": "api.meta.ai"
+        },
+        "revisions": [],
+        "final_verdict": "Pass",
+        "final_translation": "Vale, nos vemos pronto.",
+        "token_usage": {
+          "prompt_tokens": 400,
+          "completion_tokens": 375,
+          "total_tokens": 775
+        }
+      }
+    ],
+    "totals": {
+      "total_segments": 6,
+      "first_pass_count": 6,
+      "final_pass_count": 6,
+      "total_revisions": 0,
+      "first_pass_rate": 1,
+      "final_pass_rate": 1,
+      "total_tokens": 4911,
+      "prompt_tokens": 2474,
+      "completion_tokens": 2437
+    }
+  },
+  "scene": {
+    "segments": [
+      {
+        "id": "seg-001",
+        "status": "Empty",
+        "context": {
+          "speaker_id": "A",
+          "speaker_label": null,
+          "emotion_tone_label": null,
+          "on_screen_text": null,
+          "scene_summary": null,
+          "regions": null,
+          "speaker_description": null,
+          "burned_in_text": null
+        },
+        "error": null,
+        "provenance": {
+          "model_id": "sam-3.1",
+          "endpoint_host": "api.meta.ai",
+          "timestamp_utc": "2026-11-01T03:27:56.5485232Z",
+          "prompt_template_version": "scene-v1"
+        },
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "images_processed": 0,
+        "raw_content": null,
+        "frame_id": null,
+        "timecode_seconds": null,
+        "frame_sha256": "c93e69cfccbfb9ae8a6119fc9d595d55b2ee0fe706060a6406b5cdd1547a5237",
+        "vision_provenance": null,
+        "vision_usage": null,
+        "vision_raw_content": null
+      },
+      {
+        "id": "seg-002",
+        "status": "Parsed",
+        "context": {
+          "speaker_id": "B",
+          "speaker_label": null,
+          "emotion_tone_label": null,
+          "on_screen_text": null,
+          "scene_summary": null,
+          "regions": [
+            {
+              "concept": "shop sign",
+              "x1": 1588,
+              "y1": 395,
+              "x2": 1639,
+              "y2": 466,
+              "frame_width": 1920,
+              "frame_height": 1080,
+              "mask_x": 0,
+              "mask_y": 0,
+              "mask_data": "72,52,~!!!*d!0dcVYmhP_]H1ivU13\u002BkkO)95:Cm/\u0026@\u00268*0Gk#Rk5KS6pQ36-lm:4JtPJ[=r!j3w\u0026Q]TMC)?9wO9-R890prY%9HJdlYc:jDAsQ-e6(P*V\u0060BO)JL3fA-aa7\u002BIOH#Gq0ZnAx!-_9exQ^M\u0026U:ku6DzEGVh_9jbM\u002681t1(vENQ*e[wK0c/JkShZw8%T*^ttO22)p69iJK!X6FZ%K]=-@T?\u0026RabeH6LHG?%Khk[vtpOSpH8:\u002B{-8%UXsr=x]k[\u002B1:z*hA#At!R7\u0060%!b!@f\u00263$(yPepBRPoJcs{vm0lN_5-M\u0027MlkaTP:GUTij)0dgmF{I\u0026u:d%Fl]\u0060uX5k:oU[G!\u002BE-%@]xkw\u002BZ3RTR3tw8e[32iR#lzc5I7l*RA$Ii0Mk:T*)2(_TlL4Bo.O%0TLxN\u002BoB-*m!/0d)dthJzEEwokOSU3r5sUo)Ow/4k-Q%7ha_R*jMj1/L)Wp7o^/T$@cZHlA6Et7aC@kFmg2LG6-Uk(c2{)vlIwuepjQ5Q=._6Bwi6j=i36e3RwSk9Cv{QDvlI_r$A%xa6u\u00274d9x/#Yp)q:\u0060oD*r1gW\u0026%p-4!%\u006036hOd)n9BMsaeLn%zeiB$x89oiv**\u0026R6WPiu:RG1JP\u002B-Y](p_{H@#7nX-khom0G4\u0060c?^\u0027*p[@!.V2ktb.SEF[N$94\u0027-[@NJ9*)SLZgY3HHGNUKYqY^5Ln?/el-R3Eq?cmjYHe=Ql/XcHZ#j[Z*?ZweBA\u0026$IJCOBdnq:F$O$JI\u002Bfvg\u00600^Qh8k@t(q:Sti]%^?JmhLFJ2\u0060QTlAP^Em*Tb:qN%71y\u0027fDifBeVcxU\u002Bp3AMH._a![fsu#sad:WY:0U4@F?fYHC1aY@]3n!3kKsN0scK[%meADj)$Y)UgAVTrg8FD=]mP_(l%#i\u0026[n366\u0060CsK80J:V%c\u0026FKYwSIW{JO5FCAP\u0026k{%8W:VJobFIrkn7{G?.\u002BA"
+            },
+            {
+              "concept": "shop sign",
+              "x1": 449,
+              "y1": 145,
+              "x2": 751,
+              "y2": 534,
+              "frame_width": 1920,
+              "frame_height": 1080,
+              "mask_x": 0,
+              "mask_y": 0,
+              "mask_data": "390,303,~!!#yw#P3^9gm=CaB-LMotdO)wW\u002Buxl)L=-9/TION%42yzIT0zVqf\u0026yXs_L)/8Mp\u0026iua6M-RzMdCPJ\u0026G^H$8I3V3B@@P3tjMxPgn!F4\u0027e%5gRDO\u0027RW/CgI9dia\u0026mOGHI:2wQ?Hk\u0060j=62sb%LFY/(yyHOq=\u0026q)/2=-W%@(?d/vZIXzA[T8RXV2/\u0027_\u0027kT8G)Ud2DuC2Gb-!]asGeV\u0060WJAL.T\u0026UJGf^V9rHmgsjsE!cG\u002Bnkd\u002BhM0AKCE]9U52DY\u002B]\u0027Y(R[#{\u0027KX47S%azVx:XUkWGk^pwJ]FcE@ae25UX_Zl@hT#qTw4oO\u0027BHIdEWptSH6dwER*6\u0027nR.GFta0ahJJ_JDBgp:7P(IDUB!!JXhYSJxCPheJj\u0060Je_1-3i[nOyQAlbd_N0G2%JT1vdN\u00602NyUrZ5ZJ1kZ\u0060Au$T/\u0060q]6YDy!8SL9BgE$=xE=hC$?h$n\u0026plZdZLM!sT7-vLd6P.d(d=D:SS8\u006072\u0060e]Ge9r\u00608v\u0026^r-wPX*4u?gyJx)!QuuNKFAP_[Djh\u0027n0UJG^7jEHw{%E(w)pj*=ll-x_b-*_h2IMVXM(cA$-=AMmUv5jYp(\u002Bw!v\u0060KJA_t:F\u002BkA?PAb\u002B.Z$X*rt${MI/RnRXqqs3VcfRYA4/\u0027VmPOtvR_(4=pqA*TOO!m=mkr:M=pz/@#P\u0060rhYzL=T8x^r_-0gmZt$#2hUwFnP$S]5222W?b9D0*u$*5DS=:?R-\u002BP*pFq:K8Y@MpY^.4]iHUS$Ql]]soTU:*UY\u0026eQ)-{j7%0l(Mw[M:/WRV!\u0027me[a2KPX10hmu%SjgO:\u0026o\u0026l0%4mi/-.xEmrQ.RVCp(kR!/tS6%voSvSWAjnI\u0026Bv#RA[i*^e=dVM)Sg-uWCx#!uqkH\u0027:\u0060k9rQH[=?s\u0027jQ\u002747\u002BF)I/ZWKQYharXGC9p7RG[P6_DoA0A\u002Bcy(IY\u0026Sx)W_NfS:sqS=CqwCQU^t)LebO=HPd6.ZikbDD4TT3(Kr_Fn{am{to?$#R\u0027xmZ[J]wggw\u002BFXnpv*HC\u00273C0wF{CdW2X{FK@ZXv\u0027*V@/q]Mw\u002B#EjzpWY%2BE\u0027.L(oM#zM\u0026W:NVT$MoYLn\u0026EYe2\u0026!/WRo4jL2^U.c3ikgpal!YE^4(3oJ@Dea@X]T1h?2rUR_OZ\u0027DcYoocR*qWGf$loP2GDaiE*b_vDl#LW5G4DK8npvge=e2?y\u002B0#$5\u0027%$1=P4q2:Vv1_:ngghh1aCFs8b%DDA)y7wVZOe\u00274%^MLmCPgCbAP2dKfdZ3_L.!k3:8F]H_ECBWQsPh9gh)-hIN/efM0iZPuRY#T\u0026UI\u0060ir$l\u0027sx09c0-09ehse-\u0060tP*\u0060UH/)h:V(MI=^A!G/EusV:\u0027yno[BypMuF.DlG5^#nZD97Alo-ud\u002BP-H-:MC#(Xt\u0027Ywi=[7?byHp-B:MrOAk.hg[HS1FrFU-(w*jFdt\u0026hFe4^F[rC?LXk\u002B@d[iz{9^4tq5A%g0{x*f?^cdmni!xKr_X7A8%IVzzVjDnO_77m:6YXmH\u0027KQ\u0060^R#=g:LIG8GL:NK[I:IUa\u0027rj^!-3\u002B%L?:stxgd8Ovi[)f/$MojmwOAPtE8sRdoSkiGT-UMyWhHI:Crm%oKN3M^2JnNb[3RcV4mqLd9N\u00277Vn\u002B0_*t.KMY$H\u0060\u0060IcKeO7A3FKRt=nnwWCg-=S8Wve9j)ZTL9Ib.zT]q_Sfz1*$sznA!\u002BV\u0060$PF2pFY#N%rKY\u0026PMoaHI[=Ml-rwNnY[:9bPDt3La($PRFEx@bt_%3LaU-n4kO()Zam$Z0[I\u0060EZq(Ic5C@3D\u0060H[/?OX3l_s5-!iM@s9Ldt\u002648jTC!A1Wfikd75NN\u0027\u002Bv\u0026#Pa3XvOWD0K[{4EnfA/G$ey@!k8\u0026-Gh]U0/Q(d5(8YzcL_N:JJr1nvt]O(:#F)$DbO\u00276u$wU:uXX[U1Iasiib\u0026@ES?Q1Og%[0)!qW4#tQ]E\u002B%%]3FO:km9TToR4u]]ME){nhk{$kWm.S(C5O.#8o-V$9:ua=9ZU1Y-=pWN?ty#vhy/teciVl^]fw8G/lym\u006001D2DlbyZolqf5CWZ]?er\u0026LO\u0026b/q(d?81(Z^hJ@ACPsPouJEe-\u002BN#)-[-PDiOt!{x/!{amN!cY[T{%.[DAy09e(]GVbx/R@U7oEbQYtTg/C(ZGFo$SF!BC\u0060(\u0026=Pu^I_%OMHPo?uP\u0027#tbI!n7F:osIERl=zw=F)5$I.5h?yJdK/FOcZK%#viDpBo_8bQ^r4r@=kV{B{n7/9*AL@V\u0060/8gxN(UD*RQ#H6[]n\u0060_rSL853uQqBI[(^Y0ym!aRo7v6(67fm(DK-!6-%F$1\u002Bw=#RoZCyF3$4\u0060CLsU=sbDRA\u0026dvPP1(jOY8ZW09vK=]Hu\u00267)eF/UX!skB)9UZFI8bBiNv^(DPB^1HY$V_mZl]{Y=WWT/QH:[C6{\u002Bm?:z\u0060Fu1-fyeuDpcg0)l@Ry!r%SS7vQD8H[eFY1U-=7V\u0026@-c$7iW?7Oc7(73QeDW_c$65cz]yY1r28el#uKIB]D!\u0027NPfzaGYWxorOOE[FZMf]Ln60(mNnjby6=Z1cXqRkY{ZtwQ=!BRZPVM\u0026/F%-]-t-5yXBs\u0027@=XqK44w#yy1WxX=$Os5WKQDaHFKEli#EopRo93G7Sfy!zcW1b^qWv_Q[kpq6mLes:*=W6JWcr/Y70[jhERvp3S?kJ(TiZ?\u0060yOpNSa!TYsY6-xGiOV.n\u00264/xvNMX][qWGZ\u0027AMYt(2c\u0026dMWCR-R).F7-/vK=1W5Q%G2Tlb(0C88r@.\u002BnLh2@I@G3iY9]:8bOlEDC_xxwHaFYEAW2dxKm6LM\u0026Zy\u0060o@Ow:D0!/KVZlYl2Gksec?.0yVP]Mo5dmd/nAao-9Jwje^4T)LL?mugtf-G0h*0YxI5AkyrY_N5kcK7%#U%A[bW#\u0060gHQ26z/i%x5ds5Wjxw\u0027pO]\u0027:cV.6^Uah%C:hf/Hg7cR9s=M!T)n/utS\u002B%8bf{oj@@#=N%8#iy7_\u0026i\u002Bk\u0060HuU7@4CAHKNUMbClUCrZrA$\u0026R\u0060c[*LQo\u002BQZ\u0060g7n3%gb$KvtF.I2H4oA.j#fy{2agq9.T{]9]Z9De0P!NKTU{bIa:uodPi(A=poP%\u0026-rUS{S*L\u0026b)S9^ZduP%PQp/!ty9ybQ96*gR^g/WZcH{6v%%s1?.@p@!OM:sL[Au51q(S=\u002BNl{cAy\u002BPbI%\u002BcCtVegbk\u0026-8vb^u#?Uafw@q#xGjqoW_#Uc@?bM)h6z%W]ina)${:h:g(B*I0agz/pn==C.aBAOjf_5mZ!ch.clZpF[(=E^dW\u0026e\u0027l?*[b#83[7i87KU5qe!8U@p#iRCy7T)fUF4vl)6-kds(b%#?7Z*=XOt:z\u0026ZZ\u0027HaaVM_zf\u0027b\u0026e.4k\u002BX9W/xTJn=Fgd1)OK]MLSkrbha71mDamDa\u0026b8j(bMln\u002B:!{=8zWZvO@nEB7{x%VE!*i/MZ=lc\u0026nYDeSR{].iKV(G?r(2O6*\u0060_^Nt\u002BW%Ne.x6v7t@AC4$VEd^t/cKdK\u0026X$MkB[fD!_fX\u0027i7lYLVlGi)Oh4OlL^*Ms3O:qm2g5S/I6tfQ^zz=.cxDwy40fN\u0026gdKu4Uyv9s2)n_r]!zKbK\u0027[y\u002BlmQ.PazXs29{R\u0026lrR\u0026dC!bO9H4wAETOH4e!?I@FWw7P\u002BP\u002B8Bc(^.T5D3\u0026EY6@ZH/\u0027T\u0026P\u0026udvq\u00601Y]Y]RPN9Ond@Ufojwud0^!\u0027IGw6(OBHEk!y{C*_M\u002Bd6wl5@sWr!a9X9!50nG5$Dr[N[.n/W3!B6iwG3iVzCwQX?P#jJmyne_0m:*p11rPNDa#\u0060i\u002BxT2%Q^\u0060]npGG$_nlmL$p\u00264a1v\u0026oAU9\u0027[7S_Nk]1/d1E-_kO@Z]x\u0060cZ8RJ5(7\u0027?F^EELBhj:PswA]#eG*ip*EX(Al#Xa\u00263]hX1iK/o]9h7@x-4^T-4-8cQQ%GD-G0G8owx3Lnxz:Fab?QOWJ*[!(6]NP-x/J7OPhixa_tzyDe5L6WOG*BYQD3Wxq%u92WJ)QxnOx\u0026FdKGYKj5#foZ]gVveEO-fy0W\u002BfP=\u0026-dhA7*#k)ZqLwm=4Gsx/U6v!$\u002B(V{5mk?{%c9YtS[v)23$h_fj@AC7FONsqjI*2w:KuQLd-?G\u002B*kRqF01OxRdgY3MSwH@%dl*ACB*o{!\u0026h1-2K{DTj\u00270^8n7eH\u002B?D28.2iw\u002B2MURJ.!N\u002BqIeE-_\u0027T(5*=\u0060O)UrvIoKW!/AF7n-ivqDU\u0027#=YbEay.\u0026s8Ud.h@?.:%ZZEvm$?U({I\u0060G@\u00274[VJ]-=mVyJFRkz(=E7nxXrq5mt!H(uWt8@[OE6LJh\u0060LaBKfZB=v@aHY]EW*y!a7$=HQNjY6O\u002B(pViTxwNFXlW@y=qun-VtR/DW-x^Kq\u0027ftiukfJI4)_c$:wIo.j84k2.bL?yeQ\u0026=\u002BWpNy*h4x_90\u002B8gZxpNdc^%]![\u0026v?on72j(kl5uQUA$SjY([8W(Oa\u0060fE!11i=ak9\u0060vBrLNWN\u0060QFQvRd8/X[/z0\u0026KlM\u002B]9]H^1:?v3p@c2ZGDB\u00279)\u00605FfNK*4kgR-/P*dv6D.j*r7vo9jgpaC\u0060k)RLI{\u0060KTK.uVo.@pma5:D{xykM)SCb*v_O)/EKo^6@\u0060=3erbH4MR/BNapaxo5SQ7_XO0x$S^gPct$J@S2ta0KSb?4c8f-7hP@5Hjj6\u0026FQ!_hag?H\u0026kMxafx@y4RCXziRS0c[v.a%^ckDzf\u0060TH4yKel{7h$Xrj(_kf3s@30t\u0060B\u00263RW0HBCC(fl6YkT2_*q$laXVnE:IUR/iu7zVlA##_Mq]f)EM/4h^V[Lz!x=qq8tM\u002BPUT\u002B)_aFa=p%h=6O=T\u0060jpR3)E-v.sTDoVZyIaday*sOLW=MIizbu\u002B3-pA\u00274\u0027?Sbs5)ABHD.(%3tvT(R[//[145N8qc9z?)#\u0060]oI{*V@\u0026g6G)rnvZULug=Xh%#QE=2ES^.\u0027D{nhBQu/p=dg@uwXP=2!4vCUB7vgSXgkNb%QM$J=(wkx3)m*.!B@D3]:ixQg(OR\u0026VHMo\u002Bi5S)\u0027\u0026Uz[)SM{v@h_G!6T!4v1u5(tH.kYQ:bb\u002B\u002By!Hi_7_[7iApjC:]4^\u0027Fv=m?gFu/G*-SrsazgLXZ[$WjB[965l5TJnA{u-9.Gk-kvF{s*q#N=no!\u002BYAHYaoaK!t\u0026Z-q7-/=hpvzIpX\u002B3eE=LS\u0026[ak59I4Wt#bT?c]gaqGr?Yw$a1K$ZE3%bWVLHp-E7P2gn/wk)^b\u00266e*Fq8O@(sOUbC.%UEyq^r\u0026]vt{G3dr2QS#_WJ0zGLVQVWFNUm:zFQBOFk7@cL4*{T$i1\u0027e.XrQe#kfqdH]V(x2.wLP0*\u0026?3vY{9FNV#h64$2]VA?wmwtak*QM?ZW)WwoQrG7\u0027]SnWnYUn:9GY5.bWBTgQ2?L7soH6Ra?RbJ]A30Vcjyj-q1EZdFT78X{)\u002B.1g:mgVk9/Tp\u0027K$=0_(aK-w.SV4)krS]Y\u0027%nHEM?C]p(wd*]:%xNk?lowGo[Uh-6IJCO#DYGI321O)wYV[LLNrc@9\u0060C%V:@rDO\u0027l=*jH%6P_yf#e.Zg?5SP7[a$j#\u002BR?X8c9_\u0026jPdlW@9=AlD[H[^ub\u0060o6*!\u0060U4FJZiGx)I1etr:61u10j4is7FsXV\u0060/\u002B?Ju?.0\u0026ot0K\u0027WzP{YNXyN)\u0026Vq\u0027p^\u002BloCZY^h9:J{eI\u0026/nN(nlkTyfRu*yfcPeEa@gEIF$Z\u0026Ec!(i.Obr.G0Mh5J(fVYZ\u0026t@vbPSnvsbZ$jh^Y[SgC1M9-w*[XCmiOyHg\u0060NqA-S91z\u0026R8GYba^E5u@m.!7?$l@Pnz#*9ZZO3*4IR\u0026I(6c/9s]\u0026PJJx92aHHrRh3*\u0026QL17\u0027Pi1=kP15^j6FhOI\u0027BXvf98v^:#Vq3.?ikVCIlztgKPBSd^KhxhYxxW@E=))[=IX!bC\u0027H:uKhqd8K@J=oI1OJE\u002BB6sO9HM\u0060\u0027kxtNDV\u0026if9lsdy8jx\u0027kl*ApQSsKU@b5li.Nxh\u002BOKB-8]\u0026tT5(Jwj7%{j\u002B3{gy4\u0026gkh7/TZX9%u/IL.^zs5ftA)@zyK!\u0026qlZalr6$H0e[xDGNP\u002B?4K2/y\u0026eW%vj0\u0027\u0060V@Ei2Lm26x?/l:OZ1Wf{$R_JU2US_ld(Wn3ydRG-ROcC4$ATV_1JSEI[6S/iQdAzF_vDl8*iE@N$e:7B^B=g]a=NySeKui*^H6uRMF3cCtt9ONkpVRQSWQ9VYhq_[i^j?TEU%z\u002BKDRcSueVE7M^yOc[%%N$4q$-5J1{U{HUZB6*uJt=Z\u0060!a(Q3{\u0027((w#2cteugtY_.0)4Ogjrr(CtEBc8L^ETQJ(m5hd\u0026?Bb\u0027RQ01Z/DnAKUXZ9\u0026\u0026XfGK_h\u0060a7=-bJbz$vTVbupll4Xx4[{tgQP#qlPnE9c\u0060b2LBdlhrwa5[]o\u0060Zf^\u0026X]q8oyzZLO?*rZ\u002BoC($J0UZz?(Wfb\u0060YubQx[m.%xGk\u002BgP8{d_Gh/5gdUg\u002B[h)4a5Ls3#E[Qn\u0060]*:C/huT6ET2a=NxErU?e6A_%[1t@nb9P854V]!Gd_Ti{cMCc9DIgTxg7Bcmt({rZ(BC/!Dh2sghFG%c)\u0027HzbntT%u^%UT\u002B1Wy#Zg/f$d04_bFC-8Y^$V75iScP?PJB-WobK@Xx7JxGynFx[KZv(xrP\u002BS\u0026uPr%FFigqh2oa8fkA0@Ei.^1Lx:2iT26_Y5ze@U\u0027%sSLz^P1B*VSMlw[9MO.GXw=*UI\u002BOyqbVrys\u0026bx?3XC6JlYvQLyhUise%/i\u002BOpmloc?cE/$s7m\u0026C/ljTsj8bpoZB9f^d2MZONA\u00600%@]_e(HR7VGb.wc{ri0@2sL]MZY-\u002Bv\u002Box1J\u00600-i-Pq\u00261a:UP:0S^BhAjFk.Q(Qv%l]0686j\u002BI8(DZ!Cw9ML%/pXH\u0060)!rh{s%mV\u0026#Svo?j:/$JFlqL[(]YoOO^SE-LqyCwjphgVw9jd_VFNqRI8q1ciH\u002B]YZb$bX)-RMy4_IOW:!-fnD?mrirMH9$\u0026!$9xN@yx[cgt5y:lrXcZM2J(m9?dF5Cjd$h8*!a:51oB.\u002BY_S-mmEGNvPCrW9)Y]W9$#7oprQ_v%7JGt6RoDD#?#bQY\u0027\u002BK\u0027kmwGp\u00272uJa\u0027bn2{(uk3!%-hwG\u002BbP[)M#G8.9EJ=E1Irrd/k2*7mR2\u0026Yy]n-#-!@acO[EZ{t=OozgD1vui(w@2oAl)2\u0060oP=VAly*dcHc@sDK6g)CNViakMk@yZ38]Acj:3!Y3a_e#0/Ol8n\u0026zMsZ!aIX-23(F8PpD?/4\u0026[Fz-zE?_\u0027/ro{0)%7qBC(GCC*oP5AUTENZl=MaEdzG[Xm3aL^AdGzc[JNxuX!%k?BA\u0060T\u002Bf#p2=^l#6m1YBNqf2LSdu$/\u0060W.e*Dq3Mm(SonmGPR6as=nsapb:fbR\u0027Qm(!dK-b3\u002740c)qwozj8KPb*i\u0060Gg42pY4IsTQS]v]-]\u0027V88\u00600Q\u0026?jG)/q!Ts{Mx_eWOoTAUh#PfUe11u8O{Ks)hrnWU]USvi\u00601$tR3o)qOxFynTE\u0060o@]dN]^VJ\u00265y!P5nJb^mxndMvx9@PK:j/r8c)Z7B{CYKg8vdmJ$uUy\u0027GJYFa#\u0060.^RlpdekJm_6pMlC\u002B9?Gs6J5[H6_C@FAa1S6i^T^VXx5n/-Kxg/Yhy.toav2\u0026[rq2R^2jvt^U=qP:\u0027y^D#y[mdUj!tC\u0060\u002BA=KaOpj:Wh#kJl(g@^I=1cX:WMmI\u002BWytZaR1ENHX2q*r/LA_f/bFlD\u002B=Wck#]0#!\u0027P7otPE2I3rSO(wfRP[BV6!?T9l_\u002BRVJUlDc/opZ_!AsGZZb7H4O[?dY$MsEqQX:KdS#mxYmJ0E!\u0027g^3Uh9P4y0Z5o-XgQUS#xIA(c43d2q!Ix\u0026MqW=DPN(ZR]YfIv^VbgB%^D\u002BXHU5%e$SLP:CoT:HPiix*{cYz*kMsH/-2]JYXQv\u0060#/Ouv=1.NU0Lf7R_dEnW2txIwDJ2u)iC6sEH_GPrbCZe\u0026zN#b3F6jd^DMWFSIz\u0060c\u0026k*uSa/V$?Kf[F)5*2tzw.6d6Dnf\u0026$\u002B[BN=o/l$:-4ae?S[\u0027*iqa{#tzdWOO=m%3%_J-H:9khU]K-X%D$gz)9YD2wMDt{IG[?\u0060QOZ3y)p-Qjvq?%^jlqczw2kNreyijnq8lT(8]wA4svoxlSiJ?8\u002B\u0027Gte#h8E3aq!iY:WV(S-w!AqV[b#rqo!=aaRwPoogLc2ptIFE\u0027EEqwMAW9o3Qc$97ig=sAN8y%mDdSI2hHeCMhwY*P=?TwkJO=\u002BwH1\u0060US!j\u0060%QaXvJBy-w8BOu=?uU=\u002Bc!udcs4k\u0027#Hv\u002BPL=kv#YiaO4OP\u0027-P-\u0026/WAs\u0027D/)nS2AnvDpf)^d[\u0027HSee!{j\u0060t42bvXzVFh#m@\u0060!iBi7_7V1)9b:b\u0060\u002BZ7CgQR@obDO\u0026QPwOjM][30Bms8/akL7od5\u0060V=9RJPHrTmV\u002Bq*PkuKNMO6Zfm580m^T8hM2[XW2]Rn6]h:8bEA7%aK!7k@JYY2mhFrrezu3VB9\u0060-C?ouxp?imC$=S^Kpek1O=DTbH[N=kg!Y@K1o0Q=mB^/\u0060G]#q3]x]J]1fGT%$=nA?bUkFl54QQ7VAJC\u0060\u0026Ls@WUEK#Kk-{j:oU=Lrpo\u0027vO/\u0027f=9T9(41Zs(Bv2$O\u0026#gUoL)e?UPOR$=$xKc0\u0060/waVuVhP4{i5L:*-tRi5PqU)r-0Z%/?kA_{RZL8U{_aXAW[1hh%x0bDOMxmSA4pE{EG%okh277BO-=MGx?\u002Bh@XRNRI\u0026k_5O5U\u002BGrQ_zj4xd\u002BQ!Ijb=tZu]3\u002Bq5:_h:6E8ExZe!PRa4H!SvS\u0027\u0026CmY2[(Wc?Tpl\u0026()Dext8$Uhb4UZ\u0027QJ\u0060ju8b@?hOtT[sUa/\u0026E^P#uiqYw0HlQ]q]exs9F_^!t-.^uR*V.?g_EKK8aDxo@yOkN#Bou_?GWgE$QTEvqePA\u0060i.i3bW9\u0060DzNIT.DA\u002Bezx[=NN8J=8F.(D$KFvo\u0026eVvf(LNWjXMX!o$\u0026_lO{osw12DRNq9nUMNT3[m*8C?/sDOnB31Bny%G9c\u0027i-M=X.c\u0060uaoH:-\u00607_8j/\u0027KzuL0oXA0TTk@8J=u#q0I@b\u002Brou\u0027QMDY1BDsSlG$dYnpNZ(s-ZA7]x?{mtB8cDQoSv8lf/v{{d\u0026u-2_7U#\u002BN]_Abe4ZFqLx#q1B(s\u0060#SMT_I0JJ(aot!s#!6\u0026$xV5B^27M0/Gy2_l38/gluR:v2C4#R.dC={XC*JlET=hA7[a%L\u0027YIhMhD7qy0kFcXS)U$ByXZ\u002B#v{a*L@Z%7G!.X#IJ)Q[A)aeAgq$Bh6kfdS[1e@QoML?uu-!5Y!cF=H$cuo!g\u0026cYM-B14Cu\u0026:T)ZZL(:j\u0027s8g.HUXpKsWDlQW#a\u0027gRCX1V1Phk\u0027u(.ydFirUQ3I=buYA/?]5fn/uJ5c7msO^h\u0026E5p.y_u:yQZO-L1.U.bBrk4iAtqHF]Cob%wc-MO!mKZOM{(wJ$)0:uo=[w:_ZgEuPPIeOiWegL:p5h{0Wz)8Ha.\u002B6hx*4@^u.h8CDh#Z_kbi@0ub!g0q[Gr5R(pax0xu1UrdNz5o7ci_wS/:wCg\u002BJ8n]IYmc*L7RQbJy-BkOm!F%=h^RdO]Od7=Mi{t/Dwh\u002BT?2T%CGP\u0027nr?Mh3NoXY\u0026MLQC4s\u0026Hx-P447@g!JZK5]0Lx3TV1qoJlD3W\u0026#\u0026^k@5eBM9?]Nm[#RLfLC6-cJIFlR773FOS-$i8\u002Bd]XK@[Wah.HuS=l$DhwH#%hM.\u00260j.utut#m/kKP4rc.2Q:(sBgAMkn(bS\u0026!sOowu7Wm#7G%Ld@VI.pD\u002B1vQDZH#yv0r%X2YmE/ar?Y=bz1gtO#8#a\u0060N3Ac9Z)LiALM\u0027Ln\u002B:KGYRLwQkMw]y5$RbnRMJ{lSamRN1(Oi(FT@Vn_mK)6VMK%AR(-tmtPlgU?GGI^WX04o9r7RhD\u002B4m4\u00261!42@=0G-V\u00600fAijf)o:LzEgHhq-7r0)fvLvJZosvJ#%xVnPH\u0026%=vXd[Uej85I#V6Lf2\u0026c{p0Q:epYFFE:ASl?RMr%fvfeB4t:H9b]sBm2G@U)AOUrgJ[=4*e_cq*dM%\u0026(:KFD./cAT4pxg8qH5=)Q\u00609KzCVcvK_f-v]\u0026QhOrS\u0027QuZG{!]$W^MD.$E\u002B\u002B#g@D[D(JbHrZ02ggt4^\u0027G?pVR_8niv!uc!XL@w\u002B[I??s5*O@=nXs1x?s=$qMd?Kc8qAe\u002BOcJ_cf#\u0026O/2Xqb#\u0060a)Di)aWyUVTG8jbP\u0027Epa\u0026py8RW6BG-HS0b^.k?g:xE5C4^N4f\u0060*o=mr8?t[R{w*:#9V\u00606\u002Bkb4%Mz.*/-fYK%nSYtY.gU\u0060t/r4^{x4O{NtF#nk3u18!p\u0026q=f9*a@BPpT=v44G=yy\u0026-\u00277]FGTtS7Dym1U\u0027?c5{G4[\u0060Y#B\u002B]I^C{?Ce]V.d\u0026R!QH6O#hFWif*[)LZqaUf5nTAk?1HlQ]P^a3X3a:6QDba/7h*dQ\u0026k0\u0026Z$dOBo:UV_y5W@0h\u00606{BGz7Qm_JL_]w?QyY#p[m.[QhOH\u0026hvfGup@3wd7UHT5\u002B=HA)eCH*h\u0026m:m7=v\u002B]Z*kDtXp?!PD:@Q*QN\u0026wK2k_m[nf32\u002Bk]6LFeTYC)YfQsfyqSkHA(D8(SosAc\u0060:r$gqZREy#8Czq$feKY_0a!velHq-=T)CZMl=DvQK8v\u0027\u0060sLt]Hw6$q1-LZsnuWXjj?N@5@wtu_3jvxy4KDm07^uRSU{rK\u0027\u0027:uyj7TS?dv\u002B\u0026L5DIh[pq)FB]_NDe\u0026?GHH@:Sw#5gp\u0027W@wP=#Q8)\u0027s92qDj#K:ivY5fZ\u0060R(vWU:3?\u00268e^_r/k0L=cX2mS=\u0060-kNZ!qF$hl(H#-n#Y[Fh?-IHt:{\u002B^\u0026\u0026V9==)n#kjoY7\u002B_A!-L\u0026aYmf$sKJDuh\u0026oc^BF/83pc\u0060bv#ZC!5S?x_nA3R[]=a*nXR)SS\u0060aJD\u0027\u0060jJ.bTao^\u0060K_IhAF5uWA)RQSBjE:Uh21?Jws[dYio^%iJknWW#W)c..Y5F7z3abgonzHd*U-1-!=P_dYHlWB%EV7nC1]rGdN:A\u002BALXOM84y$JdE-GvU!Q#IL%8q)/ohjh%)ejW6oNZ-3o^=*?JOgzu5\u0027\u002BUkYQ)iZJ$Is\u002Bgr\u002BY[b*{tj8aEFJo1DL1a\u0060\u002BR9u#Ka9LrP:kOfITSDQuHWL_:ZY.B6O!!itDOchEiJnBSTjFhe?0-2Rw7RCqJw^gPv4iZ!hXos\u002BtQ?2vLM-AXH_?nN55K_#1XgY{L7@bi*=hi)\u0026S.kyb[tlLutEc3Ysu\u0027ctTxjc^0R6uU(0WKHemk6R{?r69p.z#wB#]uh9!UwSlWJzOLpr\u00607\u0027olTVR$EMJyRk4e@WLy{9aGj6zDQy4aE#BFcWv0.iruuS!^G6QVc?*UEE(j2BtFUDv[^PKmBXwZ9KQ@2elHn*PH3a2=oH!\u0027GBc=Bh\u002Bg.[Lv\u0027W\u0027e9*S-r/BTfR5VoG\u002Bh)-NUVp3z\u0060Mbj3mbTO@z^a*(Ta\u0027_]K3R%XWM.OFgtdCTh4{\u0027Y6*h:^I:1=)@S/$)UI$Jo\u0026:f.z\u0060xA47@l?W!sXYdt1Zpb8%Zz%Yl0fNF*/PK^j5-nv%\u0026@@#C])M.e*S9!5[GG\u0060j\u0026%=\u002B?rDfj-UqV?=0U{L4Qi3[gM!Yp?-BM:7L8lgn]\u0027u\u00270djoD!IgF=g%0vxBWXT*em=pg0i\u002B@snuIbfB*HxCCH@sRdvO\u002B5\u002B1dTS8^mGV^8-$tis-(kzmA7x:N]jgP-?nq34ER7XHF^WpO.u(Go$qq4I0.V.V^k1:o\u002B2Do*y]MW8.I=1ftfoP\u0027%tY\u0027hE!/*P?T=TDbi$/k2uN80\u002B2!3\u002BCh?WU5RcPQYyR4F*6z49{Hmgsis@X7igwPTH4pT4ySg]\u002B$)\u0027cWWcILGVVlR(3mGj^JkzZ-46v{:c!Q/(N\u0026g][)=t)KaO\u0060Pag3zUJGM2\u002Bo{Bl=i8?R)hYH.7alLZBL[Z)u\u0026j%bA=bXM@tTj-)38h?3h-JbSQn8T6rt-\u0060DV7Yf!Hig:t=Xv\u0060n)gcr$]KoszBzji/!OlBuQF2Q(d-SBRFX{{X]Jq.c^R2a$UNMQj1hyMW1znWO\u002B\u0060kcxhS7W\u002BGLyzliZq!?TA!PSTgT39N3\u0026hL2Dg*7_yZD^h\u0060=S\u0060^wOM!)89\u0060K0pf-\u002BnO-?{od$x[XNeww\u0026%E2pTji4\u002Bdg6cNVA:4mE(Ov\u0027CDI4o0bR\u0027(5)%jEgv$^Q*k8%!pzg3h1Mz^5_F=8\u0027qsGw[dE7hrU/N(S#DQ0d57o:Cemz-9A//\u0027yO_q0#ixnFRp-t]mfU69U[F_]5Ws1w!FRX[2vOX.00n4=TBWaH4mjj6%x#kT2*8k\u0060{e0%z(iFh!Biir4E6DCi\u00604h]Jz0fURmTre7y/vBMEw73?zT$GfEQiq\u0060TRAxs1Au$-XQ]H?6QF\u0027-3xGTb.QV7wts[w)1Dlu\u0027:?jeQZoebXo[BzlU$d9kb%%Uahg9amSjJHo67DoGurVv0]AW2IeUrCv=d4Brpa\u0060r$@YZUi#1\u0027_sLSKRY[T\u0026sLogbaId)KUgt_-nup%G$G4Enrtq\u002B#M6cC$\u0060FKb6m\u002626vL5NM9k*X\u00602x\u0027!CZ_GnB^b\u0060vvUb@mRckA/2bUOVXsNrVnm:XRuzs9gsgn*=p?d$Ia?]UNa_H*7b)\u0027ME0s61uxTN%8DbOVth*sdrj[xyzH:-q^-a\u0026U8NKO:K)VOEyaTQ*OMT\u0027kZISi\u002BEM9-VEkZ{\u002B2\u0027ImDfwCQFpFOd)NjUw0z1eK[rWo?0ru-y4\u00271u.QYbkhurd%BZ5Fr(.{]GI0ijiWT5B_!cvjd\u0026qA9^?)VN7fIsDGsiBX09BiFV{k:qkBJvTLrPQJy-$@cQX(5a\u0060:i\u002B1F\u002BnzER8k\u002BvonT8-on1Y[qKwl7]??*Jh6SHqcWv\u00602o\u0026[8MioJ]y9U^cmSO?gXMIHAuh\u0026lno38$O:BrHm\u002665*fou\u0027I3k@uBn\u0026ysiStV(6DGYh8AF6$xXV^lB^tf:e0OhvtZl.1\u0027x($*Sn:d)H]$I?\u0060[bjM83oaIEQQT*l7\u0027t1652n)Ri_Oi@o7oF[qY\u002Bh\u0060)ggoGZEwAWurbX\u0026Y4ZZTZ\u002BZ$O7[BdZJ$c8ipc]B\u002B:=w=8AkSNFyHixb^8P/$r^)(E*4KYdpW!OM6E4Ou9@F4z{amI%CLhB\u0026\u002Bgi]b#3_dUN6*h]\u0027Yan?=.boYa[crs8nJ=4E^*:WwTpClA:Q!s2cr$MN_2wmILv2WiXxODc*XQcN!eO[YG[cPDhcuGmIqFX^5?)HW:mUa95asoQ5yok(MtV9^i20\u0026]4B:ubESV{X5]=hkkCB]8(.i\u00604v89jS)qBPkpB2_]TA^slVqH1NiZE)=0.\u002BQYC@eSID@XoD%2i)5xAF)SV\u0060Mj9![x2LDY$iWCod1]r#nW1#65qVo1O\u0027\u002B4?4{Nl(V9\u0026g(\u0027i4\u0026.[)ghsYm)3\u0060\u0060$3D*5M7PxJcr^P$^$Y2P*P\u0060bedX\u00602:3VZA/i#hii/hC$N9i0\u002Bhg@oc93@!h-oFu21393uuR]Nw$Qi:YlCYIyohV/JA[8QJ\u002Bt9V*banu\u0026E%QNTLzGEDFh6FX@GN]UidAOXtn]tAY@!0TkJcVp4k^Ps9-XF3L4r5\u0026a_#IC]nk5JA$sf1w\u0027VP@qo-vw{6BrG$($Y1_KRLHN5@.\u0027Vc_W\u00269ZX\u0060a.!@(zQ\u0027\u0026\u0026\u0026UcDx-E/D!f.s?JKx%TDCuI#]%=1Ow3Q7Ost)[Jetx$^:*(wd\u0026ojiBrg4!m0sa3It.2nk\u0027PTlauo]^GapLD\u0060:\u002B-I51tq\u0060ZKFG!\u0027_dp%m/dd7m=-zIU@QX@\u0027)98Zoa6k)nQOW^Oa0:].\u002B0gY9!oRRAP5c{nj6#@SaV67.P]@expXiNm.2i/02ak/OZ/\u0026hq3gE7\u0026Pdr:yu#Slo]ht8Qh[qI/x(GFk=aJQbh)bYshX1i1PrdN(iUd*mV6K:4mmstT]I\u00608RO7o%t7e5OyMN2Xu!qZ-\u0060X41T5f5xFi\u002BISS^BphA4B%IIu/9=:gqqt43_[@)UE\u0026VsT.q\u00601z_)\u002BAzKu1vpnG)@P@wXE^$w)X8v5MGD$q6\u002B]R9F\u0027c2m4:9g:V\u0060TB6.N_)n57\u002Bff2irxyc_UeW_8ToAb/wtB(CbJNAmRE9Uk9h[Um[[_gLiDNX3#X!qH3C.sc$a1VK970X9sx0AN5^NVK@PUo2J_\u002BA)9u%vw1TRFFWFj.K\u0060tXeX{Cs9*JtZ@5rLMJQxtW/DPoe:0iY#BOPkT6/Go[^GS%m\u0027_hH?PB^^T\u0060$XMrEv\u0060OC9S9r?xAo/!2Aa0#H(0tAIg2D4f2xrY-\u0060zZ]C0E7Hx-X/EszJCW[L0OCz\u00271cfiXybOG6HGF1D6qA8oN(qUOjbTxxS2m4\u002BF^dJDvrvqbh[#M?p2\u0026GImkl)#h!YJHoBlE?TaPj?jhH{KY1uusoE\u0060W(blLh5#v\u002BlpiO\u0026]R5v5pHMBOp90Yi5J5-0U/uCvWdn0Oix[X^vR:AyPC3VHHptq68pIZ)DuJPW]_sMuu{0:A(uS7cN\u002B0C*)5FYcVZk$!2?@Y@\u0027sQ_5dnp\u00266Y4li{A\u0027c*XI]f0#O2C\u0027JBKcpwi0vqlsAnVjNSo0=*xpT/QALK1=\u00603S\u002Bil\u0027LfLG!uO7\u002BRPH1[UU0GONuu=A@%qT^9!^!O.ZE[y.mq(\u00601WK-AyTG=]YunvQ$Z-r]:\u002B\u0060bQ)Jb7LM0MbLVd4V0t@eud0%5YWZKT\u0026=j\u0026N!\u0026t=\u002BV/Go\u002701Rn\u002677S2it4%2i6mlZLZ=RG$-qi4Ww{S^\u002Bdtv6**1Lm9.\u0060cZHSD9eqCEvmunPJ7X\u0026/5q*Zm\u0027\u00275Qf=GqCBEAy9YH]j\u002B[5JX=rOM\u0060.kD39=hjaheaf!yxaN2t]M\u0027Sd{6dF\u0060a9#V15JU\u0027(aWBM_Ov\u0060xBdVnrZ2m\u0026T{-rWma*yt!3Mz!YbI3khsD3=V{u$c/daH!^p7JE\u0060KBdt(pLR20]R?00![mna*u/$s8{kso5:XOLSuYTy2/1?o7UfMg%T$(5i^w:P:i{zx/o9XfjLXRBzG\u00267#\u0026[WkVMC#WtlAK1(NEJHt?IfsN-nHFq?bWaitJaXrR{DK\u002Bbo:G3{!w@79h\u00275M3C:]2MQ7B$\u0026OSZL$gTVPh5z?=!4ej:)bu4C)j!buAF_4.[\u0060=Rm%HeT#tyhR/[!wZ/SrcXjvrbWQd43H6q\u0026w)N6FTxa%10S14P9HA1_Krae#.v*)\u0026ZbS6TZ=I#R/zQy3moQ/rZ9\u0060g{AQ3^Z/j0e:VZ8_?d9rIXG5r\u0026QAwh?nll4Sx]R252\u0027z=8LM0cJ!@\u002BG[.A*![@1=6zvO#g6nOxxq\u002Bj8?.qf!bMT^kK*lvyF8uK%\u002BD/_SWHA-mT9etlW$#7h^*zd:CyDt{D3g\u002B7Vx*@?8mQ7CrMD6G3pu^TEa[\u0026LEx\u0027^quBEMC1-tbH\u0060t7/@iH5?EvJ-47aqdqG49G{SaS$9(V3kAd$X*j!1JHEFoH\u0060[D9Ludd^s\u002BP_9f?0K_xC)BuL0I1ESu7{ooHH2/ae2yuG6VQ[U_Df)iBZ%/X)@zuB-6ViPa6\u0027h@FyJnYyt8_us8J\u0026LzdxCyEh$Y?b/WM1WJ.gsPFfV!ib(Sf?.%nDtPjKJW7HUwgSkAIFn8Egc$ncMnf[kr\u002Bsn.[xlS\u0060e8d\u00277KrFTCrxWe8r*ihV(uQD4h[\u0027Sb^sTkh=!CgW3uxN1\u00276$\u0026_KnvY8(/:#w.Ab[G9b*R-ETW@M\u0027-$.k?LycE@{:4[fW!$fy=F.Ph5IC\u00260h_@xl]z^5/OCj))Q-OOoO:7!=?HpJXNo!c$1wavpYxT/icdR!CWToNPNB3o\u0026IGd7B?cdb^Bkb1E[E7moT:HwxFRidkJ/WBiYJWm?{Q6=ev\u0060[5u\u0060ec$^(Ghoz9\u0026RlyJ\u0060d6Pw7ZJI%Zf5Fk#8.d:X\u0026@f%uHX7xhVp@)J@QQ)c1qVt-MOSbi\u002B\u00273MTSGk*?HbF#PhxUF@n(WK%xf5-nvy64)K%UIN]/v3oyfSNZ1l8ZwwBjbhWesm50UI?20QkerjFkY26b\u0027t1sF9Pm04/D\u002BCDOslja1cP0wVB^Nh#bDJWyI\u0026L#xFQ\u002BRnqT.V$I\u0060IN?0UwtLV=LUThZwLCpvWsM7=FU0jHPh$rf3F$!J[qLe.(FN\u002BK6Z%q-GW$?VH6Pa%a?\u0027G7sAgHD\u0027YXbjm-9iHH\u00602z9D\u0027G*-PrRFbCKf\u0027CE\u0027Nq!]\u0060\u002Bnk$jJ]JVtQvZN^c-?mkobu*0QR3sT$%g=ZvZVunD_{1qP]f\u0060nFQ=2sP*ES*Sm?z2.8Q[_Y*YG@8\u0026fN-{(Gpekd:?.p=OQtn\u002BB)a$2!C7({IvQV7oaWD3-LZ_Pa-wzn\u002BNskf\u0060On2_G?8\u002B^^St60Y=!\u00272yB.gZG7sOmF4Wb=BRW!Q[-T$1A2\u002BfJlR%bDe8Qx8\u0026-jVA{b)6xDe*Uz%JTFN%h_2]2wUzX@E@850_-kx\u0027()\u0026:!%i?eJ\u002BN\u0060I\u0027D2k\u0026K6@kP##.xEHpIB2({s*H\u0060rcQ_6(\u0027\u002BL\u0026iS$nLA3S{[=5{6:16q_3*h2Zg:e\u00263EsTX\u0060%e^Y@Y\u002BaRfC-gMfG[:[u-\u0027Ve]WZG:CyV$*^JVtFIr%V0#*zgkK4dSS{RRIJ99S8{_^HRM!WV9h7C*h$m?_A\u0060dh-C?N@0Y$eQwji^x^^gSUGf@\u0026x@3:52:JqXDEO\u0027Mii8ZN!t#2{-hk%8HvDxc[iF3rS/9d7=p*ndaa@Tn7zjckiDgIo8FWwYHY4hH\u0060Ry*V1R#[m1A\u0026#ky2mFwQ2\u0060P090uU\u0027?SJU_qM6f:s8jPIv\u00277R_ku/G3u(TRpyBxM727\u002BSsB1C/ZYwVdNS4pYN\u0060K)4.Xh?{Ijq.=IFZV\u0027:y@PS13]l^n$pB3NPC/5oAxoPm.G\u0060:\u0027x\u002B\u0026rT:30U[L%kcc!RkyF\u0027SX!hg8?W:imucAvE\u0027FqB8Qs!p?t$[^XYKKR@vr(N-8\u0060A0B-7CUL*@[CSC5dd\u0060vHfl=2JF]yF4SgQ$?auB\u002B$@[n%-S{jLKHqt$oz^58D_Q?sQcRb9vrE\u0027M\u0060yNxLU8*0)QN#K1mGOQdz!P(wjkf\u0026IKGcY\u0060:bjB\u002B\u002B-1.pb{B@$t\u002B8(0aZS{A!=!E9ar\u002BnZtW$z6t_%G@(*AE]Y\u002Bj:Y(fYcHTeh$II\u00266iHfCJZQs_IkoHS92Km=^^V{uvlU:{X-bPvA%J3D{c\u0027J!1phy%\u002Bb@DoMSU)l?{[=cB.K?4Q(7NMdpRu\u0060KB@HefT.M3h_5q8)NPg]Ag1b2Y9xyQSFl50ad^mw8t[Fd5p-0(RM2nxJxoB:fF5[I33.V0uPT81K8pHm%Dtwr=3Hpil8\u0060\u0027q0G@[Mb\u0060Ph{m6.o9GGG^v-GdzbS%Y%5SlQb-wQY%6gdCx/J\u0060GKkj\u0026wRIpA?1WB@JXPT\u002BLgX.nka7HwikD)huVq!Tm4z8RZGaX3y!lCHlNG\u0060Q(k9\u0027HxkrXYmonV=uB7%eb%9\u0026#(N8jT_$\u0060Sj=T!.C#W$b%V1Gim\u002780)KBHTFKpV\u002638cjPi3Q*$z{l_H@\u0060FP.MP=9eDv%Ct.\u0027CooUeP8]yqjZ4VQxv#\u0060q*]dVWTut\u0060GfbFD]\u002B75z%V%:DQQ^v._1:@/K\u002BUmZgw1xfNavx1Z@.h(1y\u0026Ys*js1G/H#*Un\u0027d5dXId6e48zjb-=9m\u002BOC\u00603T4j\u0027q5pIDLid=P7QI9SV\u002BRGb66KTl@XT.{jJ$ZhXU\u002B?pZC)aiakXY?e2U.\u002Bhyd]f1:Dep@MN85%ywJrQ@7*W\u0027\u0026ft@p*wtEFVp$L5.-x!Xe?w\u0027\u0027!j%0qO$bZTs[4]!0LAl]#\u002BfU[:/\u0026stgIR0gl$bhJ6:2y)-\u00264CXXdcNY[(KMf?SeZqXky4HY8V)7[iB3LMq](!!D3hxZGY?3WorNN@npw/uckxcT[irhs8HmbrgN\u0026JoI#5GUjSX0iUQ?y_[b0/m#B*Ru:1HEd[PyI(#ei-4[[\u0026y*VBxg1N*7PgGK!OuAl]j5C(nHH(TLVnccJz[]pGgXLHN1j8y:\u002BP-od*1\u0027QXUxm5\u0026v#/eRdnR35Y\u002BK6[sTPVu:f\u0060c$jZ\u00279aTF0W/JiVGsMRr.NG-Fo_8YkT?HR7rFuY\u0027=U-5fbxO:)*\u002B:Nlf^N5jWnt/\u002B\u002BW=?a]=t2ux#TrC]iqAwwB?^\u0060#Y6EO6:KGac(r\u0060K:=#{cm-\u0060\u0060#4Ma\u0060g_a5!kC7qhbdAo^3MD@.B2E.Op/MoFz3Ag?-e3Xo=8Ra8C2f\u0060Hk0\u002B5Nf1aY8\u0060P0G%L\u0060:wtkq0Udd\u0026][1GN6M#obHy2[Dziqz\u0026%_H{*Xm\u0060R-pT2:x(\u002BGQWh7icI{LnRp@\u0060y3iR/2M:{suMuuuy9)of!qRB4x/L%U5c\u0060H.$2%br)oQgI_S_FClI%{Si?IEAljqbVanv2Ia*\u00600wmHfQ8UkN\u0027J:d_u.Qv)a.vNtLDtp2CCU_ORQ2sLE-pO-ht2V\u0026vA\u0026@d%h#)1bs[IRkJVD7#UMZSb[dZk%O5nv\u0026**vHQanag?USdltJ^G!SOi\u0026q9:Srr9iGov$#W/hr#Y#ooRuCU20I-r\u0026MF)8gTVA*LAGxXA5\u002Bf@NLAhPq(o$EYH1)ZGk\u0026p:Aw\u002B)%K(k[Vk.e0\u002733y?iDs2:TQb0NuTCneS{5!jbOb7s$%VY=Zb@\u0026QbBHW#EfgB7F*kU0@jQJCY%mTg\u0060(jR@_28^GhFT\u0027!lNxwk39P\u0027@dsP$?J_h/s_MXQm^E5E*=O3C\u0027nxrlE@IB:49sks/:7*TUZx340/G//Ghrho]HsrKDLOJT[Z/(KV9KmiDog/%_[=!$VIPLXcXlPpz(ibG/M4he4.3@hpl516P\u0027W7c{(h\u002BcfBi3mbtmtSqn{I7{Nkopo4JRt6@?{uKS5CI"
+            },
+            {
+              "concept": "shop sign",
+              "x1": 1836,
+              "y1": 190,
+              "x2": 1919,
+              "y2": 381,
+              "frame_width": 1920,
+              "frame_height": 1080,
+              "mask_x": 0,
+              "mask_y": 0,
+              "mask_data": "192,84,~!!!Bj#K{%!c\u0026y]a/-FX=QHt\u0027I7\u002B.XaY_oTopQWOa\u0060xUcz\u0026EijAN:x%Aw6C!*amz8cp__uY4BCVg0i@]l$B@R$@ar))F%B10^\u0060l\u0027P2Qo/3$4AQ0nEX0gUVp66GXfxQ\u0026(?)L[.?:\u0060$9dR%:W!19D\u00264%hO@nxhYwd9qO{V{0m!)hNj.j_e(j:q/05v9vK7mXF%UMeJdF$2G[VI0fmJ/sFjwkPq1!RbJ5YwT\u002BO-?U5h\u002B8umP4LHuH8nRbOnc(W^zDq6PwfPbYr7WM_s#O\u0027^\u0060v8P2G9e^wh0Pi\u00605sec)\u0027gO{l9(:EgX\u0027lhg2RTxUPTgPjzSI:HcJb77\u00260(DK7pPVL0-W(_$#TaP{=^zj*aHHtTx3RASB\u00273Eo[e3.aVB(00\u00272\u002B]k\u0027.0gGqLVXnl]83HM:lh\u002Br.4!W^e)X#47kL--gaqH(0QD9R3t7X]g\u0060.8qXXw)?L[VCYD6wp1sA\u002BHXxX3Xq{xm@s[eb9-{\u0026\u0027\u00602gZUSR5[qbzx]4WI_!g4*?F_*@-pj9Qn*saRX@.B5o^hGA#dpFmItY](JM:3utdEMYZA_GlTn\u0026?fN\u00277wWrB4(i*:bj1m3=5D$m-\u0026mWbba^LlW\u0027]e83?PkMA7-Ih@!Z)81AFY0lyPA\u002B4%T4AA(/C=@:=Ir_ScPC/Az\u0060L#.%ueg[sVwHRQFK!NqV{R\u002B_{bAK#(.0-k=b)%cNyT6Vl/\u002Bhh[@/Ac3$fyke)Cgctg\u0027L*Lh\u0027*W1=!c%4c*bS*#(F%p8wA2:e\u0027gZ4XWf0i:jiGHhHno3tVzA{zrTQbXqwzXb?(0\u0026C9yy\u0060Z-l*$y\u0026$_m*b$v.)seCoG^cECVLo9n$k=Gc=bBeJr\u002B#\u0027sq\u0060qU!{_7)@9l*s)UI4(HQ_WsW\u0060h-rnqJ[x_m5f\u0060WlC5TS?bM0DL*])?ol#X8.kX[dSaTVWymNbeNU7QN^?\u0026.r#Y\u002B\u0060Dgp=r:\u0027=Mh5#WjMcVn?e\u0026(H1*m^HNZC1?b@vgcuDe)e_rLr\u0060iMr4pyc3-LCcw6tgWJRsuPJYN\u0026Vmpy\u0027%d(kMWgWvbL4rO5gu^J{W2ebf$*W)Fo9h]:v470DaZK*GQ#JAu)@$*kIiOqP9@/w?JzgX2EDp?Lx^irvDIoA!1G_X=Ad$BH37L@q[9mR54\u0027baaxE/F@y2%-x5n{c5@aHv7ghuT{ha\u0026(pCMpktaWr@P\u0060uc0hwG=q7uWEep46*7Nh*)O^8S5FbV.V92_Z\u0026*g@U)GWj2c\u002Bq7S\u0027KDz3D\u0027so7xBZL%n0bd@yOn%OYfA\u002Bp\u0026K(\u0027HO]djee\u00270OBn6t?:-O^){dGs8Txfc2%yj4gZaPa-]SIP=d#i43:uQuRJUs9cH3A7p#FKUZB!2#RSr6SbC5g2\u002By[w::e-6F4G]s@@(B\u0027e12[Xnzjn4i!U2HfCsRTO/M]eDOuPIc\u0026ML$lj(meH$h/\u002BRu!jbrhd\u0026CgzUyoe?xD2\u002B%sA*/S7ds)n\u0027N.zmLp5:-oT^X%A6#cy\u0026[\u0027\u0060(bSXSJ2$tsc9W\u002BAsj36ilQOBSa!lL2\u0060\u0026Xe[7=C_x_1g%8u)I\u0060TBv-]\u0060{izP)afj#xz!RT9@u\u0026[dqUrFon55qOj8cTa]aGM8fX\u002B]\u002B1u1t_]mQP^[*-\u00607\u0027r$?n$M?#iTn*UAi$Cwb!Rm@)kBApxUZ8h@\u0026bH\u0060Q/\u0027K!Fs=.R64)vedTYRqUryd!nZDBKfTUH*y(R?#\u0027NFUCMHgG#\u0060Aj\u002BQdaX\u002BKoHC\u0026*(r.l@f8TjNl@P_1iMT$:oGu]^%qCvZMMGy\u0027K!ZA@T4lh6yO[9==F*^ixrAtC\u0027NvjwK\u002Bmb7.wa4F09fL@\u0026GJLZuYc-5yx_PMQ6IR9KQ9o\u0060Xm?txyH:oIO8(Qr-euKy\u002B5)e9X\u0060{wDI6W\u0027ed7r$TQ:)kvYp3U]QE8Qnnna]B[?q$PRtm[oV(Uh\u0026lA2KVH/1IZO?X\u0060\u0027yFuYWT4%Jmz0m/\u002BKh0oGAc9^hJFz2ui:64sMyRm/\u002Bs?7mtcOEW=jLcY-iJJr@)tOSNV%wo1biXD0_aeia)8:D.{-P-IK4Nd1MZIN?ndTqK(#\u002B\u0027\u002BBUlC5Zzvdn]q9Pj[p3nmom\u0026EiR6I9L4(PYwq\u00262?KcTmCNH[dKz$.QC=4^itFtQo@gNjOJFdGO?qbXro(FvFIWn1NUw#OjDaB$Yn.p/x2D!?D_sSCVr\u0060Z9Otak18.SC/M\u0026QegU$.3?\u0026Nnt-U@A=]x[X^j\u0026(qrD{A_*GDl4S-o.UtZ2^iZd{gfi5s\u0026xQtuqIv?k\u0026g]cS%aGQvWPZb$*UMI{iMIN9xlTD-WM4g(mcHDrH9_{KGkrfuy0z4aY#8-{Id1\u002BERsV%iQlNnee/\u0026ggr\u0060?Q8Iw=tC.uT7R)fcbrpL34S\u002BSe?Cl_Mo3/4tXG8y*Qmxl6\u00265Z$RwEj={.pm\u002B9A2s-Gae%={UyCTbyi1s=Z*2UR$FSuhvCT@po]BWb#yk1gd\u0026H:D2Iw%UA\u0060\u0027aIyqr2t\u0060(@6Z2enR?\u0026]7\u0060XYFIy-RK@o\u002BZ^mfCi0.)bry.Lo[DgYqQ[Yowq6#.U^c^%bM{t\u0060Ns@KN*1)5\u002BLik:9w!N.\u002BKGgh#{vV6RXUjUU!WGIS^@FP_C?u%WYpvM#*]77g\u0027\u00279oP2sCG8Ant!7J89Gwj]_BeISspf]Sl3\u00276_G22!9C28GQP-aW2Y)..Z5.MHry.ue8gGAjCD\u0026X!hx]$q!9i=.p)IU#et$AhAgI{tiR_h\u0060i?VWhxkiWL_3?k6WQI.kkxPLP\u0060*.-7d=pG5(l50(u(r#%z)aiB4wZga$SQlTHJ/Rm^jDAvI8BFgkB@\u0060*2H\u0026@JiMf-gZ\u002B5)AIwTep\u0027k:7Cd(4eAVN2Mc1z%iC?DuJ\u00260?dMLIgDo!Y\u0027r#Q4uIJBTns![wJ8yVOxPR.dX764@a$?z24bjjlru-{Y\u0026VWL\u0060kUwri(9@kJ:-UGxl#O10f\u0026F/A-falD?taCN(Uoty?[t9b@(dYCoNK9O#%E_mU8BFbPPdSVR\u002B.*K5\u0027un$VdO#krQ$QewTq74)9NTC9\u002B[!vv%nenX@15?.R42i^S#oj:-vBPTEe:rVTpewv7n4aB_)c*9XV?{uTG?R!PJ\u0060_#2M3[5x8=L2qRlD?O./8#-]Grw9.!#jF7R{r0F%JiU/7D$EnBoW=Y8\u0060Y[mqUBd*=qgE\u0060-h{tm(Dmrf(rH\u0026d\u0026G/?5xzR9a\u0060z51=bU5*LZv?-sM9.J#x*tI^y0c@RhF"
+            },
+            {
+              "concept": "shop sign",
+              "x1": 1546,
+              "y1": 234,
+              "x2": 1663,
+              "y2": 285,
+              "frame_width": 1920,
+              "frame_height": 1080,
+              "mask_x": 0,
+              "mask_y": 0,
+              "mask_data": "52,118,~!!!3I#L#CiiZZt?/BQFpZZ78pV#VJp=^qh41Gw?lnv*{J?3\u002Bq]1ANU2y2[hJ=/5\u0060EPTfqk@gq?Cxc\u002BEgduv@m=8LCylCF_iTicE?aW\u0026v6Z988v02lKrt_{Apjom/6jOVMri4IYkJsk1#/kSJ9XI!eni-j.#DFYzR=UthCL#x?/Drr9GY4d\u00277GgLObv%xYfQp1sQf1q:3E4EJch%Tj[)Id3M.shAgA3\u0060j*mWgPxDD{%Q3Hm\u002642%m\u002BO*545sUQU^d7yf:^-U@4bBN\u0060v=\u002BnGDj={yT0au^7nB$YxxTKj)_!5-a#gDze\u0060jhp\u0026{Z2GdD$6iPODPUK]u4oY$Wx^=xnqJR$[E{2a%pMPWjN8V\u0060F3Is(P[)vRoxQX:AiEc:K3EshiTg@gUzryJ?h0GSC@r#ljhM_]j1u8**Fd-k#OlxNc0gjh)Y6xOpnzhgs_:%5\u0060*a%3$\u0060SrZXyZ-L[4hczf8Gc0N8NPE)9Pd\u0026\u00275%T(:xZ\u0060QMJ@WXNP\u0026T9rpGpetgR\u0026]OU_UzBHHE4HTh8mMAmbEp*$loMswzLpeh)Uc\u0026\u0060a\u0026BiFtXGDAPl:P=t\u0027Od0XK[VY%4KrNamAyhdDlPJBM^v4Th[lVy\u0060Gp:SD2q!8B@W0Jfl]*.8sfc:1UV$\u0026hmnX8.\u0027!T%W*7T9GPwcY\u0060-lMyfOHj4/w_j7@J\u0027nd]W6G[\u0027C)Da6C5\u0026Fbc3]oLPK@0gIBuQ8Z4I%@_V{Mp87v6e$OG/sN!nF4)^\u0027T*Yx?:Y-158q%Sxw(UX:%!#M1CF*9YiqWyR%O)CDLoLT)]hrEcm$s3pAl8nzg.tl/uW1FREF2jHy\u002BtVr(PbkDzd%DeEjuj:3RmKQCq)0V$Dx2\u00277/Edxb%me\u002Bqh7]GIY!P6e8xRM2d*O$ZAv3eKcA_vdspsP*KkF)pQ)cnd4ULH7b\u0060xrc]D\u002BD!2(c?Lvq2noTw]Gq7P*N=]e50QT$m{PFxYdeaS1x8:$r.BAmR=]\u002B%2R]L\u00279d2FmZ.??GLsif\u0060d]mbaj]gi(.bY/#K)qTDQv8\u002B[N9l6\u0060\u0060X_-7sQ\u002BCr^1KO23bAnja(9YU5%4{9yJli4QBy)/yth{x0lvqu57#]y\u0026kn1[ZJQlriJWgL\u002BwMdUj[t8^[p9NfVr\u0027[^1%\u002639Q)clB4p:18Q*KGMY?2[2N#N(P_5u/\u0026LrN1kkTEFv\u0026{7)vG$\u0027G%Ta@II_MS]P#LkZjP]Fh%\u0060:ooh{1IfkjFD$MsuJms/n%Qi-(]-y\u0027S_bhXA1?(D*sn5RG4LTUAE0lxaW3#/Z$NUrwuVKZ@\u0060v\u002BL%(/l4kiT3uoWy[32UUPWc?IU)E8NmAJG%LRcxzVsz\u0060V#d*YkD_J0Ue\u002BCLz=@15/iSn]p2wrEcmg:O2S%3UYMRU$F7c*\u0027P)f_E7[2x]pQo#Nay7*)DeK6.D_\u0026XP[^$P9HE]C600rAtbhu#ofvb96brn#od=yeFN.*Jq/hfpjsK8lqB/ywC1A5^6k3#Y4)\u002Be5NBs4Y\u0026IU6=@aM2grU\u0026^eG\u0060e*PmhB\u002B)EtI=[#IR@e07.^Jp\u0027RI3l6RE:6Y\u0060^0Es64?R\u0027-U1o7n4OeL9GqIv\u002BPd(.bJq{Wr#a)UaF_c]tji)L125r13Lipi2#)k[7D\u0027qBEN/D!3RT6iDe^2?]#_lnStSNyr2tw]Av\u0027j@3u8p*y)uYOffXSSrSBmhCH#dSJ4rW[I9WiKJN^zO=ns8MGn@84l^fj$ZKPJZi9\u002B^ht)::k0lnKc#jBBb(\u0026H*E%tpGrANQR5bT-!Jo/i]dMVd$I9Ui!q8:MdM]\u00267)8xco:][?38\u002Bi]/(7XD-Y6TwT_"
+            }
+          ],
+          "speaker_description": null,
+          "burned_in_text": null
+        },
+        "error": null,
+        "provenance": {
+          "model_id": "sam-3.1",
+          "endpoint_host": "api.meta.ai",
+          "timestamp_utc": "2026-11-01T03:27:57.9524551Z",
+          "prompt_template_version": "scene-v1"
+        },
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "images_processed": 1,
+        "raw_content": "\u003C0f\u003E0\u003C|box;x1=1588;y1=395;x2=1639;y2=466;w=1920;h=1080|\u003E\u003C|mask;x=0;y=0;data=72,52,~!!!*d!0dcVYmhP_]H1ivU13\u002BkkO)95:Cm/\u0026@\u00268*0Gk#Rk5KS6pQ36-lm:4JtPJ[=r!j3w\u0026Q]TMC)?9wO9-R890prY%9HJdlYc:jDAsQ-e6(P*V\u0060BO)JL3fA-aa7\u002BIOH#Gq0ZnAx!-_9exQ^M\u0026U:ku6DzEGVh_9jbM\u002681t1(vENQ*e[wK0c/JkShZw8%T*^ttO22)p69iJK!X6FZ%K]=-@T?\u0026RabeH6LHG?%Khk[vtpOSpH8:\u002B{-8%UXsr=x]k[\u002B1:z*hA#At!R7\u0060%!b!@f\u00263$(yPepBRPoJcs{vm0lN_5-M\u0027MlkaTP:GUTij)0dgmF{I\u0026u:d%Fl]\u0060uX5k:oU[G!\u002BE-%@]xkw\u002BZ3RTR3tw8e[32iR#lzc5I7l*RA$Ii0Mk:T*)2(_TlL4Bo.O%0TLxN\u002BoB-*m!/0d)dthJzEEwokOSU3r5sUo)Ow/4k-Q%7ha_R*jMj1/L)Wp7o^/T$@cZHlA6Et7aC@kFmg2LG6-Uk(c2{)vlIwuepjQ5Q=._6Bwi6j=i36e3RwSk9Cv{QDvlI_r$A%xa6u\u00274d9x/#Yp)q:\u0060oD*r1gW\u0026%p-4!%\u006036hOd)n9BMsaeLn%zeiB$x89oiv**\u0026R6WPiu:RG1JP\u002B-Y](p_{H@#7nX-khom0G4\u0060c?^\u0027*p[@!.V2ktb.SEF[N$94\u0027-[@NJ9*)SLZgY3HHGNUKYqY^5Ln?/el-R3Eq?cmjYHe=Ql/XcHZ#j[Z*?ZweBA\u0026$IJCOBdnq:F$O$JI\u002Bfvg\u00600^Qh8k@t(q:Sti]%^?JmhLFJ2\u0060QTlAP^Em*Tb:qN%71y\u0027fDifBeVcxU\u002Bp3AMH._a![fsu#sad:WY:0U4@F?fYHC1aY@]3n!3kKsN0scK[%meADj)$Y)UgAVTrg8FD=]mP_(l%#i\u0026[n366\u0060CsK80J:V%c\u0026FKYwSIW{JO5FCAP\u0026k{%8W:VJobFIrkn7{G?.\u002BA|\u003E,1\u003C|box;x1=449;y1=145;x2=751;y2=534;w=1920;h=1080|\u003E\u003C|mask;x=0;y=0;data=390,303,~!!#yw#P3^9gm=CaB-LMotdO)wW\u002Buxl)L=-9/TION%42yzIT0zVqf\u0026yXs_L)/8Mp\u0026iua6M-RzMdCPJ\u0026G^H$8I3V3B@@P3tjMxPgn!F4\u0027e%5gRDO\u0027RW/CgI9dia\u0026mOGHI:2wQ?Hk\u0060j=62sb%LFY/(yyHOq=\u0026q)/2=-W%@(?d/vZIXzA[T8RXV2/\u0027_\u0027kT8G)Ud2DuC2Gb-!]asGeV\u0060WJAL.T\u0026UJGf^V9rHmgsjsE!cG\u002Bnkd\u002BhM0AKCE]9U52DY\u002B]\u0027Y(R[#{\u0027KX47S%azVx:XUkWGk^pwJ]FcE@ae25UX_Zl@hT#qTw4oO\u0027BHIdEWptSH6dwER*6\u0027nR.GFta0ahJJ_JDBgp:7P(IDUB!!JXhYSJxCPheJj\u0060Je_1-3i[nOyQAlbd_N0G2%JT1vdN\u00602NyUrZ5ZJ1kZ\u0060Au$T/\u0060q]6YDy!8SL9BgE$=xE=hC$?h$n\u0026plZdZLM!sT7-vLd6P.d(d=D:SS8\u006072\u0060e]Ge9r\u00608v\u0026^r-wPX*4u?gyJx)!QuuNKFAP_[Djh\u0027n0UJG^7jEHw{%E(w)pj*=ll-x_b-*_h2IMVXM(cA$-=AMmUv5jYp(\u002Bw!v\u0060KJA_t:F\u002BkA?PAb\u002B.Z$X*rt${MI/RnRXqqs3VcfRYA4/\u0027VmPOtvR_(4=pqA*TOO!m=mkr:M=pz/@#P\u0060rhYzL=T8x^r_-0gmZt$#2hUwFnP$S]5222W?b9D0*u$*5DS=:?R-\u002BP*pFq:K8Y@MpY^.4]iHUS$Ql]]soTU:*UY\u0026eQ)-{j7%0l(Mw[M:/WRV!\u0027me[a2KPX10hmu%SjgO:\u0026o\u0026l0%4mi/-.xEmrQ.RVCp(kR!/tS6%voSvSWAjnI\u0026Bv#RA[i*^e=dVM)Sg-uWCx#!uqkH\u0027:\u0060k9rQH[=?s\u0027jQ\u002747\u002BF)I/ZWKQYharXGC9p7RG[P6_DoA0A\u002Bcy(IY\u0026Sx)W_NfS:sqS=CqwCQU^t)LebO=HPd6.ZikbDD4TT3(Kr_Fn{am{to?$#R\u0027xmZ[J]wggw\u002BFXnpv*HC\u00273C0wF{CdW2X{FK@ZXv\u0027*V@/q]Mw\u002B#EjzpWY%2BE\u0027.L(oM#zM\u0026W:NVT$MoYLn\u0026EYe2\u0026!/WRo4jL2^U.c3ikgpal!YE^4(3oJ@Dea@X]T1h?2rUR_OZ\u0027DcYoocR*qWGf$loP2GDaiE*b_vDl#LW5G4DK8npvge=e2?y\u002B0#$5\u0027%$1=P4q2:Vv1_:ngghh1aCFs8b%DDA)y7wVZOe\u00274%^MLmCPgCbAP2dKfdZ3_L.!k3:8F]H_ECBWQsPh9gh)-hIN/efM0iZPuRY#T\u0026UI\u0060ir$l\u0027sx09c0-09ehse-\u0060tP*\u0060UH/)h:V(MI=^A!G/EusV:\u0027yno[BypMuF.DlG5^#nZD97Alo-ud\u002BP-H-:MC#(Xt\u0027Ywi=[7?byHp-B:MrOAk.hg[HS1FrFU-(w*jFdt\u0026hFe4^F[rC?LXk\u002B@d[iz{9^4tq5A%g0{x*f?^cdmni!xKr_X7A8%IVzzVjDnO_77m:6YXmH\u0027KQ\u0060^R#=g:LIG8GL:NK[I:IUa\u0027rj^!-3\u002B%L?:stxgd8Ovi[)f/$MojmwOAPtE8sRdoSkiGT-UMyWhHI:Crm%oKN3M^2JnNb[3RcV4mqLd9N\u00277Vn\u002B0_*t.KMY$H\u0060\u0060IcKeO7A3FKRt=nnwWCg-=S8Wve9j)ZTL9Ib.zT]q_Sfz1*$sznA!\u002BV\u0060$PF2pFY#N%rKY\u0026PMoaHI[=Ml-rwNnY[:9bPDt3La($PRFEx@bt_%3LaU-n4kO()Zam$Z0[I\u0060EZq(Ic5C@3D\u0060H[/?OX3l_s5-!iM@s9Ldt\u002648jTC!A1Wfikd75NN\u0027\u002Bv\u0026#Pa3XvOWD0K[{4EnfA/G$ey@!k8\u0026-Gh]U0/Q(d5(8YzcL_N:JJr1nvt]O(:#F)$DbO\u00276u$wU:uXX[U1Iasiib\u0026@ES?Q1Og%[0)!qW4#tQ]E\u002B%%]3FO:km9TToR4u]]ME){nhk{$kWm.S(C5O.#8o-V$9:ua=9ZU1Y-=pWN?ty#vhy/teciVl^]fw8G/lym\u006001D2DlbyZolqf5CWZ]?er\u0026LO\u0026b/q(d?81(Z^hJ@ACPsPouJEe-\u002BN#)-[-PDiOt!{x/!{amN!cY[T{%.[DAy09e(]GVbx/R@U7oEbQYtTg/C(ZGFo$SF!BC\u0060(\u0026=Pu^I_%OMHPo?uP\u0027#tbI!n7F:osIERl=zw=F)5$I.5h?yJdK/FOcZK%#viDpBo_8bQ^r4r@=kV{B{n7/9*AL@V\u0060/8gxN(UD*RQ#H6[]n\u0060_rSL853uQqBI[(^Y0ym!aRo7v6(67fm(DK-!6-%F$1\u002Bw=#RoZCyF3$4\u0060CLsU=sbDRA\u0026dvPP1(jOY8ZW09vK=]Hu\u00267)eF/UX!skB)9UZFI8bBiNv^(DPB^1HY$V_mZl]{Y=WWT/QH:[C6{\u002Bm?:z\u0060Fu1-fyeuDpcg0)l@Ry!r%SS7vQD8H[eFY1U-=7V\u0026@-c$7iW?7Oc7(73QeDW_c$65cz]yY1r28el#uKIB]D!\u0027NPfzaGYWxorOOE[FZMf]Ln60(mNnjby6=Z1cXqRkY{ZtwQ=!BRZPVM\u0026/F%-]-t-5yXBs\u0027@=XqK44w#yy1WxX=$Os5WKQDaHFKEli#EopRo93G7Sfy!zcW1b^qWv_Q[kpq6mLes:*=W6JWcr/Y70[jhERvp3S?kJ(TiZ?\u0060yOpNSa!TYsY6-xGiOV.n\u00264/xvNMX][qWGZ\u0027AMYt(2c\u0026dMWCR-R).F7-/vK=1W5Q%G2Tlb(0C88r@.\u002BnLh2@I@G3iY9]:8bOlEDC_xxwHaFYEAW2dxKm6LM\u0026Zy\u0060o@Ow:D0!/KVZlYl2Gksec?.0yVP]Mo5dmd/nAao-9Jwje^4T)LL?mugtf-G0h*0YxI5AkyrY_N5kcK7%#U%A[bW#\u0060gHQ26z/i%x5ds5Wjxw\u0027pO]\u0027:cV.6^Uah%C:hf/Hg7cR9s=M!T)n/utS\u002B%8bf{oj@@#=N%8#iy7_\u0026i\u002Bk\u0060HuU7@4CAHKNUMbClUCrZrA$\u0026R\u0060c[*LQo\u002BQZ\u0060g7n3%gb$KvtF.I2H4oA.j#fy{2agq9.T{]9]Z9De0P!NKTU{bIa:uodPi(A=poP%\u0026-rUS{S*L\u0026b)S9^ZduP%PQp/!ty9ybQ96*gR^g/WZcH{6v%%s1?.@p@!OM:sL[Au51q(S=\u002BNl{cAy\u002BPbI%\u002BcCtVegbk\u0026-8vb^u#?Uafw@q#xGjqoW_#Uc@?bM)h6z%W]ina)${:h:g(B*I0agz/pn==C.aBAOjf_5mZ!ch.clZpF[(=E^dW\u0026e\u0027l?*[b#83[7i87KU5qe!8U@p#iRCy7T)fUF4vl)6-kds(b%#?7Z*=XOt:z\u0026ZZ\u0027HaaVM_zf\u0027b\u0026e.4k\u002BX9W/xTJn=Fgd1)OK]MLSkrbha71mDamDa\u0026b8j(bMln\u002B:!{=8zWZvO@nEB7{x%VE!*i/MZ=lc\u0026nYDeSR{].iKV(G?r(2O6*\u0060_^Nt\u002BW%Ne.x6v7t@AC4$VEd^t/cKdK\u0026X$MkB[fD!_fX\u0027i7lYLVlGi)Oh4OlL^*Ms3O:qm2g5S/I6tfQ^zz=.cxDwy40fN\u0026gdKu4Uyv9s2)n_r]!zKbK\u0027[y\u002BlmQ.PazXs29{R\u0026lrR\u0026dC!bO9H4wAETOH4e!?I@FWw7P\u002BP\u002B8Bc(^.T5D3\u0026EY6@ZH/\u0027T\u0026P\u0026udvq\u00601Y]Y]RPN9Ond@Ufojwud0^!\u0027IGw6(OBHEk!y{C*_M\u002Bd6wl5@sWr!a9X9!50nG5$Dr[N[.n/W3!B6iwG3iVzCwQX?P#jJmyne_0m:*p11rPNDa#\u0060i\u002BxT2%Q^\u0060]npGG$_nlmL$p\u00264a1v\u0026oAU9\u0027[7S_Nk]1/d1E-_kO@Z]x\u0060cZ8RJ5(7\u0027?F^EELBhj:PswA]#eG*ip*EX(Al#Xa\u00263]hX1iK/o]9h7@x-4^T-4-8cQQ%GD-G0G8owx3Lnxz:Fab?QOWJ*[!(6]NP-x/J7OPhixa_tzyDe5L6WOG*BYQD3Wxq%u92WJ)QxnOx\u0026FdKGYKj5#foZ]gVveEO-fy0W\u002BfP=\u0026-dhA7*#k)ZqLwm=4Gsx/U6v!$\u002B(V{5mk?{%c9YtS[v)23$h_fj@AC7FONsqjI*2w:KuQLd-?G\u002B*kRqF01OxRdgY3MSwH@%dl*ACB*o{!\u0026h1-2K{DTj\u00270^8n7eH\u002B?D28.2iw\u002B2MURJ.!N\u002BqIeE-_\u0027T(5*=\u0060O)UrvIoKW!/AF7n-ivqDU\u0027#=YbEay.\u0026s8Ud.h@?.:%ZZEvm$?U({I\u0060G@\u00274[VJ]-=mVyJFRkz(=E7nxXrq5mt!H(uWt8@[OE6LJh\u0060LaBKfZB=v@aHY]EW*y!a7$=HQNjY6O\u002B(pViTxwNFXlW@y=qun-VtR/DW-x^Kq\u0027ftiukfJI4)_c$:wIo.j84k2.bL?yeQ\u0026=\u002BWpNy*h4x_90\u002B8gZxpNdc^%]![\u0026v?on72j(kl5uQUA$SjY([8W(Oa\u0060fE!11i=ak9\u0060vBrLNWN\u0060QFQvRd8/X[/z0\u0026KlM\u002B]9]H^1:?v3p@c2ZGDB\u00279)\u00605FfNK*4kgR-/P*dv6D.j*r7vo9jgpaC\u0060k)RLI{\u0060KTK.uVo.@pma5:D{xykM)SCb*v_O)/EKo^6@\u0060=3erbH4MR/BNapaxo5SQ7_XO0x$S^gPct$J@S2ta0KSb?4c8f-7hP@5Hjj6\u0026FQ!_hag?H\u0026kMxafx@y4RCXziRS0c[v.a%^ckDzf\u0060TH4yKel{7h$Xrj(_kf3s@30t\u0060B\u00263RW0HBCC(fl6YkT2_*q$laXVnE:IUR/iu7zVlA##_Mq]f)EM/4h^V[Lz!x=qq8tM\u002BPUT\u002B)_aFa=p%h=6O=T\u0060jpR3)E-v.sTDoVZyIaday*sOLW=MIizbu\u002B3-pA\u00274\u0027?Sbs5)ABHD.(%3tvT(R[//[145N8qc9z?)#\u0060]oI{*V@\u0026g6G)rnvZULug=Xh%#QE=2ES^.\u0027D{nhBQu/p=dg@uwXP=2!4vCUB7vgSXgkNb%QM$J=(wkx3)m*.!B@D3]:ixQg(OR\u0026VHMo\u002Bi5S)\u0027\u0026Uz[)SM{v@h_G!6T!4v1u5(tH.kYQ:bb\u002B\u002By!Hi_7_[7iApjC:]4^\u0027Fv=m?gFu/G*-SrsazgLXZ[$WjB[965l5TJnA{u-9.Gk-kvF{s*q#N=no!\u002BYAHYaoaK!t\u0026Z-q7-/=hpvzIpX\u002B3eE=LS\u0026[ak59I4Wt#bT?c]gaqGr?Yw$a1K$ZE3%bWVLHp-E7P2gn/wk)^b\u00266e*Fq8O@(sOUbC.%UEyq^r\u0026]vt{G3dr2QS#_WJ0zGLVQVWFNUm:zFQBOFk7@cL4*{T$i1\u0027e.XrQe#kfqdH]V(x2.wLP0*\u0026?3vY{9FNV#h64$2]VA?wmwtak*QM?ZW)WwoQrG7\u0027]SnWnYUn:9GY5.bWBTgQ2?L7soH6Ra?RbJ]A30Vcjyj-q1EZdFT78X{)\u002B.1g:mgVk9/Tp\u0027K$=0_(aK-w.SV4)krS]Y\u0027%nHEM?C]p(wd*]:%xNk?lowGo[Uh-6IJCO#DYGI321O)wYV[LLNrc@9\u0060C%V:@rDO\u0027l=*jH%6P_yf#e.Zg?5SP7[a$j#\u002BR?X8c9_\u0026jPdlW@9=AlD[H[^ub\u0060o6*!\u0060U4FJZiGx)I1etr:61u10j4is7FsXV\u0060/\u002B?Ju?.0\u0026ot0K\u0027WzP{YNXyN)\u0026Vq\u0027p^\u002BloCZY^h9:J{eI\u0026/nN(nlkTyfRu*yfcPeEa@gEIF$Z\u0026Ec!(i.Obr.G0Mh5J(fVYZ\u0026t@vbPSnvsbZ$jh^Y[SgC1M9-w*[XCmiOyHg\u0060NqA-S91z\u0026R8GYba^E5u@m.!7?$l@Pnz#*9ZZO3*4IR\u0026I(6c/9s]\u0026PJJx92aHHrRh3*\u0026QL17\u0027Pi1=kP15^j6FhOI\u0027BXvf98v^:#Vq3.?ikVCIlztgKPBSd^KhxhYxxW@E=))[=IX!bC\u0027H:uKhqd8K@J=oI1OJE\u002BB6sO9HM\u0060\u0027kxtNDV\u0026if9lsdy8jx\u0027kl*ApQSsKU@b5li.Nxh\u002BOKB-8]\u0026tT5(Jwj7%{j\u002B3{gy4\u0026gkh7/TZX9%u/IL.^zs5ftA)@zyK!\u0026qlZalr6$H0e[xDGNP\u002B?4K2/y\u0026eW%vj0\u0027\u0060V@Ei2Lm26x?/l:OZ1Wf{$R_JU2US_ld(Wn3ydRG-ROcC4$ATV_1JSEI[6S/iQdAzF_vDl8*iE@N$e:7B^B=g]a=NySeKui*^H6uRMF3cCtt9ONkpVRQSWQ9VYhq_[i^j?TEU%z\u002BKDRcSueVE7M^yOc[%%N$4q$-5J1{U{HUZB6*uJt=Z\u0060!a(Q3{\u0027((w#2cteugtY_.0)4Ogjrr(CtEBc8L^ETQJ(m5hd\u0026?Bb\u0027RQ01Z/DnAKUXZ9\u0026\u0026XfGK_h\u0060a7=-bJbz$vTVbupll4Xx4[{tgQP#qlPnE9c\u0060b2LBdlhrwa5[]o\u0060Zf^\u0026X]q8oyzZLO?*rZ\u002BoC($J0UZz?(Wfb\u0060YubQx[m.%xGk\u002BgP8{d_Gh/5gdUg\u002B[h)4a5Ls3#E[Qn\u0060]*:C/huT6ET2a=NxErU?e6A_%[1t@nb9P854V]!Gd_Ti{cMCc9DIgTxg7Bcmt({rZ(BC/!Dh2sghFG%c)\u0027HzbntT%u^%UT\u002B1Wy#Zg/f$d04_bFC-8Y^$V75iScP?PJB-WobK@Xx7JxGynFx[KZv(xrP\u002BS\u0026uPr%FFigqh2oa8fkA0@Ei.^1Lx:2iT26_Y5ze@U\u0027%sSLz^P1B*VSMlw[9MO.GXw=*UI\u002BOyqbVrys\u0026bx?3XC6JlYvQLyhUise%/i\u002BOpmloc?cE/$s7m\u0026C/ljTsj8bpoZB9f^d2MZONA\u00600%@]_e(HR7VGb.wc{ri0@2sL]MZY-\u002Bv\u002Box1J\u00600-i-Pq\u00261a:UP:0S^BhAjFk.Q(Qv%l]0686j\u002BI8(DZ!Cw9ML%/pXH\u0060)!rh{s%mV\u0026#Svo?j:/$JFlqL[(]YoOO^SE-LqyCwjphgVw9jd_VFNqRI8q1ciH\u002B]YZb$bX)-RMy4_IOW:!-fnD?mrirMH9$\u0026!$9xN@yx[cgt5y:lrXcZM2J(m9?dF5Cjd$h8*!a:51oB.\u002BY_S-mmEGNvPCrW9)Y]W9$#7oprQ_v%7JGt6RoDD#?#bQY\u0027\u002BK\u0027kmwGp\u00272uJa\u0027bn2{(uk3!%-hwG\u002BbP[)M#G8.9EJ=E1Irrd/k2*7mR2\u0026Yy]n-#-!@acO[EZ{t=OozgD1vui(w@2oAl)2\u0060oP=VAly*dcHc@sDK6g)CNViakMk@yZ38]Acj:3!Y3a_e#0/Ol8n\u0026zMsZ!aIX-23(F8PpD?/4\u0026[Fz-zE?_\u0027/ro{0)%7qBC(GCC*oP5AUTENZl=MaEdzG[Xm3aL^AdGzc[JNxuX!%k?BA\u0060T\u002Bf#p2=^l#6m1YBNqf2LSdu$/\u0060W.e*Dq3Mm(SonmGPR6as=nsapb:fbR\u0027Qm(!dK-b3\u002740c)qwozj8KPb*i\u0060Gg42pY4IsTQS]v]-]\u0027V88\u00600Q\u0026?jG)/q!Ts{Mx_eWOoTAUh#PfUe11u8O{Ks)hrnWU]USvi\u00601$tR3o)qOxFynTE\u0060o@]dN]^VJ\u00265y!P5nJb^mxndMvx9@PK:j/r8c)Z7B{CYKg8vdmJ$uUy\u0027GJYFa#\u0060.^RlpdekJm_6pMlC\u002B9?Gs6J5[H6_C@FAa1S6i^T^VXx5n/-Kxg/Yhy.toav2\u0026[rq2R^2jvt^U=qP:\u0027y^D#y[mdUj!tC\u0060\u002BA=KaOpj:Wh#kJl(g@^I=1cX:WMmI\u002BWytZaR1ENHX2q*r/LA_f/bFlD\u002B=Wck#]0#!\u0027P7otPE2I3rSO(wfRP[BV6!?T9l_\u002BRVJUlDc/opZ_!AsGZZb7H4O[?dY$MsEqQX:KdS#mxYmJ0E!\u0027g^3Uh9P4y0Z5o-XgQUS#xIA(c43d2q!Ix\u0026MqW=DPN(ZR]YfIv^VbgB%^D\u002BXHU5%e$SLP:CoT:HPiix*{cYz*kMsH/-2]JYXQv\u0060#/Ouv=1.NU0Lf7R_dEnW2txIwDJ2u)iC6sEH_GPrbCZe\u0026zN#b3F6jd^DMWFSIz\u0060c\u0026k*uSa/V$?Kf[F)5*2tzw.6d6Dnf\u0026$\u002B[BN=o/l$:-4ae?S[\u0027*iqa{#tzdWOO=m%3%_J-H:9khU]K-X%D$gz)9YD2wMDt{IG[?\u0060QOZ3y)p-Qjvq?%^jlqczw2kNreyijnq8lT(8]wA4svoxlSiJ?8\u002B\u0027Gte#h8E3aq!iY:WV(S-w!AqV[b#rqo!=aaRwPoogLc2ptIFE\u0027EEqwMAW9o3Qc$97ig=sAN8y%mDdSI2hHeCMhwY*P=?TwkJO=\u002BwH1\u0060US!j\u0060%QaXvJBy-w8BOu=?uU=\u002Bc!udcs4k\u0027#Hv\u002BPL=kv#YiaO4OP\u0027-P-\u0026/WAs\u0027D/)nS2AnvDpf)^d[\u0027HSee!{j\u0060t42bvXzVFh#m@\u0060!iBi7_7V1)9b:b\u0060\u002BZ7CgQR@obDO\u0026QPwOjM][30Bms8/akL7od5\u0060V=9RJPHrTmV\u002Bq*PkuKNMO6Zfm580m^T8hM2[XW2]Rn6]h:8bEA7%aK!7k@JYY2mhFrrezu3VB9\u0060-C?ouxp?imC$=S^Kpek1O=DTbH[N=kg!Y@K1o0Q=mB^/\u0060G]#q3]x]J]1fGT%$=nA?bUkFl54QQ7VAJC\u0060\u0026Ls@WUEK#Kk-{j:oU=Lrpo\u0027vO/\u0027f=9T9(41Zs(Bv2$O\u0026#gUoL)e?UPOR$=$xKc0\u0060/waVuVhP4{i5L:*-tRi5PqU)r-0Z%/?kA_{RZL8U{_aXAW[1hh%x0bDOMxmSA4pE{EG%okh277BO-=MGx?\u002Bh@XRNRI\u0026k_5O5U\u002BGrQ_zj4xd\u002BQ!Ijb=tZu]3\u002Bq5:_h:6E8ExZe!PRa4H!SvS\u0027\u0026CmY2[(Wc?Tpl\u0026()Dext8$Uhb4UZ\u0027QJ\u0060ju8b@?hOtT[sUa/\u0026E^P#uiqYw0HlQ]q]exs9F_^!t-.^uR*V.?g_EKK8aDxo@yOkN#Bou_?GWgE$QTEvqePA\u0060i.i3bW9\u0060DzNIT.DA\u002Bezx[=NN8J=8F.(D$KFvo\u0026eVvf(LNWjXMX!o$\u0026_lO{osw12DRNq9nUMNT3[m*8C?/sDOnB31Bny%G9c\u0027i-M=X.c\u0060uaoH:-\u00607_8j/\u0027KzuL0oXA0TTk@8J=u#q0I@b\u002Brou\u0027QMDY1BDsSlG$dYnpNZ(s-ZA7]x?{mtB8cDQoSv8lf/v{{d\u0026u-2_7U#\u002BN]_Abe4ZFqLx#q1B(s\u0060#SMT_I0JJ(aot!s#!6\u0026$xV5B^27M0/Gy2_l38/gluR:v2C4#R.dC={XC*JlET=hA7[a%L\u0027YIhMhD7qy0kFcXS)U$ByXZ\u002B#v{a*L@Z%7G!.X#IJ)Q[A)aeAgq$Bh6kfdS[1e@QoML?uu-!5Y!cF=H$cuo!g\u0026cYM-B14Cu\u0026:T)ZZL(:j\u0027s8g.HUXpKsWDlQW#a\u0027gRCX1V1Phk\u0027u(.ydFirUQ3I=buYA/?]5fn/uJ5c7msO^h\u0026E5p.y_u:yQZO-L1.U.bBrk4iAtqHF]Cob%wc-MO!mKZOM{(wJ$)0:uo=[w:_ZgEuPPIeOiWegL:p5h{0Wz)8Ha.\u002B6hx*4@^u.h8CDh#Z_kbi@0ub!g0q[Gr5R(pax0xu1UrdNz5o7ci_wS/:wCg\u002BJ8n]IYmc*L7RQbJy-BkOm!F%=h^RdO]Od7=Mi{t/Dwh\u002BT?2T%CGP\u0027nr?Mh3NoXY\u0026MLQC4s\u0026Hx-P447@g!JZK5]0Lx3TV1qoJlD3W\u0026#\u0026^k@5eBM9?]Nm[#RLfLC6-cJIFlR773FOS-$i8\u002Bd]XK@[Wah.HuS=l$DhwH#%hM.\u00260j.utut#m/kKP4rc.2Q:(sBgAMkn(bS\u0026!sOowu7Wm#7G%Ld@VI.pD\u002B1vQDZH#yv0r%X2YmE/ar?Y=bz1gtO#8#a\u0060N3Ac9Z)LiALM\u0027Ln\u002B:KGYRLwQkMw]y5$RbnRMJ{lSamRN1(Oi(FT@Vn_mK)6VMK%AR(-tmtPlgU?GGI^WX04o9r7RhD\u002B4m4\u00261!42@=0G-V\u00600fAijf)o:LzEgHhq-7r0)fvLvJZosvJ#%xVnPH\u0026%=vXd[Uej85I#V6Lf2\u0026c{p0Q:epYFFE:ASl?RMr%fvfeB4t:H9b]sBm2G@U)AOUrgJ[=4*e_cq*dM%\u0026(:KFD./cAT4pxg8qH5=)Q\u00609KzCVcvK_f-v]\u0026QhOrS\u0027QuZG{!]$W^MD.$E\u002B\u002B#g@D[D(JbHrZ02ggt4^\u0027G?pVR_8niv!uc!XL@w\u002B[I??s5*O@=nXs1x?s=$qMd?Kc8qAe\u002BOcJ_cf#\u0026O/2Xqb#\u0060a)Di)aWyUVTG8jbP\u0027Epa\u0026py8RW6BG-HS0b^.k?g:xE5C4^N4f\u0060*o=mr8?t[R{w*:#9V\u00606\u002Bkb4%Mz.*/-fYK%nSYtY.gU\u0060t/r4^{x4O{NtF#nk3u18!p\u0026q=f9*a@BPpT=v44G=yy\u0026-\u00277]FGTtS7Dym1U\u0027?c5{G4[\u0060Y#B\u002B]I^C{?Ce]V.d\u0026R!QH6O#hFWif*[)LZqaUf5nTAk?1HlQ]P^a3X3a:6QDba/7h*dQ\u0026k0\u0026Z$dOBo:UV_y5W@0h\u00606{BGz7Qm_JL_]w?QyY#p[m.[QhOH\u0026hvfGup@3wd7UHT5\u002B=HA)eCH*h\u0026m:m7=v\u002B]Z*kDtXp?!PD:@Q*QN\u0026wK2k_m[nf32\u002Bk]6LFeTYC)YfQsfyqSkHA(D8(SosAc\u0060:r$gqZREy#8Czq$feKY_0a!velHq-=T)CZMl=DvQK8v\u0027\u0060sLt]Hw6$q1-LZsnuWXjj?N@5@wtu_3jvxy4KDm07^uRSU{rK\u0027\u0027:uyj7TS?dv\u002B\u0026L5DIh[pq)FB]_NDe\u0026?GHH@:Sw#5gp\u0027W@wP=#Q8)\u0027s92qDj#K:ivY5fZ\u0060R(vWU:3?\u00268e^_r/k0L=cX2mS=\u0060-kNZ!qF$hl(H#-n#Y[Fh?-IHt:{\u002B^\u0026\u0026V9==)n#kjoY7\u002B_A!-L\u0026aYmf$sKJDuh\u0026oc^BF/83pc\u0060bv#ZC!5S?x_nA3R[]=a*nXR)SS\u0060aJD\u0027\u0060jJ.bTao^\u0060K_IhAF5uWA)RQSBjE:Uh21?Jws[dYio^%iJknWW#W)c..Y5F7z3abgonzHd*U-1-!=P_dYHlWB%EV7nC1]rGdN:A\u002BALXOM84y$JdE-GvU!Q#IL%8q)/ohjh%)ejW6oNZ-3o^=*?JOgzu5\u0027\u002BUkYQ)iZJ$Is\u002Bgr\u002BY[b*{tj8aEFJo1DL1a\u0060\u002BR9u#Ka9LrP:kOfITSDQuHWL_:ZY.B6O!!itDOchEiJnBSTjFhe?0-2Rw7RCqJw^gPv4iZ!hXos\u002BtQ?2vLM-AXH_?nN55K_#1XgY{L7@bi*=hi)\u0026S.kyb[tlLutEc3Ysu\u0027ctTxjc^0R6uU(0WKHemk6R{?r69p.z#wB#]uh9!UwSlWJzOLpr\u00607\u0027olTVR$EMJyRk4e@WLy{9aGj6zDQy4aE#BFcWv0.iruuS!^G6QVc?*UEE(j2BtFUDv[^PKmBXwZ9KQ@2elHn*PH3a2=oH!\u0027GBc=Bh\u002Bg.[Lv\u0027W\u0027e9*S-r/BTfR5VoG\u002Bh)-NUVp3z\u0060Mbj3mbTO@z^a*(Ta\u0027_]K3R%XWM.OFgtdCTh4{\u0027Y6*h:^I:1=)@S/$)UI$Jo\u0026:f.z\u0060xA47@l?W!sXYdt1Zpb8%Zz%Yl0fNF*/PK^j5-nv%\u0026@@#C])M.e*S9!5[GG\u0060j\u0026%=\u002B?rDfj-UqV?=0U{L4Qi3[gM!Yp?-BM:7L8lgn]\u0027u\u00270djoD!IgF=g%0vxBWXT*em=pg0i\u002B@snuIbfB*HxCCH@sRdvO\u002B5\u002B1dTS8^mGV^8-$tis-(kzmA7x:N]jgP-?nq34ER7XHF^WpO.u(Go$qq4I0.V.V^k1:o\u002B2Do*y]MW8.I=1ftfoP\u0027%tY\u0027hE!/*P?T=TDbi$/k2uN80\u002B2!3\u002BCh?WU5RcPQYyR4F*6z49{Hmgsis@X7igwPTH4pT4ySg]\u002B$)\u0027cWWcILGVVlR(3mGj^JkzZ-46v{:c!Q/(N\u0026g][)=t)KaO\u0060Pag3zUJGM2\u002Bo{Bl=i8?R)hYH.7alLZBL[Z)u\u0026j%bA=bXM@tTj-)38h?3h-JbSQn8T6rt-\u0060DV7Yf!Hig:t=Xv\u0060n)gcr$]KoszBzji/!OlBuQF2Q(d-SBRFX{{X]Jq.c^R2a$UNMQj1hyMW1znWO\u002B\u0060kcxhS7W\u002BGLyzliZq!?TA!PSTgT39N3\u0026hL2Dg*7_yZD^h\u0060=S\u0060^wOM!)89\u0060K0pf-\u002BnO-?{od$x[XNeww\u0026%E2pTji4\u002Bdg6cNVA:4mE(Ov\u0027CDI4o0bR\u0027(5)%jEgv$^Q*k8%!pzg3h1Mz^5_F=8\u0027qsGw[dE7hrU/N(S#DQ0d57o:Cemz-9A//\u0027yO_q0#ixnFRp-t]mfU69U[F_]5Ws1w!FRX[2vOX.00n4=TBWaH4mjj6%x#kT2*8k\u0060{e0%z(iFh!Biir4E6DCi\u00604h]Jz0fURmTre7y/vBMEw73?zT$GfEQiq\u0060TRAxs1Au$-XQ]H?6QF\u0027-3xGTb.QV7wts[w)1Dlu\u0027:?jeQZoebXo[BzlU$d9kb%%Uahg9amSjJHo67DoGurVv0]AW2IeUrCv=d4Brpa\u0060r$@YZUi#1\u0027_sLSKRY[T\u0026sLogbaId)KUgt_-nup%G$G4Enrtq\u002B#M6cC$\u0060FKb6m\u002626vL5NM9k*X\u00602x\u0027!CZ_GnB^b\u0060vvUb@mRckA/2bUOVXsNrVnm:XRuzs9gsgn*=p?d$Ia?]UNa_H*7b)\u0027ME0s61uxTN%8DbOVth*sdrj[xyzH:-q^-a\u0026U8NKO:K)VOEyaTQ*OMT\u0027kZISi\u002BEM9-VEkZ{\u002B2\u0027ImDfwCQFpFOd)NjUw0z1eK[rWo?0ru-y4\u00271u.QYbkhurd%BZ5Fr(.{]GI0ijiWT5B_!cvjd\u0026qA9^?)VN7fIsDGsiBX09BiFV{k:qkBJvTLrPQJy-$@cQX(5a\u0060:i\u002B1F\u002BnzER8k\u002BvonT8-on1Y[qKwl7]??*Jh6SHqcWv\u00602o\u0026[8MioJ]y9U^cmSO?gXMIHAuh\u0026lno38$O:BrHm\u002665*fou\u0027I3k@uBn\u0026ysiStV(6DGYh8AF6$xXV^lB^tf:e0OhvtZl.1\u0027x($*Sn:d)H]$I?\u0060[bjM83oaIEQQT*l7\u0027t1652n)Ri_Oi@o7oF[qY\u002Bh\u0060)ggoGZEwAWurbX\u0026Y4ZZTZ\u002BZ$O7[BdZJ$c8ipc]B\u002B:=w=8AkSNFyHixb^8P/$r^)(E*4KYdpW!OM6E4Ou9@F4z{amI%CLhB\u0026\u002Bgi]b#3_dUN6*h]\u0027Yan?=.boYa[crs8nJ=4E^*:WwTpClA:Q!s2cr$MN_2wmILv2WiXxODc*XQcN!eO[YG[cPDhcuGmIqFX^5?)HW:mUa95asoQ5yok(MtV9^i20\u0026]4B:ubESV{X5]=hkkCB]8(.i\u00604v89jS)qBPkpB2_]TA^slVqH1NiZE)=0.\u002BQYC@eSID@XoD%2i)5xAF)SV\u0060Mj9![x2LDY$iWCod1]r#nW1#65qVo1O\u0027\u002B4?4{Nl(V9\u0026g(\u0027i4\u0026.[)ghsYm)3\u0060\u0060$3D*5M7PxJcr^P$^$Y2P*P\u0060bedX\u00602:3VZA/i#hii/hC$N9i0\u002Bhg@oc93@!h-oFu21393uuR]Nw$Qi:YlCYIyohV/JA[8QJ\u002Bt9V*banu\u0026E%QNTLzGEDFh6FX@GN]UidAOXtn]tAY@!0TkJcVp4k^Ps9-XF3L4r5\u0026a_#IC]nk5JA$sf1w\u0027VP@qo-vw{6BrG$($Y1_KRLHN5@.\u0027Vc_W\u00269ZX\u0060a.!@(zQ\u0027\u0026\u0026\u0026UcDx-E/D!f.s?JKx%TDCuI#]%=1Ow3Q7Ost)[Jetx$^:*(wd\u0026ojiBrg4!m0sa3It.2nk\u0027PTlauo]^GapLD\u0060:\u002B-I51tq\u0060ZKFG!\u0027_dp%m/dd7m=-zIU@QX@\u0027)98Zoa6k)nQOW^Oa0:].\u002B0gY9!oRRAP5c{nj6#@SaV67.P]@expXiNm.2i/02ak/OZ/\u0026hq3gE7\u0026Pdr:yu#Slo]ht8Qh[qI/x(GFk=aJQbh)bYshX1i1PrdN(iUd*mV6K:4mmstT]I\u00608RO7o%t7e5OyMN2Xu!qZ-\u0060X41T5f5xFi\u002BISS^BphA4B%IIu/9=:gqqt43_[@)UE\u0026VsT.q\u00601z_)\u002BAzKu1vpnG)@P@wXE^$w)X8v5MGD$q6\u002B]R9F\u0027c2m4:9g:V\u0060TB6.N_)n57\u002Bff2irxyc_UeW_8ToAb/wtB(CbJNAmRE9Uk9h[Um[[_gLiDNX3#X!qH3C.sc$a1VK970X9sx0AN5^NVK@PUo2J_\u002BA)9u%vw1TRFFWFj.K\u0060tXeX{Cs9*JtZ@5rLMJQxtW/DPoe:0iY#BOPkT6/Go[^GS%m\u0027_hH?PB^^T\u0060$XMrEv\u0060OC9S9r?xAo/!2Aa0#H(0tAIg2D4f2xrY-\u0060zZ]C0E7Hx-X/EszJCW[L0OCz\u00271cfiXybOG6HGF1D6qA8oN(qUOjbTxxS2m4\u002BF^dJDvrvqbh[#M?p2\u0026GImkl)#h!YJHoBlE?TaPj?jhH{KY1uusoE\u0060W(blLh5#v\u002BlpiO\u0026]R5v5pHMBOp90Yi5J5-0U/uCvWdn0Oix[X^vR:AyPC3VHHptq68pIZ)DuJPW]_sMuu{0:A(uS7cN\u002B0C*)5FYcVZk$!2?@Y@\u0027sQ_5dnp\u00266Y4li{A\u0027c*XI]f0#O2C\u0027JBKcpwi0vqlsAnVjNSo0=*xpT/QALK1=\u00603S\u002Bil\u0027LfLG!uO7\u002BRPH1[UU0GONuu=A@%qT^9!^!O.ZE[y.mq(\u00601WK-AyTG=]YunvQ$Z-r]:\u002B\u0060bQ)Jb7LM0MbLVd4V0t@eud0%5YWZKT\u0026=j\u0026N!\u0026t=\u002BV/Go\u002701Rn\u002677S2it4%2i6mlZLZ=RG$-qi4Ww{S^\u002Bdtv6**1Lm9.\u0060cZHSD9eqCEvmunPJ7X\u0026/5q*Zm\u0027\u00275Qf=GqCBEAy9YH]j\u002B[5JX=rOM\u0060.kD39=hjaheaf!yxaN2t]M\u0027Sd{6dF\u0060a9#V15JU\u0027(aWBM_Ov\u0060xBdVnrZ2m\u0026T{-rWma*yt!3Mz!YbI3khsD3=V{u$c/daH!^p7JE\u0060KBdt(pLR20]R?00![mna*u/$s8{kso5:XOLSuYTy2/1?o7UfMg%T$(5i^w:P:i{zx/o9XfjLXRBzG\u00267#\u0026[WkVMC#WtlAK1(NEJHt?IfsN-nHFq?bWaitJaXrR{DK\u002Bbo:G3{!w@79h\u00275M3C:]2MQ7B$\u0026OSZL$gTVPh5z?=!4ej:)bu4C)j!buAF_4.[\u0060=Rm%HeT#tyhR/[!wZ/SrcXjvrbWQd43H6q\u0026w)N6FTxa%10S14P9HA1_Krae#.v*)\u0026ZbS6TZ=I#R/zQy3moQ/rZ9\u0060g{AQ3^Z/j0e:VZ8_?d9rIXG5r\u0026QAwh?nll4Sx]R252\u0027z=8LM0cJ!@\u002BG[.A*![@1=6zvO#g6nOxxq\u002Bj8?.qf!bMT^kK*lvyF8uK%\u002BD/_SWHA-mT9etlW$#7h^*zd:CyDt{D3g\u002B7Vx*@?8mQ7CrMD6G3pu^TEa[\u0026LEx\u0027^quBEMC1-tbH\u0060t7/@iH5?EvJ-47aqdqG49G{SaS$9(V3kAd$X*j!1JHEFoH\u0060[D9Ludd^s\u002BP_9f?0K_xC)BuL0I1ESu7{ooHH2/ae2yuG6VQ[U_Df)iBZ%/X)@zuB-6ViPa6\u0027h@FyJnYyt8_us8J\u0026LzdxCyEh$Y?b/WM1WJ.gsPFfV!ib(Sf?.%nDtPjKJW7HUwgSkAIFn8Egc$ncMnf[kr\u002Bsn.[xlS\u0060e8d\u00277KrFTCrxWe8r*ihV(uQD4h[\u0027Sb^sTkh=!CgW3uxN1\u00276$\u0026_KnvY8(/:#w.Ab[G9b*R-ETW@M\u0027-$.k?LycE@{:4[fW!$fy=F.Ph5IC\u00260h_@xl]z^5/OCj))Q-OOoO:7!=?HpJXNo!c$1wavpYxT/icdR!CWToNPNB3o\u0026IGd7B?cdb^Bkb1E[E7moT:HwxFRidkJ/WBiYJWm?{Q6=ev\u0060[5u\u0060ec$^(Ghoz9\u0026RlyJ\u0060d6Pw7ZJI%Zf5Fk#8.d:X\u0026@f%uHX7xhVp@)J@QQ)c1qVt-MOSbi\u002B\u00273MTSGk*?HbF#PhxUF@n(WK%xf5-nvy64)K%UIN]/v3oyfSNZ1l8ZwwBjbhWesm50UI?20QkerjFkY26b\u0027t1sF9Pm04/D\u002BCDOslja1cP0wVB^Nh#bDJWyI\u0026L#xFQ\u002BRnqT.V$I\u0060IN?0UwtLV=LUThZwLCpvWsM7=FU0jHPh$rf3F$!J[qLe.(FN\u002BK6Z%q-GW$?VH6Pa%a?\u0027G7sAgHD\u0027YXbjm-9iHH\u00602z9D\u0027G*-PrRFbCKf\u0027CE\u0027Nq!]\u0060\u002Bnk$jJ]JVtQvZN^c-?mkobu*0QR3sT$%g=ZvZVunD_{1qP]f\u0060nFQ=2sP*ES*Sm?z2.8Q[_Y*YG@8\u0026fN-{(Gpekd:?.p=OQtn\u002BB)a$2!C7({IvQV7oaWD3-LZ_Pa-wzn\u002BNskf\u0060On2_G?8\u002B^^St60Y=!\u00272yB.gZG7sOmF4Wb=BRW!Q[-T$1A2\u002BfJlR%bDe8Qx8\u0026-jVA{b)6xDe*Uz%JTFN%h_2]2wUzX@E@850_-kx\u0027()\u0026:!%i?eJ\u002BN\u0060I\u0027D2k\u0026K6@kP##.xEHpIB2({s*H\u0060rcQ_6(\u0027\u002BL\u0026iS$nLA3S{[=5{6:16q_3*h2Zg:e\u00263EsTX\u0060%e^Y@Y\u002BaRfC-gMfG[:[u-\u0027Ve]WZG:CyV$*^JVtFIr%V0#*zgkK4dSS{RRIJ99S8{_^HRM!WV9h7C*h$m?_A\u0060dh-C?N@0Y$eQwji^x^^gSUGf@\u0026x@3:52:JqXDEO\u0027Mii8ZN!t#2{-hk%8HvDxc[iF3rS/9d7=p*ndaa@Tn7zjckiDgIo8FWwYHY4hH\u0060Ry*V1R#[m1A\u0026#ky2mFwQ2\u0060P090uU\u0027?SJU_qM6f:s8jPIv\u00277R_ku/G3u(TRpyBxM727\u002BSsB1C/ZYwVdNS4pYN\u0060K)4.Xh?{Ijq.=IFZV\u0027:y@PS13]l^n$pB3NPC/5oAxoPm.G\u0060:\u0027x\u002B\u0026rT:30U[L%kcc!RkyF\u0027SX!hg8?W:imucAvE\u0027FqB8Qs!p?t$[^XYKKR@vr(N-8\u0060A0B-7CUL*@[CSC5dd\u0060vHfl=2JF]yF4SgQ$?auB\u002B$@[n%-S{jLKHqt$oz^58D_Q?sQcRb9vrE\u0027M\u0060yNxLU8*0)QN#K1mGOQdz!P(wjkf\u0026IKGcY\u0060:bjB\u002B\u002B-1.pb{B@$t\u002B8(0aZS{A!=!E9ar\u002BnZtW$z6t_%G@(*AE]Y\u002Bj:Y(fYcHTeh$II\u00266iHfCJZQs_IkoHS92Km=^^V{uvlU:{X-bPvA%J3D{c\u0027J!1phy%\u002Bb@DoMSU)l?{[=cB.K?4Q(7NMdpRu\u0060KB@HefT.M3h_5q8)NPg]Ag1b2Y9xyQSFl50ad^mw8t[Fd5p-0(RM2nxJxoB:fF5[I33.V0uPT81K8pHm%Dtwr=3Hpil8\u0060\u0027q0G@[Mb\u0060Ph{m6.o9GGG^v-GdzbS%Y%5SlQb-wQY%6gdCx/J\u0060GKkj\u0026wRIpA?1WB@JXPT\u002BLgX.nka7HwikD)huVq!Tm4z8RZGaX3y!lCHlNG\u0060Q(k9\u0027HxkrXYmonV=uB7%eb%9\u0026#(N8jT_$\u0060Sj=T!.C#W$b%V1Gim\u002780)KBHTFKpV\u002638cjPi3Q*$z{l_H@\u0060FP.MP=9eDv%Ct.\u0027CooUeP8]yqjZ4VQxv#\u0060q*]dVWTut\u0060GfbFD]\u002B75z%V%:DQQ^v._1:@/K\u002BUmZgw1xfNavx1Z@.h(1y\u0026Ys*js1G/H#*Un\u0027d5dXId6e48zjb-=9m\u002BOC\u00603T4j\u0027q5pIDLid=P7QI9SV\u002BRGb66KTl@XT.{jJ$ZhXU\u002B?pZC)aiakXY?e2U.\u002Bhyd]f1:Dep@MN85%ywJrQ@7*W\u0027\u0026ft@p*wtEFVp$L5.-x!Xe?w\u0027\u0027!j%0qO$bZTs[4]!0LAl]#\u002BfU[:/\u0026stgIR0gl$bhJ6:2y)-\u00264CXXdcNY[(KMf?SeZqXky4HY8V)7[iB3LMq](!!D3hxZGY?3WorNN@npw/uckxcT[irhs8HmbrgN\u0026JoI#5GUjSX0iUQ?y_[b0/m#B*Ru:1HEd[PyI(#ei-4[[\u0026y*VBxg1N*7PgGK!OuAl]j5C(nHH(TLVnccJz[]pGgXLHN1j8y:\u002BP-od*1\u0027QXUxm5\u0026v#/eRdnR35Y\u002BK6[sTPVu:f\u0060c$jZ\u00279aTF0W/JiVGsMRr.NG-Fo_8YkT?HR7rFuY\u0027=U-5fbxO:)*\u002B:Nlf^N5jWnt/\u002B\u002BW=?a]=t2ux#TrC]iqAwwB?^\u0060#Y6EO6:KGac(r\u0060K:=#{cm-\u0060\u0060#4Ma\u0060g_a5!kC7qhbdAo^3MD@.B2E.Op/MoFz3Ag?-e3Xo=8Ra8C2f\u0060Hk0\u002B5Nf1aY8\u0060P0G%L\u0060:wtkq0Udd\u0026][1GN6M#obHy2[Dziqz\u0026%_H{*Xm\u0060R-pT2:x(\u002BGQWh7icI{LnRp@\u0060y3iR/2M:{suMuuuy9)of!qRB4x/L%U5c\u0060H.$2%br)oQgI_S_FClI%{Si?IEAljqbVanv2Ia*\u00600wmHfQ8UkN\u0027J:d_u.Qv)a.vNtLDtp2CCU_ORQ2sLE-pO-ht2V\u0026vA\u0026@d%h#)1bs[IRkJVD7#UMZSb[dZk%O5nv\u0026**vHQanag?USdltJ^G!SOi\u0026q9:Srr9iGov$#W/hr#Y#ooRuCU20I-r\u0026MF)8gTVA*LAGxXA5\u002Bf@NLAhPq(o$EYH1)ZGk\u0026p:Aw\u002B)%K(k[Vk.e0\u002733y?iDs2:TQb0NuTCneS{5!jbOb7s$%VY=Zb@\u0026QbBHW#EfgB7F*kU0@jQJCY%mTg\u0060(jR@_28^GhFT\u0027!lNxwk39P\u0027@dsP$?J_h/s_MXQm^E5E*=O3C\u0027nxrlE@IB:49sks/:7*TUZx340/G//Ghrho]HsrKDLOJT[Z/(KV9KmiDog/%_[=!$VIPLXcXlPpz(ibG/M4he4.3@hpl516P\u0027W7c{(h\u002BcfBi3mbtmtSqn{I7{Nkopo4JRt6@?{uKS5CI|\u003E,2\u003C|box;x1=1836;y1=190;x2=1919;y2=381;w=1920;h=1080|\u003E\u003C|mask;x=0;y=0;data=192,84,~!!!Bj#K{%!c\u0026y]a/-FX=QHt\u0027I7\u002B.XaY_oTopQWOa\u0060xUcz\u0026EijAN:x%Aw6C!*amz8cp__uY4BCVg0i@]l$B@R$@ar))F%B10^\u0060l\u0027P2Qo/3$4AQ0nEX0gUVp66GXfxQ\u0026(?)L[.?:\u0060$9dR%:W!19D\u00264%hO@nxhYwd9qO{V{0m!)hNj.j_e(j:q/05v9vK7mXF%UMeJdF$2G[VI0fmJ/sFjwkPq1!RbJ5YwT\u002BO-?U5h\u002B8umP4LHuH8nRbOnc(W^zDq6PwfPbYr7WM_s#O\u0027^\u0060v8P2G9e^wh0Pi\u00605sec)\u0027gO{l9(:EgX\u0027lhg2RTxUPTgPjzSI:HcJb77\u00260(DK7pPVL0-W(_$#TaP{=^zj*aHHtTx3RASB\u00273Eo[e3.aVB(00\u00272\u002B]k\u0027.0gGqLVXnl]83HM:lh\u002Br.4!W^e)X#47kL--gaqH(0QD9R3t7X]g\u0060.8qXXw)?L[VCYD6wp1sA\u002BHXxX3Xq{xm@s[eb9-{\u0026\u0027\u00602gZUSR5[qbzx]4WI_!g4*?F_*@-pj9Qn*saRX@.B5o^hGA#dpFmItY](JM:3utdEMYZA_GlTn\u0026?fN\u00277wWrB4(i*:bj1m3=5D$m-\u0026mWbba^LlW\u0027]e83?PkMA7-Ih@!Z)81AFY0lyPA\u002B4%T4AA(/C=@:=Ir_ScPC/Az\u0060L#.%ueg[sVwHRQFK!NqV{R\u002B_{bAK#(.0-k=b)%cNyT6Vl/\u002Bhh[@/Ac3$fyke)Cgctg\u0027L*Lh\u0027*W1=!c%4c*bS*#(F%p8wA2:e\u0027gZ4XWf0i:jiGHhHno3tVzA{zrTQbXqwzXb?(0\u0026C9yy\u0060Z-l*$y\u0026$_m*b$v.)seCoG^cECVLo9n$k=Gc=bBeJr\u002B#\u0027sq\u0060qU!{_7)@9l*s)UI4(HQ_WsW\u0060h-rnqJ[x_m5f\u0060WlC5TS?bM0DL*])?ol#X8.kX[dSaTVWymNbeNU7QN^?\u0026.r#Y\u002B\u0060Dgp=r:\u0027=Mh5#WjMcVn?e\u0026(H1*m^HNZC1?b@vgcuDe)e_rLr\u0060iMr4pyc3-LCcw6tgWJRsuPJYN\u0026Vmpy\u0027%d(kMWgWvbL4rO5gu^J{W2ebf$*W)Fo9h]:v470DaZK*GQ#JAu)@$*kIiOqP9@/w?JzgX2EDp?Lx^irvDIoA!1G_X=Ad$BH37L@q[9mR54\u0027baaxE/F@y2%-x5n{c5@aHv7ghuT{ha\u0026(pCMpktaWr@P\u0060uc0hwG=q7uWEep46*7Nh*)O^8S5FbV.V92_Z\u0026*g@U)GWj2c\u002Bq7S\u0027KDz3D\u0027so7xBZL%n0bd@yOn%OYfA\u002Bp\u0026K(\u0027HO]djee\u00270OBn6t?:-O^){dGs8Txfc2%yj4gZaPa-]SIP=d#i43:uQuRJUs9cH3A7p#FKUZB!2#RSr6SbC5g2\u002By[w::e-6F4G]s@@(B\u0027e12[Xnzjn4i!U2HfCsRTO/M]eDOuPIc\u0026ML$lj(meH$h/\u002BRu!jbrhd\u0026CgzUyoe?xD2\u002B%sA*/S7ds)n\u0027N.zmLp5:-oT^X%A6#cy\u0026[\u0027\u0060(bSXSJ2$tsc9W\u002BAsj36ilQOBSa!lL2\u0060\u0026Xe[7=C_x_1g%8u)I\u0060TBv-]\u0060{izP)afj#xz!RT9@u\u0026[dqUrFon55qOj8cTa]aGM8fX\u002B]\u002B1u1t_]mQP^[*-\u00607\u0027r$?n$M?#iTn*UAi$Cwb!Rm@)kBApxUZ8h@\u0026bH\u0060Q/\u0027K!Fs=.R64)vedTYRqUryd!nZDBKfTUH*y(R?#\u0027NFUCMHgG#\u0060Aj\u002BQdaX\u002BKoHC\u0026*(r.l@f8TjNl@P_1iMT$:oGu]^%qCvZMMGy\u0027K!ZA@T4lh6yO[9==F*^ixrAtC\u0027NvjwK\u002Bmb7.wa4F09fL@\u0026GJLZuYc-5yx_PMQ6IR9KQ9o\u0060Xm?txyH:oIO8(Qr-euKy\u002B5)e9X\u0060{wDI6W\u0027ed7r$TQ:)kvYp3U]QE8Qnnna]B[?q$PRtm[oV(Uh\u0026lA2KVH/1IZO?X\u0060\u0027yFuYWT4%Jmz0m/\u002BKh0oGAc9^hJFz2ui:64sMyRm/\u002Bs?7mtcOEW=jLcY-iJJr@)tOSNV%wo1biXD0_aeia)8:D.{-P-IK4Nd1MZIN?ndTqK(#\u002B\u0027\u002BBUlC5Zzvdn]q9Pj[p3nmom\u0026EiR6I9L4(PYwq\u00262?KcTmCNH[dKz$.QC=4^itFtQo@gNjOJFdGO?qbXro(FvFIWn1NUw#OjDaB$Yn.p/x2D!?D_sSCVr\u0060Z9Otak18.SC/M\u0026QegU$.3?\u0026Nnt-U@A=]x[X^j\u0026(qrD{A_*GDl4S-o.UtZ2^iZd{gfi5s\u0026xQtuqIv?k\u0026g]cS%aGQvWPZb$*UMI{iMIN9xlTD-WM4g(mcHDrH9_{KGkrfuy0z4aY#8-{Id1\u002BERsV%iQlNnee/\u0026ggr\u0060?Q8Iw=tC.uT7R)fcbrpL34S\u002BSe?Cl_Mo3/4tXG8y*Qmxl6\u00265Z$RwEj={.pm\u002B9A2s-Gae%={UyCTbyi1s=Z*2UR$FSuhvCT@po]BWb#yk1gd\u0026H:D2Iw%UA\u0060\u0027aIyqr2t\u0060(@6Z2enR?\u0026]7\u0060XYFIy-RK@o\u002BZ^mfCi0.)bry.Lo[DgYqQ[Yowq6#.U^c^%bM{t\u0060Ns@KN*1)5\u002BLik:9w!N.\u002BKGgh#{vV6RXUjUU!WGIS^@FP_C?u%WYpvM#*]77g\u0027\u00279oP2sCG8Ant!7J89Gwj]_BeISspf]Sl3\u00276_G22!9C28GQP-aW2Y)..Z5.MHry.ue8gGAjCD\u0026X!hx]$q!9i=.p)IU#et$AhAgI{tiR_h\u0060i?VWhxkiWL_3?k6WQI.kkxPLP\u0060*.-7d=pG5(l50(u(r#%z)aiB4wZga$SQlTHJ/Rm^jDAvI8BFgkB@\u0060*2H\u0026@JiMf-gZ\u002B5)AIwTep\u0027k:7Cd(4eAVN2Mc1z%iC?DuJ\u00260?dMLIgDo!Y\u0027r#Q4uIJBTns![wJ8yVOxPR.dX764@a$?z24bjjlru-{Y\u0026VWL\u0060kUwri(9@kJ:-UGxl#O10f\u0026F/A-falD?taCN(Uoty?[t9b@(dYCoNK9O#%E_mU8BFbPPdSVR\u002B.*K5\u0027un$VdO#krQ$QewTq74)9NTC9\u002B[!vv%nenX@15?.R42i^S#oj:-vBPTEe:rVTpewv7n4aB_)c*9XV?{uTG?R!PJ\u0060_#2M3[5x8=L2qRlD?O./8#-]Grw9.!#jF7R{r0F%JiU/7D$EnBoW=Y8\u0060Y[mqUBd*=qgE\u0060-h{tm(Dmrf(rH\u0026d\u0026G/?5xzR9a\u0060z51=bU5*LZv?-sM9.J#x*tI^y0c@RhF|\u003E,3\u003C|box;x1=1546;y1=234;x2=1663;y2=285;w=1920;h=1080|\u003E\u003C|mask;x=0;y=0;data=52,118,~!!!3I#L#CiiZZt?/BQFpZZ78pV#VJp=^qh41Gw?lnv*{J?3\u002Bq]1ANU2y2[hJ=/5\u0060EPTfqk@gq?Cxc\u002BEgduv@m=8LCylCF_iTicE?aW\u0026v6Z988v02lKrt_{Apjom/6jOVMri4IYkJsk1#/kSJ9XI!eni-j.#DFYzR=UthCL#x?/Drr9GY4d\u00277GgLObv%xYfQp1sQf1q:3E4EJch%Tj[)Id3M.shAgA3\u0060j*mWgPxDD{%Q3Hm\u002642%m\u002BO*545sUQU^d7yf:^-U@4bBN\u0060v=\u002BnGDj={yT0au^7nB$YxxTKj)_!5-a#gDze\u0060jhp\u0026{Z2GdD$6iPODPUK]u4oY$Wx^=xnqJR$[E{2a%pMPWjN8V\u0060F3Is(P[)vRoxQX:AiEc:K3EshiTg@gUzryJ?h0GSC@r#ljhM_]j1u8**Fd-k#OlxNc0gjh)Y6xOpnzhgs_:%5\u0060*a%3$\u0060SrZXyZ-L[4hczf8Gc0N8NPE)9Pd\u0026\u00275%T(:xZ\u0060QMJ@WXNP\u0026T9rpGpetgR\u0026]OU_UzBHHE4HTh8mMAmbEp*$loMswzLpeh)Uc\u0026\u0060a\u0026BiFtXGDAPl:P=t\u0027Od0XK[VY%4KrNamAyhdDlPJBM^v4Th[lVy\u0060Gp:SD2q!8B@W0Jfl]*.8sfc:1UV$\u0026hmnX8.\u0027!T%W*7T9GPwcY\u0060-lMyfOHj4/w_j7@J\u0027nd]W6G[\u0027C)Da6C5\u0026Fbc3]oLPK@0gIBuQ8Z4I%@_V{Mp87v6e$OG/sN!nF4)^\u0027T*Yx?:Y-158q%Sxw(UX:%!#M1CF*9YiqWyR%O)CDLoLT)]hrEcm$s3pAl8nzg.tl/uW1FREF2jHy\u002BtVr(PbkDzd%DeEjuj:3RmKQCq)0V$Dx2\u00277/Edxb%me\u002Bqh7]GIY!P6e8xRM2d*O$ZAv3eKcA_vdspsP*KkF)pQ)cnd4ULH7b\u0060xrc]D\u002BD!2(c?Lvq2noTw]Gq7P*N=]e50QT$m{PFxYdeaS1x8:$r.BAmR=]\u002B%2R]L\u00279d2FmZ.??GLsif\u0060d]mbaj]gi(.bY/#K)qTDQv8\u002B[N9l6\u0060\u0060X_-7sQ\u002BCr^1KO23bAnja(9YU5%4{9yJli4QBy)/yth{x0lvqu57#]y\u0026kn1[ZJQlriJWgL\u002BwMdUj[t8^[p9NfVr\u0027[^1%\u002639Q)clB4p:18Q*KGMY?2[2N#N(P_5u/\u0026LrN1kkTEFv\u0026{7)vG$\u0027G%Ta@II_MS]P#LkZjP]Fh%\u0060:ooh{1IfkjFD$MsuJms/n%Qi-(]-y\u0027S_bhXA1?(D*sn5RG4LTUAE0lxaW3#/Z$NUrwuVKZ@\u0060v\u002BL%(/l4kiT3uoWy[32UUPWc?IU)E8NmAJG%LRcxzVsz\u0060V#d*YkD_J0Ue\u002BCLz=@15/iSn]p2wrEcmg:O2S%3UYMRU$F7c*\u0027P)f_E7[2x]pQo#Nay7*)DeK6.D_\u0026XP[^$P9HE]C600rAtbhu#ofvb96brn#od=yeFN.*Jq/hfpjsK8lqB/ywC1A5^6k3#Y4)\u002Be5NBs4Y\u0026IU6=@aM2grU\u0026^eG\u0060e*PmhB\u002B)EtI=[#IR@e07.^Jp\u0027RI3l6RE:6Y\u0060^0Es64?R\u0027-U1o7n4OeL9GqIv\u002BPd(.bJq{Wr#a)UaF_c]tji)L125r13Lipi2#)k[7D\u0027qBEN/D!3RT6iDe^2?]#_lnStSNyr2tw]Av\u0027j@3u8p*y)uYOffXSSrSBmhCH#dSJ4rW[I9WiKJN^zO=ns8MGn@84l^fj$ZKPJZi9\u002B^ht)::k0lnKc#jBBb(\u0026H*E%tpGrANQR5bT-!Jo/i]dMVd$I9Ui!q8:MdM]\u00267)8xco:][?38\u002Bi]/(7XD-Y6TwT_|\u003E\n",
+        "frame_id": null,
+        "timecode_seconds": null,
+        "frame_sha256": "ccd0a69f93769a4bcdcf27a5491de5e0778d8f05be2250af338ae610acca4f43",
+        "vision_provenance": null,
+        "vision_usage": null,
+        "vision_raw_content": null
+      },
+      {
+        "id": "seg-003",
+        "status": "Empty",
+        "context": {
+          "speaker_id": "C",
+          "speaker_label": null,
+          "emotion_tone_label": null,
+          "on_screen_text": null,
+          "scene_summary": null,
+          "regions": null,
+          "speaker_description": null,
+          "burned_in_text": null
+        },
+        "error": null,
+        "provenance": {
+          "model_id": "sam-3.1",
+          "endpoint_host": "api.meta.ai",
+          "timestamp_utc": "2026-11-01T03:27:57.9538063Z",
+          "prompt_template_version": "scene-v1"
+        },
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "images_processed": 0,
+        "raw_content": null,
+        "frame_id": null,
+        "timecode_seconds": null,
+        "frame_sha256": "3dce75618da5bf12dd3e7718bab0e2e9ef01cdef58e70089caa0239d46d00d6f",
+        "vision_provenance": null,
+        "vision_usage": null,
+        "vision_raw_content": null
+      },
+      {
+        "id": "seg-004",
+        "status": "Empty",
+        "context": {
+          "speaker_id": "B",
+          "speaker_label": null,
+          "emotion_tone_label": null,
+          "on_screen_text": null,
+          "scene_summary": null,
+          "regions": null,
+          "speaker_description": null,
+          "burned_in_text": null
+        },
+        "error": null,
+        "provenance": {
+          "model_id": "sam-3.1",
+          "endpoint_host": "api.meta.ai",
+          "timestamp_utc": "2026-11-01T03:27:57.9552505Z",
+          "prompt_template_version": "scene-v1"
+        },
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "images_processed": 0,
+        "raw_content": null,
+        "frame_id": null,
+        "timecode_seconds": null,
+        "frame_sha256": "af191a6711daaa15d4dfd1ca2ab9332878cdf8710586974f9db97ed68687c570",
+        "vision_provenance": null,
+        "vision_usage": null,
+        "vision_raw_content": null
+      },
+      {
+        "id": "seg-005",
+        "status": "Empty",
+        "context": {
+          "speaker_id": "A",
+          "speaker_label": null,
+          "emotion_tone_label": null,
+          "on_screen_text": null,
+          "scene_summary": null,
+          "regions": null,
+          "speaker_description": null,
+          "burned_in_text": null
+        },
+        "error": null,
+        "provenance": {
+          "model_id": "sam-3.1",
+          "endpoint_host": "api.meta.ai",
+          "timestamp_utc": "2026-11-01T03:27:57.9561717Z",
+          "prompt_template_version": "scene-v1"
+        },
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "images_processed": 0,
+        "raw_content": null,
+        "frame_id": null,
+        "timecode_seconds": null,
+        "frame_sha256": "daf10c6a8e2330ce45b737d2c411ecec7739c2378da95266530f6dac104f7694",
+        "vision_provenance": null,
+        "vision_usage": null,
+        "vision_raw_content": null
+      },
+      {
+        "id": "seg-006",
+        "status": "Empty",
+        "context": {
+          "speaker_id": "B",
+          "speaker_label": null,
+          "emotion_tone_label": null,
+          "on_screen_text": null,
+          "scene_summary": null,
+          "regions": null,
+          "speaker_description": null,
+          "burned_in_text": null
+        },
+        "error": null,
+        "provenance": {
+          "model_id": "sam-3.1",
+          "endpoint_host": "api.meta.ai",
+          "timestamp_utc": "2026-11-01T03:27:57.9572800Z",
+          "prompt_template_version": "scene-v1"
+        },
+        "usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "images_processed": 0,
+        "raw_content": null,
+        "frame_id": null,
+        "timecode_seconds": null,
+        "frame_sha256": "369e213b9e07a0fd460cb3143ae491a17d9c5e122007ffc1fa454fcf00483661",
+        "vision_provenance": null,
+        "vision_usage": null,
+        "vision_raw_content": null
+      }
+    ],
+    "usage_total": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0
+    },
+    "images_processed_total": 1,
+    "vision_usage_total": null
+  },
+  "audition": {
+    "source_language": "en",
+    "target_language": "es",
+    "cast": [
+      {
+        "speaker_id": "anna",
+        "voice_id": "Xb7hH8MSUJpSbSDYk0k2",
+        "voice_name": "Alice - Clear, Engaging Educator"
+      },
+      {
+        "speaker_id": "ashley",
+        "voice_id": "hpp4J3VqNfWAUOO0d1Us",
+        "voice_name": "Bella - Professional, Bright, Warm"
+      }
+    ],
+    "segments": [
+      {
+        "id": "seg-001",
+        "text": "Hi, Ashley.",
+        "speaker_id": "A",
+        "cast_voice": null,
+        "window_seconds": 1.2,
+        "takes": [
+          {
+            "take_number": 1,
+            "kind": "Initial",
+            "text": "Hola, Ashley.",
+            "meaning_verdict": "Pass",
+            "meaning_issues": [],
+            "meaning_explanation": "Greeting and addressee \u0027Ashley\u0027 preserved exactly; \u0027Hi\u0027 -\u003E \u0027Hola\u0027 is equivalent.",
+            "synthesized": false,
+            "measured_seconds": null,
+            "window_seconds": 1.2,
+            "timing_verdict": "NotSynthesized",
+            "is_winner": false,
+            "audio_file_name": null,
+            "synthesis_note": "No cast voice for this speaker; not synthesized.",
+            "translation_tokens": 222,
+            "meaning_tokens": 548,
+            "elevenlabs_characters": 0,
+            "speed_factor": null
+          }
+        ],
+        "cast": false,
+        "winner_take_number": null,
+        "winner_file_name": null,
+        "note": "No cast voice for this speaker; alternates not requested."
+      },
+      {
+        "id": "seg-002",
+        "text": "Hello, Anna. Which coffee shop? There are three coffee shops.",
+        "speaker_id": "B",
+        "cast_voice": null,
+        "window_seconds": 4.9,
+        "takes": [
+          {
+            "take_number": 1,
+            "kind": "Initial",
+            "text": "Hola, Anna. \u00BFQu\u00E9 cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+            "meaning_verdict": "Pass",
+            "meaning_issues": [],
+            "meaning_explanation": "Translation preserves greeting, name, question about which coffee shop, and statement that there are three, with no change in number, entities, or intent.",
+            "synthesized": false,
+            "measured_seconds": null,
+            "window_seconds": 4.9,
+            "timing_verdict": "NotSynthesized",
+            "is_winner": false,
+            "audio_file_name": null,
+            "synthesis_note": "No cast voice for this speaker; not synthesized.",
+            "translation_tokens": 215,
+            "meaning_tokens": 573,
+            "elevenlabs_characters": 0,
+            "speed_factor": null
+          }
+        ],
+        "cast": false,
+        "winner_take_number": null,
+        "winner_file_name": null,
+        "note": "No cast voice for this speaker; alternates not requested."
+      },
+      {
+        "id": "seg-003",
+        "text": "Okay, my apartment is across from a big department store.",
+        "speaker_id": "C",
+        "cast_voice": null,
+        "window_seconds": 4.4,
+        "takes": [
+          {
+            "take_number": 1,
+            "kind": "Initial",
+            "text": "Mi apartamento est\u00E1 frente a unos grandes almacenes.",
+            "meaning_verdict": "Pass",
+            "meaning_issues": [],
+            "meaning_explanation": "Candidate preserves location and subject; \u0027unos grandes almacenes\u0027 is the idiomatic Spanish term for a (single) department store, so number meaning is intact and discourse marker \u0027Okay\u0027 is immaterial.",
+            "synthesized": false,
+            "measured_seconds": null,
+            "window_seconds": 4.4,
+            "timing_verdict": "NotSynthesized",
+            "is_winner": false,
+            "audio_file_name": null,
+            "synthesis_note": "No cast voice for this speaker; not synthesized.",
+            "translation_tokens": 282,
+            "meaning_tokens": 730,
+            "elevenlabs_characters": 0,
+            "speed_factor": null
+          }
+        ],
+        "cast": false,
+        "winner_take_number": null,
+        "winner_file_name": null,
+        "note": "No cast voice for this speaker; alternates not requested."
+      },
+      {
+        "id": "seg-004",
+        "text": "A big department store? Ah, I see it. see it.",
+        "speaker_id": "B",
+        "cast_voice": null,
+        "window_seconds": 3.7,
+        "takes": [
+          {
+            "take_number": 1,
+            "kind": "Initial",
+            "text": "\u00BFUna tienda departamental grande? Ah, la veo. la veo.",
+            "meaning_verdict": "Pass",
+            "meaning_issues": [],
+            "meaning_explanation": "Candidate accurately translates the question about a big department store and the exclamation \u0027I see it\u0027 repeated twice, preserving subject, object, and intent.",
+            "synthesized": false,
+            "measured_seconds": null,
+            "window_seconds": 3.7,
+            "timing_verdict": "NotSynthesized",
+            "is_winner": false,
+            "audio_file_name": null,
+            "synthesis_note": "No cast voice for this speaker; not synthesized.",
+            "translation_tokens": 211,
+            "meaning_tokens": 572,
+            "elevenlabs_characters": 0,
+            "speed_factor": null
+          }
+        ],
+        "cast": false,
+        "winner_take_number": null,
+        "winner_file_name": null,
+        "note": "No cast voice for this speaker; alternates not requested."
+      },
+      {
+        "id": "seg-005",
+        "text": "Okay, bye Ashley. See you soon.",
+        "speaker_id": "A",
+        "cast_voice": null,
+        "window_seconds": 2.3,
+        "takes": [
+          {
+            "take_number": 1,
+            "kind": "Initial",
+            "text": "Bueno, adi\u00F3s Ashley. Nos vemos pronto.",
+            "meaning_verdict": "Pass",
+            "meaning_issues": [],
+            "meaning_explanation": "Candidate preserves all material elements: farewell to Ashley (\u0027adi\u00F3s Ashley\u0027) and expectation to meet again soon (\u0027Nos vemos pronto\u0027) matching \u0027See you soon\u0027.",
+            "synthesized": false,
+            "measured_seconds": null,
+            "window_seconds": 2.3,
+            "timing_verdict": "NotSynthesized",
+            "is_winner": false,
+            "audio_file_name": null,
+            "synthesis_note": "No cast voice for this speaker; not synthesized.",
+            "translation_tokens": 285,
+            "meaning_tokens": 594,
+            "elevenlabs_characters": 0,
+            "speed_factor": null
+          },
+          {
+            "take_number": 2,
+            "kind": "Revision",
+            "text": "Bueno, adi\u00F3s Ashley. Nos vemos pronto",
+            "meaning_verdict": "Pass",
+            "meaning_issues": [],
+            "meaning_explanation": "Translation preserves greeting, addressee, and farewell intent with equivalent meaning.",
+            "synthesized": false,
+            "measured_seconds": null,
+            "window_seconds": 2.3,
+            "timing_verdict": "NotSynthesized",
+            "is_winner": false,
+            "audio_file_name": null,
+            "synthesis_note": "No cast voice for this speaker; not synthesized.",
+            "translation_tokens": 850,
+            "meaning_tokens": 515,
+            "elevenlabs_characters": 0,
+            "speed_factor": null
+          }
+        ],
+        "cast": false,
+        "winner_take_number": null,
+        "winner_file_name": null,
+        "note": "No cast voice for this speaker; alternates not requested."
+      },
+      {
+        "id": "seg-006",
+        "text": "Okay, see you soon.",
+        "speaker_id": "B",
+        "cast_voice": null,
+        "window_seconds": 2,
+        "takes": [
+          {
+            "take_number": 1,
+            "kind": "Initial",
+            "text": "Bueno, nos vemos pronto.",
+            "meaning_verdict": "Pass",
+            "meaning_issues": [],
+            "meaning_explanation": "Candidate accurately preserves the farewell meaning: acknowledgment (Okay/Bueno) and \u0027see you soon\u0027 (nos vemos pronto) with same intent.",
+            "synthesized": false,
+            "measured_seconds": null,
+            "window_seconds": 2,
+            "timing_verdict": "NotSynthesized",
+            "is_winner": false,
+            "audio_file_name": null,
+            "synthesis_note": "No cast voice for this speaker; not synthesized.",
+            "translation_tokens": 224,
+            "meaning_tokens": 520,
+            "elevenlabs_characters": 0,
+            "speed_factor": null
+          }
+        ],
+        "cast": false,
+        "winner_take_number": null,
+        "winner_file_name": null,
+        "note": "No cast voice for this speaker; alternates not requested."
+      }
+    ],
+    "totals": {
+      "total_segments": 6,
+      "lines_cast": 0,
+      "takes_synthesized": 0,
+      "meta_calls": 14,
+      "translation_tokens": 2289,
+      "meaning_tokens": 4052,
+      "elevenlabs_characters": 0,
+      "elevenlabs_cap_hit": false,
+      "meta_cap_hit": false
+    }
+  }
+}

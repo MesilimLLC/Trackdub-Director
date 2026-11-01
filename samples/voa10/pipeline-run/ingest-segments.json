@@ -1,0 +1,38 @@
+[
+  {
+    "id": "seg-001",
+    "text": "Hi, Ashley.",
+    "duration_seconds": 1.2,
+    "speaker": "A"
+  },
+  {
+    "id": "seg-002",
+    "text": "Hello, Anna. Which coffee shop? There are three coffee shops.",
+    "duration_seconds": 4.9,
+    "speaker": "B"
+  },
+  {
+    "id": "seg-003",
+    "text": "Okay, my apartment is across from a big department store.",
+    "duration_seconds": 4.4,
+    "speaker": "C"
+  },
+  {
+    "id": "seg-004",
+    "text": "A big department store? Ah, I see it. see it.",
+    "duration_seconds": 3.7,
+    "speaker": "B"
+  },
+  {
+    "id": "seg-005",
+    "text": "Okay, bye Ashley. See you soon.",
+    "duration_seconds": 2.3,
+    "speaker": "A"
+  },
+  {
+    "id": "seg-006",
+    "text": "Okay, see you soon.",
+    "duration_seconds": 2,
+    "speaker": "B"
+  }
+]
