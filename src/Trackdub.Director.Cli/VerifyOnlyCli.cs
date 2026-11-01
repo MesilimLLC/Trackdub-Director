@@ -56,8 +56,17 @@ internal static class VerifyOnlyCli
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         string temp = path + ".tmp";
-        File.WriteAllText(temp, content);
-        File.Move(temp, path, overwrite: true);
+        try
+        {
+            File.WriteAllText(temp, content);
+            File.Move(temp, path, overwrite: true);
+        }
+        catch
+        {
+            // Best-effort cleanup so a failed write never leaves a stray temp file.
+            File.Delete(temp);
+            throw;
+        }
     }
 
     private static Options? Parse(string[] args, out string? error)

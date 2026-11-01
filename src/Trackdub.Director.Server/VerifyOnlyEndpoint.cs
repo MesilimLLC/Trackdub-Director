@@ -22,7 +22,7 @@ internal static class VerifyOnlyEndpoint
 
         string root = ResolveRunsRoot(configuration, environment);
         string runDir = Path.GetFullPath(Path.Combine(root, run));
-        if (Path.IsPathRooted(run) || !IsInside(root, runDir))
+        if (Path.IsPathRooted(run) || run.IndexOfAny(['\\', ':']) >= 0 || !IsInside(root, runDir))
         {
             return Results.BadRequest(new { error = "'run' must name a folder inside the captured-runs root." });
         }
@@ -77,6 +77,6 @@ internal static class VerifyOnlyEndpoint
     private static bool IsInside(string root, string path)
     {
         string prefix = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        return path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+        return path.StartsWith(prefix, StringComparison.Ordinal);
     }
 }

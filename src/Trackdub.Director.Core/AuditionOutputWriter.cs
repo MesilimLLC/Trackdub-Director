@@ -54,7 +54,7 @@ public static class AuditionOutputWriter
     {
         string root = Path.GetFullPath(auditionDir) + Path.DirectorySeparatorChar;
         string target = Path.GetFullPath(Path.Combine(auditionDir, fileName));
-        if (!target.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+        if (!target.StartsWith(root, StringComparison.Ordinal))
         {
             throw new ArgumentException("Take file name resolves outside the audition directory.", nameof(fileName));
         }
