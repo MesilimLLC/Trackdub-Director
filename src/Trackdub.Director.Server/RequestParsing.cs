@@ -149,6 +149,48 @@ internal static class RequestParsing
         return new AdaptationApiRequest(body.Segments, body.SourceLanguage, body.TargetLanguage);
     }
 
+    internal static async Task<PipelineApiRequest?> ReadPipelineRequestAsync(HttpRequest http, CancellationToken ct)
+    {
+        using var doc = await JsonDocument.ParseAsync(http.Body, cancellationToken: ct).ConfigureAwait(false);
+        JsonElement root = doc.RootElement;
+
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidOperationException("Request body must be a JSON object with 'audio_base64' or a 'segments' array.");
+        }
+
+        TranscribeSegment[]? segments = null;
+        if (root.TryGetProperty("segments", out JsonElement segEl) && segEl.ValueKind == JsonValueKind.Array)
+        {
+            segments = JsonSerializer.Deserialize<TranscribeSegment[]>(segEl.GetRawText(), JsonOptionsWeb)
+                ?? throw new InvalidOperationException("Invalid 'segments' array.");
+        }
+
+        SceneSegmentInput[]? sceneSegments = null;
+        if (root.TryGetProperty("scene_segments", out JsonElement sceneEl) && sceneEl.ValueKind == JsonValueKind.Array)
+        {
+            sceneSegments = JsonSerializer.Deserialize<SceneSegmentInput[]>(sceneEl.GetRawText(), JsonOptionsWeb)
+                ?? throw new InvalidOperationException("Invalid 'scene_segments' array.");
+        }
+
+        QaOptionsDto? optionsDto = null;
+        if (root.TryGetProperty("options", out JsonElement optEl) && optEl.ValueKind == JsonValueKind.Object)
+        {
+            optionsDto = ReadQaOptions(optEl);
+        }
+
+        return new PipelineApiRequest(
+            ReadFirst<string>(root, el => el.ValueKind == JsonValueKind.String ? el.GetString() : null, "audio_base64", "audioBase64"),
+            ReadFirst<string>(root, el => el.ValueKind == JsonValueKind.String ? el.GetString() : null, "audio_file_name", "audioFileName"),
+            segments,
+            sceneSegments,
+            ReadFirst<bool?>(root, el => el.ValueKind is JsonValueKind.True or JsonValueKind.False ? el.GetBoolean() : null, "scene"),
+            ReadFirst<bool?>(root, el => el.ValueKind is JsonValueKind.True or JsonValueKind.False ? el.GetBoolean() : null, "audition"),
+            ReadFirstPresentString(root, "sourceLanguage", "source_language", "from"),
+            ReadFirstPresentString(root, "targetLanguage", "target_language", "to"),
+            optionsDto);
+    }
+
     // A body is either a raw segment array, or an object with a 'segments' array and optional languages.
     internal static async Task<SegmentBody<T>> ReadSegmentBodyAsync<T>(HttpRequest http, CancellationToken ct)
     {

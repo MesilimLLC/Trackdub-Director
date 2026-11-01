@@ -402,6 +402,113 @@ export async function postAudition(
   });
 }
 
+// Transcribe stage: WAV in, segments in the app input shape out. The ASR
+// endpoint reports no token usage; the server omits usage (null) and marks
+// usage_reported false — never zero.
+export type TranscribeSegment = {
+  id: string;
+  text: string;
+  duration_seconds: number;
+  speaker?: string | null;
+};
+
+export type TranscribeResult = {
+  model: string;
+  endpoint_host: string;
+  timestamp_utc: string;
+  session_id?: string | null;
+  transcript: string;
+  audio_duration_ms: number;
+  segments: TranscribeSegment[];
+  usage_reported: boolean;
+};
+
+export async function postTranscribe(audio: File): Promise<TranscribeResult> {
+  const form = new FormData();
+  form.append("audio", audio, audio.name || "audio.wav");
+  const r = await fetch("/api/transcribe", { method: "POST", body: form });
+  if (!r.ok) {
+    const bodyText = await r.text().catch(() => "");
+    throw new Error(`POST /api/transcribe ${r.status}: ${bodyText.slice(0, 600)}`);
+  }
+  return (await r.json()) as TranscribeResult;
+}
+
+// Pipeline: one orchestrated run over the existing lanes. Each stage is
+// Ran | SkippedByFlag | Failed | NotRun; a flag-skipped stage is never a pass.
+export type PipelineStage = {
+  stage: string; // transcribe | qa | scene | audition
+  status: string; // Ran | SkippedByFlag | Failed | NotRun
+  note?: string | null;
+  error?: string | null;
+};
+
+export type PipelineReport = {
+  source_language: string;
+  target_language: string;
+  stages: PipelineStage[];
+  segments: TranscribeSegment[];
+  transcribe?: TranscribeResult | null;
+  qa?: QaReport | null;
+  scene?: SceneContextBatch | null;
+  audition?: AuditionReport | null;
+};
+
+export async function postPipeline(
+  audio: File | null,
+  segments: SegmentInput[],
+  sceneSegments: SegmentInput[],
+  flags: { scene: boolean; audition: boolean },
+  from = "en",
+  to = "es",
+): Promise<PipelineReport> {
+  const body: Record<string, unknown> = {
+    scene: flags.scene,
+    audition: flags.audition,
+    sourceLanguage: from,
+    targetLanguage: to,
+  };
+  if (audio) {
+    body.audio_base64 = await fileToBase64(audio);
+    body.audio_file_name = audio.name || "audio.wav";
+  } else {
+    body.segments = segments.map((s) => ({
+      id: s.id,
+      text: s.text,
+      duration_seconds: s.duration_seconds ?? null,
+      speaker: s.speaker_id ?? null,
+    }));
+  }
+  if (sceneSegments.length > 0) {
+    body.scene_segments = sceneSegments.map((s) => ({
+      id: s.id,
+      text: s.text,
+      frame_image_data_url: s.frame_image_data_url ?? null,
+      concepts: s.concepts ?? null,
+      speaker_id: s.speaker_id ?? null,
+      speaker_label: s.speaker_label ?? null,
+      frame_id: s.frame_id ?? null,
+      timecode_seconds: s.timecode_seconds ?? null,
+      frame_sha256: s.frame_sha256 ?? null,
+      vision_enrichment: s.vision_enrichment ?? null,
+    }));
+  }
+  return postJson<PipelineReport>("/api/pipeline", body);
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read audio file"));
+    reader.onload = () => {
+      const result = reader.result as string;
+      const comma = result.indexOf(",");
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export async function fetchStatus(): Promise<StatusResponse> {
   const r = await fetch("/api/status");
   if (!r.ok) throw new Error(`GET /api/status ${r.status}`);

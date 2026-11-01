@@ -72,6 +72,11 @@ a { color: #8ab4ff; }
 .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
 .file-btn { cursor: pointer; }
 
+.pipeline-panel { margin-bottom: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.pipeline-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.pipeline-flag { display: flex; gap: 6px; align-items: center; font-size: 0.9rem; color: var(--text); }
+.pipeline-panel .line-meta { margin-top: 10px; }
+
 .lines { display: flex; flex-direction: column; gap: 10px; }
 
 .line-card {

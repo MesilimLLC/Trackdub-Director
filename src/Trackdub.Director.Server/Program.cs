@@ -27,6 +27,8 @@ builder.Services.AddTransient<SceneContextService>(sp => new SceneContextService
 builder.Services.AddSingleton<ITtsProvider>(_ => new ElevenLabsTtsProvider());
 builder.Services.AddSingleton<MetaMuseImageClient>(sp => new MetaMuseImageClient(sp.GetRequiredService<HttpClient>()));
 builder.Services.AddTransient<VisualLocalisationService>(sp => new VisualLocalisationService(sp.GetRequiredService<MetaMuseImageClient>()));
+builder.Services.AddSingleton<IMuseTranscribeClient>(sp => new MuseTranscribeClient(sp.GetRequiredService<HttpClient>()));
+builder.Services.AddTransient<TranscribeService>(sp => new TranscribeService(sp.GetRequiredService<IMuseTranscribeClient>()));
 
 // JSON: keep defaults but ensure case-insensitive reads and respect JsonPropertyName attributes
 builder.Services.ConfigureHttpJsonOptions(opts =>
@@ -58,6 +60,8 @@ app.MapPost("/api/scene-context", ApiEndpoints.SceneContextAsync);
 app.MapPost("/api/director-adaptation", ApiEndpoints.DirectorAdaptationAsync);
 app.MapPost("/api/audition", ApiEndpoints.AuditionAsync);
 app.MapPost("/api/visual-localisation", ApiEndpoints.VisualLocalisationAsync);
+app.MapPost("/api/transcribe", ApiEndpoints.TranscribeAsync);
+app.MapPost("/api/pipeline", ApiEndpoints.PipelineAsync);
 app.MapFallback(ApiEndpoints.FallbackAsync);
 
 app.Run();

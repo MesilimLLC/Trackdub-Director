@@ -13,12 +13,14 @@ public static class MetaAuth
     public const string ReasoningEffortEnv = "META_REASONING_EFFORT";
     public const string SceneModelEnv = "META_SCENE_MODEL";
     public const string VisionModelEnv = "META_VISION_MODEL";
+    public const string TranscribeModelEnv = "META_TRANSCRIBE_MODEL";
 
     public const string DefaultBaseUrl = "https://api.meta.ai/v1";
     public const string DefaultModel = "muse-spark-1.1";
     public const string DefaultReasoningEffort = "low";
     public const string DefaultSceneModel = "sam-3.1";
     public const string DefaultVisionModel = "muse-spark-1.1";
+    public const string DefaultTranscribeModel = "muse-voice-transcribe-1.0";
 
     public static string GetApiKey()
     {
@@ -67,6 +69,13 @@ public static class MetaAuth
     {
         string? raw = Environment.GetEnvironmentVariable(VisionModelEnv);
         return string.IsNullOrWhiteSpace(raw) ? DefaultVisionModel : raw.Trim();
+    }
+
+    /// <summary>ASR model for the transcribe stage (/v1/asr/transcribe, DIARIZATION).</summary>
+    public static string GetTranscribeModel()
+    {
+        string? raw = Environment.GetEnvironmentVariable(TranscribeModelEnv);
+        return string.IsNullOrWhiteSpace(raw) ? DefaultTranscribeModel : raw.Trim();
     }
 
     public static string? GetReasoningEffort()
