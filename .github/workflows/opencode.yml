@@ -35,7 +35,7 @@ jobs:
         startsWith(github.event.comment.body, '/opencode ') ||
         github.event.comment.body == '/opencode')
       )
-    runs-on: docker-desktop
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
       id-token: write

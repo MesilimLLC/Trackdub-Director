@@ -18,7 +18,7 @@ name: Dependabot auto-merge
 #
 # Guardrails honoured (enforced by .github/scripts/*.py in the `yaml` CI job):
 #   - `pull_request` and `workflow_run`, never `pull_request_target`.
-#   - `runs-on: docker-desktop` (laptop ARC scale set); no GitHub-hosted runners.
+#   - `runs-on: ubuntu-latest`.
 #   - No marketplace actions at all — only `actions/checkout`, `curl`, and the
 #     runner's shell.
 on:
@@ -57,7 +57,7 @@ jobs:
        github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.event == 'pull_request' &&
        startsWith(github.event.workflow_run.head_branch, 'dependabot/'))
-    runs-on: docker-desktop
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
