@@ -11,11 +11,13 @@ Meta AI Developer Hackathon (Oct 26 - Nov 4, 2026).
 
 **All code, data files, and measurements in this repository were created
 during the hackathon (Oct 26 - Nov 4, 2026)**, apart from the pre-existing
-material listed at the end of this section. This is a standalone app. It does not import, copy, or call
+material named below. This is a standalone app. It does not import, copy, or call
 the author's earlier project Trackdub
-([github.com/mesalimllc/Trackdub](https://github.com/mesalimllc/Trackdub)),
-which predates the event and is not part of this submission. Pre-existing
-material used here: VOA Learning English footage (public domain) and
+([github.com/MesilimLLC/Trackdub](https://github.com/MesilimLLC/Trackdub)),
+which predates the event and is not part of this submission. The problem
+framing comes from that experience; the code does not.
+
+Pre-existing material: VOA Learning English footage (public domain) and
 ElevenLabs stock voices.
 
 | Lane | What it does | Meta model |
