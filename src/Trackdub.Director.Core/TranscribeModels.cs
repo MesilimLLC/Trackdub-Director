@@ -20,12 +20,13 @@ public sealed record TranscribeTurn(
 /// One transcribed segment in the app's input shape ({id, text, duration_seconds})
 /// plus the diarization speaker label, recorded verbatim ("A", "B", ...) and never
 /// mapped to a character name. DurationSeconds is the turn's endMs minus startMs,
-/// rounded to 0.1 s, matching the voa10 stamping convention.
+/// rounded to 0.1 s, matching the voa10 stamping convention. Nullable so pipeline
+/// / web inputs can omit duration (QA then estimates); ASR mapping always sets it.
 /// </summary>
 public sealed record TranscribeSegment(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("text")] string Text,
-    [property: JsonPropertyName("duration_seconds")] double DurationSeconds,
+    [property: JsonPropertyName("duration_seconds")] double? DurationSeconds,
     [property: JsonPropertyName("speaker")] string? Speaker = null);
 
 /// <summary>

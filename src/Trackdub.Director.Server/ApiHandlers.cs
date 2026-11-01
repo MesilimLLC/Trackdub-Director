@@ -127,7 +127,20 @@ internal static class ApiHandlers
         {
             var service = new PipelineService(client, transcribeClient, tts, options);
             PipelineReport report = await service.RunAsync(req, ct).ConfigureAwait(false);
+            if (report.Audition is not null)
+            {
+                await TryWriteAuditionOutputsAsync(report.Audition, ct).ConfigureAwait(false);
+            }
+
             return Results.Json(report);
+        }
+        catch (TtsApiException ex)
+        {
+            return MapTtsException(ex);
+        }
+        catch (MetaApiException ex)
+        {
+            return MapMetaException(ex);
         }
         catch (ArgumentException ex)
         {

@@ -47,6 +47,17 @@ public sealed class MuseTranscribeClient : IMuseTranscribeClient
         audioContent.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
         form.Add(audioContent, "audio", string.IsNullOrWhiteSpace(fileName) ? "audio.wav" : fileName);
 
+        // Create the raw-capture parent before the paid call so a missing folder
+        // fails closed before spend, and the response can still be written after.
+        if (!string.IsNullOrWhiteSpace(_rawCapturePath))
+        {
+            string? dir = Path.GetDirectoryName(Path.GetFullPath(_rawCapturePath));
+            if (!string.IsNullOrEmpty(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+        }
+
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{MetaAuth.GetBaseUrl()}/asr/transcribe")
         {
             Content = form,
@@ -64,22 +75,14 @@ public sealed class MuseTranscribeClient : IMuseTranscribeClient
 
     private async Task<string> SendForBodyAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        HttpResponseMessage response;
+        // Headers-read keeps the timeout covering body read too only when the
+        // whole send+read path shares the same cancellation / catch mapping.
         try
         {
-            response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-        }
-        catch (HttpRequestException ex)
-        {
-            throw new MetaApiException($"Meta Model API request failed: {ex.Message}", ex);
-        }
-        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
-        {
-            throw new MetaApiException("Meta Model API request timed out.", ex);
-        }
+            using HttpResponseMessage response = await _httpClient
+                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .ConfigureAwait(false);
 
-        using (response)
-        {
             string body = response.Content is null
                 ? string.Empty
                 : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -90,6 +93,14 @@ public sealed class MuseTranscribeClient : IMuseTranscribeClient
             }
 
             return body;
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new MetaApiException($"Meta Model API request failed: {ex.Message}", ex);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new MetaApiException("Meta Model API request timed out.", ex);
         }
     }
 
@@ -112,7 +123,7 @@ public sealed class MuseTranscribeClient : IMuseTranscribeClient
 
         foreach (TranscribeTurn turn in parsed.Turns)
         {
-            if (turn.Transcript is null || turn.EndMs < turn.StartMs)
+            if (turn is null || turn.Transcript is null || turn.EndMs < turn.StartMs)
             {
                 throw new MetaApiException($"Unexpected Meta Model API transcribe turn shape: {Truncate(body)}");
             }

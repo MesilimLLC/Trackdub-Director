@@ -120,6 +120,13 @@ internal static class PipelineCli
             return 1;
         }
 
+        string? pathClash = ValidateOutputPath(output, audio, input, sceneInput);
+        if (pathClash is not null)
+        {
+            Console.Error.WriteLine($"error: {pathClash}");
+            return 1;
+        }
+
         try
         {
             PipelineRequest? request = await BuildRequestAsync(audio, input, sceneInput, scene, audition, from, to).ConfigureAwait(false);
@@ -152,6 +159,11 @@ internal static class PipelineCli
             var service = new PipelineService(client, new MuseTranscribeClient(), new ElevenLabsTtsProvider(), options);
             Console.WriteLine($"Pipeline: {(audio is not null ? $"audio {Path.GetFullPath(audio)}" : $"{request.Segments!.Count} segment(s)")} {from}->{to} | scene {(scene ? "on" : "off")} | audition {(audition ? "on" : "off")}");
             PipelineReport report = await service.RunAsync(request).ConfigureAwait(false);
+
+            if (report.Audition is not null)
+            {
+                await TryWriteAuditionOutputsAsync(report.Audition).ConfigureAwait(false);
+            }
 
             string resolvedOutput = Path.GetFullPath(output);
             string? dir = Path.GetDirectoryName(resolvedOutput);
@@ -263,6 +275,89 @@ internal static class PipelineCli
         return new PipelineRequest(audioBytes, segments, sceneSegments, scene, audition, from, to, audioFileName);
     }
 
+    private static string? ValidateOutputPath(string output, string? audio, string? input, string? sceneInput)
+    {
+        string resolvedOutput;
+        try
+        {
+            resolvedOutput = Path.GetFullPath(output);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return "--output must be a valid file path.";
+        }
+
+        StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        foreach ((string label, string? path) in new (string, string?)[]
+        {
+            ("--audio", audio),
+            ("--input", input),
+            ("--scene-input", sceneInput),
+        })
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                continue;
+            }
+
+            string resolved;
+            try
+            {
+                resolved = Path.GetFullPath(path);
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                return $"{label} must be a valid file path.";
+            }
+
+            if (string.Equals(resolvedOutput, resolved, comparison))
+            {
+                return $"--output must not be the same path as {label}.";
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Persists winning takes when AUDITION_OUTPUT_DIR is set (same contract as the
+    /// server). AudioBytes are JsonIgnore, so the report JSON alone would drop them.
+    /// </summary>
+    private static async Task TryWriteAuditionOutputsAsync(AuditionReport report)
+    {
+        string? outputDir = Environment.GetEnvironmentVariable("AUDITION_OUTPUT_DIR");
+        if (string.IsNullOrWhiteSpace(outputDir))
+        {
+            return;
+        }
+
+        string auditionDir = Path.Combine(outputDir, "media", "audition");
+        Directory.CreateDirectory(auditionDir);
+        foreach (AuditionSegmentReport segment in report.Segments)
+        {
+            AuditionTakeReport? winner = segment.Takes.FirstOrDefault(t => t.IsWinner);
+            if (winner?.AudioBytes is null || segment.WinnerFileName is null)
+            {
+                continue;
+            }
+
+            string root = Path.GetFullPath(auditionDir) + Path.DirectorySeparatorChar;
+            string target = Path.GetFullPath(Path.Combine(auditionDir, segment.WinnerFileName));
+            if (!target.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException($"Winning take file name resolves outside the audition directory: {segment.WinnerFileName}");
+            }
+
+            await File.WriteAllBytesAsync(target, winner.AudioBytes).ConfigureAwait(false);
+        }
+
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true };
+        await File.WriteAllTextAsync(
+            Path.Combine(outputDir, "audition-manifest.json"),
+            JsonSerializer.Serialize(report, options)).ConfigureAwait(false);
+        Console.WriteLine($"Audition winners written under {auditionDir}");
+    }
+
     public static void PrintHelp()
     {
         Console.WriteLine("Usage: trackdub-director pipeline (--audio <file.wav> | --input <segments.json>) --output <report.json> [options]");
@@ -291,6 +386,7 @@ internal static class PipelineCli
         Console.WriteLine("Environment:");
         Console.WriteLine("  META_API_KEY (or META_MODEL_API_KEY)   Required.");
         Console.WriteLine("  ELEVENLABS_API_KEY                      Required only for --audition.");
+        Console.WriteLine("  AUDITION_OUTPUT_DIR                     When set with --audition, write winning WAVs + manifest.");
         Console.WriteLine("  META_TRANSCRIBE_MODEL                   Default: muse-voice-transcribe-1.0");
         Console.WriteLine("  META_MODEL_API_BASE_URL                 Default: https://api.meta.ai/v1");
     }

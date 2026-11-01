@@ -18,8 +18,10 @@ builder.Services.AddCors(options =>
     });
 });
 
-// HttpClient used by MetaClient. Registered so tests can replace it with a fake handler.
-builder.Services.AddSingleton(_ => new HttpClient(new HttpClientHandler()) { Timeout = TimeSpan.FromSeconds(60) });
+// Shared HttpClient for Meta chat/vision/ASR. Timeout is 300s so diarization can
+// finish; chat calls normally return well under that. Tests replace this singleton
+// with a fake handler, so MuseTranscribeClient must resolve the same instance.
+builder.Services.AddSingleton(_ => new HttpClient(new HttpClientHandler()) { Timeout = TimeSpan.FromSeconds(300) });
 builder.Services.AddTransient(sp => new MetaClient(sp.GetRequiredService<HttpClient>()));
 builder.Services.AddTransient<TranslationService>(sp => new TranslationService(sp.GetRequiredService<MetaClient>()));
 builder.Services.AddTransient<SceneContextService>(sp => new SceneContextService(sp.GetRequiredService<MetaClient>()));

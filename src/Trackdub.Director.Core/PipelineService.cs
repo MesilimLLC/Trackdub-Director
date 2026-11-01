@@ -56,28 +56,32 @@ public sealed class PipelineService
             {
                 using var stream = new MemoryStream(request.AudioWav, writable: false);
                 transcribe = await _transcribe.TranscribeAsync(stream, request.AudioFileName, cancellationToken).ConfigureAwait(false);
-                stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.Ran));
             }
             catch (Exception ex) when (ex is MetaApiException or InvalidOperationException)
             {
                 stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.Failed, Error: ex.Message));
-                stages.Add(new PipelineStageReport(StageQa, PipelineStageStatus.NotRun, Note: "upstream stage failed"));
-                stages.Add(new PipelineStageReport(StageScene, PipelineStageStatus.NotRun, Note: "upstream stage failed"));
-                stages.Add(new PipelineStageReport(StageAudition, PipelineStageStatus.NotRun, Note: "upstream stage failed"));
+                AppendNotRun(stages, StageQa, StageScene, StageAudition);
                 return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), [], null, null, null, null);
             }
 
             segments = transcribe.Segments;
+            if (segments.Length == 0)
+            {
+                stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.Failed, Error: "No speech turns detected in audio."));
+                AppendNotRun(stages, StageQa, StageScene, StageAudition);
+                return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), [], transcribe, null, null, null);
+            }
+
+            stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.Ran));
         }
         else
         {
             stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.NotRun, Note: "no audio supplied"));
             segments = request.Segments!.Select(s => new TranscribeSegment(s.Id, s.Text, s.DurationSeconds, s.Speaker)).ToArray();
-        }
-
-        if (segments.Length == 0)
-        {
-            throw new ArgumentException("Pipeline produced no segments to process.", nameof(request));
+            if (segments.Length == 0)
+            {
+                throw new ArgumentException("Pipeline produced no segments to process.", nameof(request));
+            }
         }
 
         // Stage 2: translation + QA (QaService performs the translation calls).
@@ -89,15 +93,22 @@ public sealed class PipelineService
                 request.SourceLanguage,
                 request.TargetLanguage,
                 cancellationToken).ConfigureAwait(false);
-            stages.Add(new PipelineStageReport(StageQa, PipelineStageStatus.Ran));
         }
         catch (Exception ex) when (ex is MetaApiException or ArgumentException)
         {
             stages.Add(new PipelineStageReport(StageQa, PipelineStageStatus.Failed, Error: ex.Message));
-            stages.Add(new PipelineStageReport(StageScene, PipelineStageStatus.NotRun, Note: "upstream stage failed"));
-            stages.Add(new PipelineStageReport(StageAudition, PipelineStageStatus.NotRun, Note: "upstream stage failed"));
+            AppendNotRun(stages, StageScene, StageAudition);
             return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), segments, transcribe, null, null, null);
         }
+
+        if (HasTerminalMeaningError(qa))
+        {
+            stages.Add(new PipelineStageReport(StageQa, PipelineStageStatus.Failed, Error: "Meaning check failed with an upstream error."));
+            AppendNotRun(stages, StageScene, StageAudition);
+            return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), segments, transcribe, qa, null, null);
+        }
+
+        stages.Add(new PipelineStageReport(StageQa, PipelineStageStatus.Ran));
 
         // Stage 3: scene context for segments that have frames.
         if (!request.Scene)
@@ -121,14 +132,26 @@ public sealed class PipelineService
                 try
                 {
                     scene = await sceneService.RunAsync(framed, cancellationToken).ConfigureAwait(false);
-                    stages.Add(new PipelineStageReport(StageScene, PipelineStageStatus.Ran));
                 }
                 catch (Exception ex) when (ex is MetaApiException or ArgumentException)
                 {
                     stages.Add(new PipelineStageReport(StageScene, PipelineStageStatus.Failed, Error: ex.Message));
-                    stages.Add(new PipelineStageReport(StageAudition, PipelineStageStatus.NotRun, Note: "upstream stage failed"));
+                    AppendNotRun(stages, StageAudition);
                     return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), segments, transcribe, qa, null, null);
                 }
+
+                SceneSegmentResult? failed = scene.Segments.FirstOrDefault(s => s.Status == SceneContextStatus.Failed);
+                if (failed is not null)
+                {
+                    stages.Add(new PipelineStageReport(
+                        StageScene,
+                        PipelineStageStatus.Failed,
+                        Error: failed.Error ?? $"Scene context failed for segment '{failed.Id}'."));
+                    AppendNotRun(stages, StageAudition);
+                    return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), segments, transcribe, qa, scene, null);
+                }
+
+                stages.Add(new PipelineStageReport(StageScene, PipelineStageStatus.Ran));
             }
         }
 
@@ -161,5 +184,31 @@ public sealed class PipelineService
         }
 
         return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), segments, transcribe, qa, scene, audition);
+    }
+
+    private static bool HasTerminalMeaningError(QaReport qa)
+    {
+        foreach (QaSegmentReport segment in qa.Segments)
+        {
+            if (segment.FirstAttempt.MeaningVerdict == MeaningVerdict.Error)
+            {
+                return true;
+            }
+
+            if (segment.Revisions.Any(r => r.MeaningVerdict == MeaningVerdict.Error))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void AppendNotRun(List<PipelineStageReport> stages, params string[] stageNames)
+    {
+        foreach (string name in stageNames)
+        {
+            stages.Add(new PipelineStageReport(name, PipelineStageStatus.NotRun, Note: "upstream stage failed"));
+        }
     }
 }

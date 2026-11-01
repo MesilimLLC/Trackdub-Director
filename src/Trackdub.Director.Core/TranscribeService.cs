@@ -61,16 +61,23 @@ public sealed class TranscribeService
     {
         ArgumentNullException.ThrowIfNull(raw);
 
-        var segments = new TranscribeSegment[raw.Turns.Length];
-        for (int i = 0; i < raw.Turns.Length; i++)
+        // Skip blank / whitespace-only transcripts (non-speech turns). IDs are
+        // assigned after filtering so they stay contiguous for downstream lanes.
+        var segments = new List<TranscribeSegment>(raw.Turns.Length);
+        foreach (TranscribeTurn turn in raw.Turns)
         {
-            TranscribeTurn turn = raw.Turns[i];
+            string text = turn.Transcript.Trim();
+            if (text.Length == 0)
+            {
+                continue;
+            }
+
             double durationSeconds = Math.Round((turn.EndMs - turn.StartMs) / 1000.0, 1, MidpointRounding.AwayFromZero);
-            segments[i] = new TranscribeSegment(
-                $"seg-{i + 1:000}",
-                turn.Transcript.Trim(),
+            segments.Add(new TranscribeSegment(
+                $"seg-{segments.Count + 1:000}",
+                text,
                 durationSeconds,
-                turn.Speaker);
+                turn.Speaker));
         }
 
         return new TranscribeResult(
@@ -80,7 +87,7 @@ public sealed class TranscribeService
             raw.SessionId,
             raw.Transcript,
             raw.AudioDurationMs,
-            segments,
+            segments.ToArray(),
             raw.Turns,
             Usage: null);
     }

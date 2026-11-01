@@ -61,6 +61,13 @@ internal static class IngestCli
             return 1;
         }
 
+        string? pathClash = ValidateOutputPaths(resolvedInput, output, resultOutput, rawOutput);
+        if (pathClash is not null)
+        {
+            Console.Error.WriteLine($"error: {pathClash}");
+            return 1;
+        }
+
         try
         {
             var service = string.IsNullOrWhiteSpace(rawOutput) ? new TranscribeService() : new TranscribeService(Path.GetFullPath(rawOutput));
@@ -78,7 +85,8 @@ internal static class IngestCli
             Console.WriteLine($"Audio: {result.AudioDurationMs} ms | session: {result.SessionId ?? "(none)"} | usage: not reported by the endpoint (null, never zero)");
             foreach (TranscribeSegment segment in result.Segments)
             {
-                Console.WriteLine($"  {segment.Id} [{segment.Speaker ?? "?"}] {segment.DurationSeconds:0.0}s  {segment.Text}");
+                string duration = segment.DurationSeconds?.ToString("0.0") ?? "?";
+                Console.WriteLine($"  {segment.Id} [{segment.Speaker ?? "?"}] {duration}s  {segment.Text}");
             }
 
             return 0;
@@ -93,6 +101,40 @@ internal static class IngestCli
             Console.Error.WriteLine($"error: {ex.Message}");
             return 1;
         }
+    }
+
+    private static string? ValidateOutputPaths(string resolvedInput, string output, string? resultOutput, string? rawOutput)
+    {
+        StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        foreach ((string label, string? path) in new (string, string?)[]
+        {
+            ("--output", output),
+            ("--result", resultOutput),
+            ("--raw", rawOutput),
+        })
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                continue;
+            }
+
+            string resolved;
+            try
+            {
+                resolved = Path.GetFullPath(path);
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                return $"{label} must be a valid file path.";
+            }
+
+            if (string.Equals(resolved, resolvedInput, comparison))
+            {
+                return $"{label} must not be the same path as --input.";
+            }
+        }
+
+        return null;
     }
 
     public static void PrintHelp()

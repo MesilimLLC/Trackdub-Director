@@ -255,6 +255,11 @@ internal static class ApiEndpoints
             return Results.BadRequest(new { error = "Pipeline needs 'audio_base64' or a non-empty 'segments' array of { id, text, duration_seconds, speaker? }." });
         }
 
+        if (audio is null && req.Segments!.Any(s => s is null))
+        {
+            return Results.BadRequest(new { error = "segments must not contain null elements." });
+        }
+
         if (audio is null && req.Segments!.Any(s => string.IsNullOrWhiteSpace(s.Id) || s.Text is null))
         {
             return Results.BadRequest(new { error = "Each segment must have a non-empty 'id' and 'text'." });

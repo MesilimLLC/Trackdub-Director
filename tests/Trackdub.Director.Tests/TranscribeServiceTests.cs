@@ -18,7 +18,7 @@ public sealed class TranscribeServiceTests
         public Task<TranscribeRawResponse> TranscribeAsync(Stream wavAudio, string? fileName = null, CancellationToken cancellationToken = default)
         {
             Calls++;
-            BytesSeen += wavAudio.Length;
+            BytesSeen += wavAudio.CanSeek ? wavAudio.Length : -1;
             return Task.FromResult(response);
         }
     }
@@ -26,6 +26,29 @@ public sealed class TranscribeServiceTests
     private static TranscribeRawResponse CannedRaw()
     {
         return JsonSerializer.Deserialize<TranscribeRawResponse>(CannedBody, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+    }
+
+    [Fact]
+    public void Blank_transcript_turns_are_skipped_and_ids_stay_contiguous()
+    {
+        var raw = new TranscribeRawResponse(
+            "sess",
+            "Hello",
+            3000,
+            [
+                new TranscribeTurn(0, 0, 1000, "Hello", "A"),
+                new TranscribeTurn(1, 1000, 2000, "   ", "B"),
+                new TranscribeTurn(2, 2000, 3000, "World", "C"),
+            ]);
+
+        TranscribeResult result = new TranscribeService(new FakeTranscribeClient(raw)).Map(raw);
+
+        Assert.Equal(2, result.Segments.Length);
+        Assert.Equal("seg-001", result.Segments[0].Id);
+        Assert.Equal("Hello", result.Segments[0].Text);
+        Assert.Equal("seg-002", result.Segments[1].Id);
+        Assert.Equal("World", result.Segments[1].Text);
+        Assert.Equal("C", result.Segments[1].Speaker);
     }
 
     [Fact]
