@@ -98,7 +98,7 @@ src/Trackdub.Director.Server/    ASP.NET Core minimal API referencing Core (see 
                                   Serves the prebuilt web UI from wwwroot;
                                   no key required to start; key only gates live endpoints.
 src/Trackdub.Director.Cli/       Console app (trackdub-director):
-                                  smoke / translate / models / qa / sign-shot / meaning-eval.
+                                  smoke / translate / models / qa / sign-shot / meaning-eval / verify-only.
 web/                             React + Vite + TypeScript frontend. One screen:
                                   header (key status, model, QA summary), line list with
                                   per-line verdicts and expandable attempts, and Run Translate /
@@ -317,7 +317,7 @@ Frontend: one Vitest smoke test rendering the line list from a mocked API respon
 Trackdub.Director.slnx
 src/Trackdub.Director.Core/    Class library: Meta Model API client, translation, duration estimator, QA loop
 src/Trackdub.Director.Server/  ASP.NET Core host exposing Core over HTTP + serving the built frontend from wwwroot
-src/Trackdub.Director.Cli/     Console app: smoke / translate / models / qa / sign-shot / meaning-eval subcommands
+src/Trackdub.Director.Cli/     Console app: smoke / translate / models / qa / sign-shot / meaning-eval / verify-only subcommands
 web/                           React + Vite + TypeScript frontend (one screen)
 tests/Trackdub.Director.Tests/ xUnit tests + server endpoint tests
 samples/segments.json           8-line sample input with duration_seconds for the qa command
@@ -363,6 +363,44 @@ dotnet run --project src/Trackdub.Director.Cli -- meaning-eval \
 Cases are `[{ id, source_text, candidate, expected: "Pass"|"Fail", error_type?, note? }]`.
 `samples/meaning-eval/NOTES.md` describes the shipped case set and the 70%
 pressure dataset.
+
+## Verify-only receipt
+
+`verify-only` is a CI-style gate over a captured run, with zero network
+calls. It reads `audition-manifest.json` and recomputes every verdict from
+the recorded numbers; no summary field (cast flag, winner flag, timing
+verdict) is trusted as a pass. A line is **Verified** only if it has a
+winning take, that take re-passes the QA lane duration check against the
+stamped window, a meaning Pass is recorded for its text, and the winning
+media file is on disk. Anything else is **HumanReviewRequired** with
+reasons per line (`Uncast`, `TimingFail`, `MeaningFail`,
+`MeaningNotEvaluated`, `MediaNotPresent`; `MediaHashMismatch` when the
+manifest recorded a hash the file no longer matches). Not evaluated is a
+review reason, never a pass.
+
+```bash
+dotnet run --project src/Trackdub.Director.Cli -- verify-only            # samples/voa10
+dotnet run --project src/Trackdub.Director.Cli -- verify-only <run-folder> --media-dir <dir> --out receipt.json
+```
+
+Exit codes: 0 all Verified, 1 at least one HumanReviewRequired, 2 usage
+error or unreadable input. The receipt is written beside the input as
+`verify-receipt.json` plus a standalone `verify-receipt.html` (inline CSS,
+no scripts, no external assets), rendered from the receipt JSON alone. The
+server exposes the same gate as `POST /api/verify-only` with
+`{ "run": "voa10" }`: it reads a run folder already on disk inside the
+captured-runs root (`samples/`, or the `VerifyOnly:RunsRoot` setting) and
+returns the receipt JSON. There is no upload path.
+
+The receipt is hash-sealed: the manifest and every present winning media
+file are listed with their SHA-256, labelled `recomputed`. Media is
+gitignored, so on a clean clone the winning files are absent: each line is
+then HumanReviewRequired with `MediaNotPresent`, and the hash is shown only
+if the manifest recorded one (`recorded-at-capture`); otherwise it says
+`not-recorded-in-manifest`. A recorded hash is never shown as recomputed.
+Audition runs now save every synthesized take (winners and losers) and
+record each take's SHA-256 in the manifest; the older captured manifests
+predate that and are kept as evidence, unchanged.
 
 ## Honest history
 

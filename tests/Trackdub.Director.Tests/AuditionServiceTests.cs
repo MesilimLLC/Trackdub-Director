@@ -311,6 +311,68 @@ public sealed class AuditionServiceTests
     }
 
     [Fact]
+    public async Task Writer_keeps_the_losing_takes_and_the_manifest_names_only_files_on_disk()
+    {
+        using var shim = EnvShim(MetaKey);
+        MetaFake meta = OverlongMeta(MeaningPasses.Three);
+        // Window 4.0 (allowed 4.4): take 1 (5.0 s) fails timing, take 3 (4.05 s) wins, take 2 (4.3 s) is the runner-up.
+        var tts = new FakeTts([5.0, 4.3, 4.05]);
+        AuditionReport report = await BuildService(meta, tts).RunAsync(
+            [new AuditionSegmentInput("seg-1", "A long line that runs over.", 4.0, "ashley")], "en", "es");
+        string outputDir = Path.Combine(Path.GetTempPath(), "audition-out-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            string manifestPath = await AuditionOutputWriter.WriteAsync(report, outputDir);
+
+            string auditionDir = Path.Combine(outputDir, "media", "audition");
+            string[] onDisk = Directory.GetFiles(auditionDir).Select(Path.GetFileName).Order().ToArray()!;
+            Assert.Equal(["seg-1-take1.wav", "seg-1-take2.wav", "seg-1-take3.wav"], onDisk);
+
+            AuditionReport manifest = JsonSerializer.Deserialize<AuditionReport>(await File.ReadAllTextAsync(manifestPath), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+            AuditionTakeReport[] takes = manifest.Segments[0].Takes;
+            Assert.Equal(AuditionTimingVerdict.Fail, takes[0].TimingVerdict);
+            Assert.True(takes[2].IsWinner);
+            foreach (AuditionTakeReport take in takes)
+            {
+                string path = Path.Combine(auditionDir, take.AudioFileName!);
+                Assert.True(File.Exists(path), $"Manifest names {take.AudioFileName} but it was not written.");
+                Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(path))).ToLowerInvariant(), take.AudioSha256);
+            }
+
+            Assert.Equal("seg-1-take3.wav", manifest.Segments[0].WinnerFileName);
+        }
+        finally
+        {
+            Directory.Delete(outputDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Manifest_does_not_name_a_file_for_a_take_whose_audio_was_not_written()
+    {
+        var cast = new AuditionCastVoice("anna", "v", "Alice");
+        AuditionTakeReport take = new(
+            1, QaAttemptKind.Initial, "Hola.", MeaningVerdict.Pass, [], "ok", Synthesized: true, 1.0, 1.0,
+            AuditionTimingVerdict.Pass, IsWinner: true, "seg-take1.wav", null, 1, 1, 5);
+        var segment = new AuditionSegmentReport("seg", "Hello.", "anna", cast, 1.0, [take], true, 1, "seg-take1.wav");
+        var report = new AuditionReport("en", "es", [cast], [segment], new AuditionTotals(1, 1, 1, 0, 0, 0, 0, false, false));
+        string outputDir = Path.Combine(Path.GetTempPath(), "audition-out-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            string manifestPath = await AuditionOutputWriter.WriteAsync(report, outputDir);
+
+            AuditionReport manifest = JsonSerializer.Deserialize<AuditionReport>(await File.ReadAllTextAsync(manifestPath), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+            Assert.Null(manifest.Segments[0].Takes[0].AudioFileName);
+            Assert.Null(manifest.Segments[0].WinnerFileName);
+            Assert.Empty(Directory.GetFiles(Path.Combine(outputDir, "media", "audition")));
+        }
+        finally
+        {
+            Directory.Delete(outputDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task NoWinning_take_reports_line_uncast_with_verdicts_preserved()
     {
         using var shim = EnvShim(MetaKey);
