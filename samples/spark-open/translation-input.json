@@ -1,0 +1,162 @@
+[
+  {
+    "id": "clean-01-voa10-002",
+    "text": "Anna, Which coffee shop? There are three coffee shops."
+  },
+  {
+    "id": "clean-02-voa10-003",
+    "text": "Okay, my apartment is across from a big department store."
+  },
+  {
+    "id": "clean-03-voa10-004",
+    "text": "A big department store? Ah, I see it!"
+  },
+  {
+    "id": "clean-04-voa10-005",
+    "text": "Okay! Bye, Ashley. See you soon!"
+  },
+  {
+    "id": "clean-05-voa10-006",
+    "text": "Okay. See you soon."
+  },
+  {
+    "id": "clean-06-fpc-002",
+    "text": "Hi Anna! I'm coming to your apartment. Where is your apartment?"
+  },
+  {
+    "id": "clean-07-fpc-003",
+    "text": "My apartment is near the Columbia Heights Metro."
+  },
+  {
+    "id": "clean-08-meet-002",
+    "text": "I love having my friends over. Come on!"
+  },
+  {
+    "id": "clean-09-seg-001",
+    "text": "The director checks every line before it reaches the audience."
+  },
+  {
+    "id": "clean-10-seg-002",
+    "text": "We need one more take."
+  },
+  {
+    "id": "clean-11-seg-003",
+    "text": "Action!"
+  },
+  {
+    "id": "clean-12-seg-004",
+    "text": "That was perfect. Let us move on."
+  },
+  {
+    "id": "clean-13-seg-005",
+    "text": "Quiet on set, please."
+  },
+  {
+    "id": "clean-14-seg-006",
+    "text": "Where are we shooting tomorrow?"
+  },
+  {
+    "id": "clean-15-seg-007",
+    "text": "Thank you for joining us today."
+  },
+  {
+    "id": "clean-16-seg-008",
+    "text": "We will see you on the next stage."
+  },
+  {
+    "id": "seeded-01-seg-004",
+    "text": "That was perfect. Let us move on."
+  },
+  {
+    "id": "seeded-02-meet-002",
+    "text": "I love having my friends over. Come on!"
+  },
+  {
+    "id": "seeded-03-voa10-004",
+    "text": "A big department store? Ah, I see it!"
+  },
+  {
+    "id": "seeded-04-seg-001",
+    "text": "The director checks every line before it reaches the audience."
+  },
+  {
+    "id": "seeded-05-voa10-002",
+    "text": "Anna, Which coffee shop? There are three coffee shops."
+  },
+  {
+    "id": "seeded-06-seg-002",
+    "text": "We need one more take."
+  },
+  {
+    "id": "seeded-07-seg-001",
+    "text": "The director checks every line before it reaches the audience."
+  },
+  {
+    "id": "seeded-08-fpc-003",
+    "text": "My apartment is near the Columbia Heights Metro."
+  },
+  {
+    "id": "seeded-09-voa10-005",
+    "text": "Okay! Bye, Ashley. See you soon!"
+  },
+  {
+    "id": "seeded-10-fpc-002",
+    "text": "Hi Anna! I'm coming to your apartment. Where is your apartment?"
+  },
+  {
+    "id": "seeded-11-voa10-003",
+    "text": "Okay, my apartment is across from a big department store."
+  },
+  {
+    "id": "seeded-12-seg-001",
+    "text": "The director checks every line before it reaches the audience."
+  },
+  {
+    "id": "seeded-13-seg-008",
+    "text": "We will see you on the next stage."
+  },
+  {
+    "id": "seeded-14-seg-006",
+    "text": "Where are we shooting tomorrow?"
+  },
+  {
+    "id": "seeded-15-seg-007",
+    "text": "Thank you for joining us today."
+  },
+  {
+    "id": "seeded-16-voa10-003",
+    "text": "Okay, my apartment is across from a big department store."
+  },
+  {
+    "id": "seeded-17-fpc-002",
+    "text": "Hi Anna! I'm coming to your apartment. Where is your apartment?"
+  },
+  {
+    "id": "seeded-18-seg-002",
+    "text": "We need one more take."
+  },
+  {
+    "id": "seeded-19-voa10-006",
+    "text": "Okay. See you soon."
+  },
+  {
+    "id": "seeded-20-seg-002",
+    "text": "We need one more take."
+  },
+  {
+    "id": "seeded-21-meet-002",
+    "text": "I love having my friends over. Come on!"
+  },
+  {
+    "id": "seeded-22-seg-008",
+    "text": "We will see you on the next stage."
+  },
+  {
+    "id": "seeded-23-seg-006",
+    "text": "Where are we shooting tomorrow?"
+  },
+  {
+    "id": "seeded-24-seg-007",
+    "text": "Thank you for joining us today."
+  }
+]

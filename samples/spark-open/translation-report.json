@@ -1,0 +1,1068 @@
+{
+  "stage": "spark-open-translation",
+  "translation_provider": "SparkOpen",
+  "meaning_provider": "Hosted",
+  "spark_open_model": "meta-models--muse-spark-open-816b-a42b-nvfp4",
+  "spark_open_endpoint_host": "trackdub-6788-resource.services.ai.azure.com",
+  "meaning_criteria_version": "meaning-v1",
+  "source_language": "en",
+  "target_language": "es",
+  "tolerance_fraction": 0.1,
+  "target_cps": 15,
+  "timestamp_utc": "2026-11-02T17:41:22.7759712Z",
+  "summary": {
+    "lines": 40,
+    "timing_pass": 22,
+    "meaning_pass": 40,
+    "combined_pass": 22,
+    "meaning_errors": 0,
+    "translation_errors": 0,
+    "timing_pass_rate": 0.55,
+    "meaning_pass_rate": 1,
+    "combined_pass_rate": 0.55,
+    "spark_open_translation_tokens": 63016,
+    "hosted_meaning_tokens": 22058
+  },
+  "results": [
+    {
+      "id": "clean-01-voa10-002",
+      "source_text": "Anna, Which coffee shop? There are three coffee shops.",
+      "window_seconds": 3.6,
+      "spark_open_translation": "Anna, \u00BFcu\u00E1l cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+      "estimated_seconds": 2.8666666666666667,
+      "max_chars": 59,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately preserves names, query about which coffee shop, and the fact there are three.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 233,
+        "completionTokens": 1336,
+        "totalTokens": 1569
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 368,
+        "completionTokens": 153,
+        "totalTokens": 521
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-02-voa10-003",
+      "source_text": "Okay, my apartment is across from a big department store.",
+      "window_seconds": 3.8,
+      "spark_open_translation": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+      "estimated_seconds": 4.066666666666666,
+      "max_chars": 62,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately preserves subject (my apartment), location (across from), and object (big department store -\u003E \u0027unos grandes almacenes\u0027, idiomatic plural in Spanish).",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 233,
+        "completionTokens": 5155,
+        "totalTokens": 5388
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 366,
+        "completionTokens": 192,
+        "totalTokens": 558
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-03-voa10-004",
+      "source_text": "A big department store? Ah, I see it!",
+      "window_seconds": 2.466666666666667,
+      "spark_open_translation": "\u00BFUna gran tienda por departamentos? \u00A1Ah, ya la veo!",
+      "estimated_seconds": 3.4,
+      "max_chars": 40,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately preserves the question about a big department store and the exclamation of seeing it, with no material change in meaning.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 232,
+        "completionTokens": 1436,
+        "totalTokens": 1668
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 366,
+        "completionTokens": 199,
+        "totalTokens": 565
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-04-voa10-005",
+      "source_text": "Okay! Bye, Ashley. See you soon!",
+      "window_seconds": 2.1333333333333333,
+      "spark_open_translation": "\u00A1Vale! \u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+      "estimated_seconds": 2.7333333333333334,
+      "max_chars": 35,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves all material meaning: acknowledgment, farewell to Ashley, and intent to see soon, with accurate name and no added or omitted facts.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 232,
+        "completionTokens": 1651,
+        "totalTokens": 1883
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 366,
+        "completionTokens": 184,
+        "totalTokens": 550
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-05-voa10-006",
+      "source_text": "Okay. See you soon.",
+      "window_seconds": 1.2666666666666666,
+      "spark_open_translation": "Vale. Nos vemos pronto.",
+      "estimated_seconds": 1.5333333333333334,
+      "max_chars": 20,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately preserves both parts: acknowledgment (\u0027Okay\u0027 -\u003E \u0027Vale\u0027) and future meeting (\u0027See you soon\u0027 -\u003E \u0027Nos vemos pronto\u0027) with no material change.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 227,
+        "completionTokens": 1131,
+        "totalTokens": 1358
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 353,
+        "completionTokens": 188,
+        "totalTokens": 541
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-06-fpc-002",
+      "source_text": "Hi Anna! I\u0027m coming to your apartment. Where is your apartment?",
+      "window_seconds": 4.2,
+      "spark_open_translation": "\u00A1Hola Anna! Voy a tu apartamento. \u00BFD\u00F3nde est\u00E1 tu apartamento?",
+      "estimated_seconds": 4.066666666666666,
+      "max_chars": 69,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves all material meaning: greeting to Anna, statement of coming to her apartment, and question asking its location, with no added or omitted facts.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 235,
+        "completionTokens": 1207,
+        "totalTokens": 1442
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 370,
+        "completionTokens": 180,
+        "totalTokens": 550
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-07-fpc-003",
+      "source_text": "My apartment is near the Columbia Heights Metro.",
+      "window_seconds": 3.2,
+      "spark_open_translation": "Mi apartamento est\u00E1 cerca del metro de Columbia Heights.",
+      "estimated_seconds": 3.7333333333333334,
+      "max_chars": 52,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Translation preserves subject, location relation (near), and place name Columbia Heights Metro exactly.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 230,
+        "completionTokens": 1355,
+        "totalTokens": 1585
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 360,
+        "completionTokens": 142,
+        "totalTokens": 502
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-08-meet-002",
+      "source_text": "I love having my friends over. Come on!",
+      "window_seconds": 2.6,
+      "spark_open_translation": "Me encanta recibir a mis amigos en casa. \u00A1Vamos!",
+      "estimated_seconds": 3.2,
+      "max_chars": 42,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately conveys loving having friends over and the invitation \u0027Come on!\u0027 as \u0027\u00A1Vamos!\u0027; no material meaning lost.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 231,
+        "completionTokens": 1337,
+        "totalTokens": 1568
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 364,
+        "completionTokens": 203,
+        "totalTokens": 567
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-09-seg-001",
+      "source_text": "The director checks every line before it reaches the audience.",
+      "window_seconds": 4.133333333333334,
+      "spark_open_translation": "El director revisa cada l\u00EDnea antes de que llegue al p\u00FAblico.",
+      "estimated_seconds": 4.066666666666666,
+      "max_chars": 68,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves subject, verb, object, temporal clause and meaning with accurate translation of all material content.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 232,
+        "completionTokens": 763,
+        "totalTokens": 995
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 365,
+        "completionTokens": 178,
+        "totalTokens": 543
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-10-seg-002",
+      "source_text": "We need one more take.",
+      "window_seconds": 1.4666666666666666,
+      "spark_open_translation": "Necesitamos una toma m\u00E1s.",
+      "estimated_seconds": 1.6666666666666667,
+      "max_chars": 24,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately preserves subject (we), modality (need), quantity (one more), and object (take/toma).",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 227,
+        "completionTokens": 1018,
+        "totalTokens": 1245
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 355,
+        "completionTokens": 172,
+        "totalTokens": 527
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-11-seg-003",
+      "source_text": "Action!",
+      "window_seconds": 0.4666666666666667,
+      "spark_open_translation": "\u00A1Acci\u00F3n!",
+      "estimated_seconds": 0.5333333333333333,
+      "max_chars": 7,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate is a direct, accurate translation of \u0027Action!\u0027 to Spanish, preserving the same imperative meaning.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 223,
+        "completionTokens": 927,
+        "totalTokens": 1150
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 347,
+        "completionTokens": 161,
+        "totalTokens": 508
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-12-seg-004",
+      "source_text": "That was perfect. Let us move on.",
+      "window_seconds": 2.2,
+      "spark_open_translation": "Eso fue perfecto. Sigamos adelante.",
+      "estimated_seconds": 2.3333333333333335,
+      "max_chars": 36,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately preserves both sentences: past evaluation \u0027That was perfect\u0027 and hortative \u0027Let us move on\u0027.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 230,
+        "completionTokens": 1474,
+        "totalTokens": 1704
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 358,
+        "completionTokens": 155,
+        "totalTokens": 513
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-13-seg-005",
+      "source_text": "Quiet on set, please.",
+      "window_seconds": 1.4,
+      "spark_open_translation": "Silencio en el set, por favor.",
+      "estimated_seconds": 2,
+      "max_chars": 23,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate directly translates the request for silence on set with equivalent subject, action, and polite modality.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 227,
+        "completionTokens": 800,
+        "totalTokens": 1027
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 356,
+        "completionTokens": 141,
+        "totalTokens": 497
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-14-seg-006",
+      "source_text": "Where are we shooting tomorrow?",
+      "window_seconds": 2.066666666666667,
+      "spark_open_translation": "\u00BFD\u00F3nde rodamos ma\u00F1ana?",
+      "estimated_seconds": 1.4666666666666666,
+      "max_chars": 34,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves subject (we), action (shooting/filming), location question (where), and time (tomorrow) with idiomatic equivalent \u0027rodamos\u0027.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 227,
+        "completionTokens": 923,
+        "totalTokens": 1150
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 352,
+        "completionTokens": 178,
+        "totalTokens": 530
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-15-seg-007",
+      "source_text": "Thank you for joining us today.",
+      "window_seconds": 2.066666666666667,
+      "spark_open_translation": "Gracias por acompa\u00F1arnos hoy.",
+      "estimated_seconds": 1.9333333333333333,
+      "max_chars": 34,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately preserves subject (thank you), action (joining/acompa\u00F1arnos), inclusive object (us/nos), and time (today/hoy) with natural Spanish phrasing.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 228,
+        "completionTokens": 1234,
+        "totalTokens": 1462
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 354,
+        "completionTokens": 192,
+        "totalTokens": 546
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "clean-16-seg-008",
+      "source_text": "We will see you on the next stage.",
+      "window_seconds": 2.2666666666666666,
+      "spark_open_translation": "Nos vemos en el pr\u00F3ximo escenario.",
+      "estimated_seconds": 2.2666666666666666,
+      "max_chars": 37,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves subject, future meeting intent, and location (\u0027next stage\u0027 -\u003E \u0027pr\u00F3ximo escenario\u0027) with no change in polarity, modality, or factual content.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 230,
+        "completionTokens": 862,
+        "totalTokens": 1092
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 357,
+        "completionTokens": 203,
+        "totalTokens": 560
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-01-seg-004",
+      "source_text": "That was perfect. Let us move on.",
+      "window_seconds": 2.2,
+      "spark_open_translation": "Eso fue perfecto. Sigamos adelante.",
+      "estimated_seconds": 2.3333333333333335,
+      "max_chars": 36,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves meaning of both clauses: \u0027That was perfect\u0027 -\u003E \u0027Eso fue perfecto\u0027 and \u0027Let us move on\u0027 -\u003E \u0027Sigamos adelante\u0027.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 230,
+        "completionTokens": 1445,
+        "totalTokens": 1675
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 358,
+        "completionTokens": 169,
+        "totalTokens": 527
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-02-meet-002",
+      "source_text": "I love having my friends over. Come on!",
+      "window_seconds": 2.6,
+      "spark_open_translation": "Me encanta tener a mis amigos en casa. \u00A1Vamos!",
+      "estimated_seconds": 3.066666666666667,
+      "max_chars": 42,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Both sentences preserve material meaning: first expresses enjoyment of having friends over, second is an idiomatic exhortation (\u0027Come on!\u0027 -\u003E \u0027\u00A1Vamos!\u0027). No facts, polarity, or intent are altered.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 231,
+        "completionTokens": 1085,
+        "totalTokens": 1316
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 364,
+        "completionTokens": 299,
+        "totalTokens": 663
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-03-voa10-004",
+      "source_text": "A big department store? Ah, I see it!",
+      "window_seconds": 2.466666666666667,
+      "spark_open_translation": "\u00BFUna gran tienda por departamentos? \u00A1Ah, la veo!",
+      "estimated_seconds": 3.2,
+      "max_chars": 40,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately translates \u0027big department store\u0027 and \u0027I see it\u0027 with no change in subject, object, modality, or polarity.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 232,
+        "completionTokens": 899,
+        "totalTokens": 1131
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 365,
+        "completionTokens": 205,
+        "totalTokens": 570
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-04-seg-001",
+      "source_text": "The director checks every line before it reaches the audience.",
+      "window_seconds": 4.133333333333334,
+      "spark_open_translation": "El director revisa cada l\u00EDnea antes de que llegue al p\u00FAblico.",
+      "estimated_seconds": 4.066666666666666,
+      "max_chars": 68,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately preserves subject (director), action (checks/revisa), object (every line/cada l\u00EDnea), and temporal condition (before it reaches the audience/antes de que llegue al p\u00FAblico) with no material change.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 232,
+        "completionTokens": 1730,
+        "totalTokens": 1962
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 365,
+        "completionTokens": 208,
+        "totalTokens": 573
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-05-voa10-002",
+      "source_text": "Anna, Which coffee shop? There are three coffee shops.",
+      "window_seconds": 3.6,
+      "spark_open_translation": "Anna, \u00BFqu\u00E9 cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+      "estimated_seconds": 2.8,
+      "max_chars": 59,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves name \u0027Anna\u0027, the question about which coffee shop, and the fact there are three, with no material change.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 233,
+        "completionTokens": 1307,
+        "totalTokens": 1540
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 367,
+        "completionTokens": 187,
+        "totalTokens": 554
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-06-seg-002",
+      "source_text": "We need one more take.",
+      "window_seconds": 1.4666666666666666,
+      "spark_open_translation": "Necesitamos una toma m\u00E1s.",
+      "estimated_seconds": 1.6666666666666667,
+      "max_chars": 24,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves subject (we/nosotros), modality of need (need/necesitamos), and object with quantity (one more take/una toma m\u00E1s).",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 227,
+        "completionTokens": 1918,
+        "totalTokens": 2145
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 355,
+        "completionTokens": 182,
+        "totalTokens": 537
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-07-seg-001",
+      "source_text": "The director checks every line before it reaches the audience.",
+      "window_seconds": 4.133333333333334,
+      "spark_open_translation": "El director revisa cada l\u00EDnea antes de que llegue al p\u00FAblico.",
+      "estimated_seconds": 4.066666666666666,
+      "max_chars": 68,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Translation preserves subject (director), action (checks/revisa), object (every line/cada l\u00EDnea), and temporal condition (before it reaches the audience/antes de que llegue al p\u00FAblico).",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 232,
+        "completionTokens": 1872,
+        "totalTokens": 2104
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 365,
+        "completionTokens": 168,
+        "totalTokens": 533
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-08-fpc-003",
+      "source_text": "My apartment is near the Columbia Heights Metro.",
+      "window_seconds": 3.2,
+      "spark_open_translation": "Mi apartamento est\u00E1 cerca del metro de Columbia Heights.",
+      "estimated_seconds": 3.7333333333333334,
+      "max_chars": 52,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Translation directly preserves subject, location relation, and named entity Columbia Heights Metro without adding or omitting material information.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 230,
+        "completionTokens": 618,
+        "totalTokens": 848
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 360,
+        "completionTokens": 183,
+        "totalTokens": 543
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-09-voa10-005",
+      "source_text": "Okay! Bye, Ashley. See you soon!",
+      "window_seconds": 2.1333333333333333,
+      "spark_open_translation": "\u00A1Ok! \u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+      "estimated_seconds": 2.6,
+      "max_chars": 35,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate directly preserves the greeting, addressee name \u0027Ashley\u0027, and intent \u0027see you soon\u0027 as \u0027Nos vemos pronto\u0027 with no material change.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 232,
+        "completionTokens": 1622,
+        "totalTokens": 1854
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 366,
+        "completionTokens": 182,
+        "totalTokens": 548
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-10-fpc-002",
+      "source_text": "Hi Anna! I\u0027m coming to your apartment. Where is your apartment?",
+      "window_seconds": 4.2,
+      "spark_open_translation": "\u00A1Hola Anna! Voy a tu apartamento. \u00BFD\u00F3nde est\u00E1 tu apartamento?",
+      "estimated_seconds": 4.066666666666666,
+      "max_chars": 69,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Translation preserves all material elements: greeting to Anna, statement of coming to her apartment, and question about its location.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 235,
+        "completionTokens": 1590,
+        "totalTokens": 1825
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 370,
+        "completionTokens": 216,
+        "totalTokens": 586
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-11-voa10-003",
+      "source_text": "Okay, my apartment is across from a big department store.",
+      "window_seconds": 3.8,
+      "spark_open_translation": "Bueno, mi apartamento est\u00E1 frente a una gran tienda por departamentos.",
+      "estimated_seconds": 4.666666666666667,
+      "max_chars": 62,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately preserves subject (my apartment), location relation (across from / frente a), and object (big department store / gran tienda por departamentos).",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 233,
+        "completionTokens": 1265,
+        "totalTokens": 1498
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 367,
+        "completionTokens": 175,
+        "totalTokens": 542
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-12-seg-001",
+      "source_text": "The director checks every line before it reaches the audience.",
+      "window_seconds": 4.133333333333334,
+      "spark_open_translation": "El director revisa cada l\u00EDnea antes de que llegue al p\u00FAblico.",
+      "estimated_seconds": 4.066666666666666,
+      "max_chars": 68,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Translation preserves subject (director), action (checks/revisa), object (every line/cada l\u00EDnea), and temporal condition (before it reaches the audience).",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 232,
+        "completionTokens": 1524,
+        "totalTokens": 1756
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 365,
+        "completionTokens": 153,
+        "totalTokens": 518
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-13-seg-008",
+      "source_text": "We will see you on the next stage.",
+      "window_seconds": 2.2666666666666666,
+      "spark_open_translation": "Nos vemos en el pr\u00F3ximo escenario.",
+      "estimated_seconds": 2.2666666666666666,
+      "max_chars": 37,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves subject, future intent, and location (\u0027next stage\u0027 -\u003E \u0027pr\u00F3ximo escenario\u0027) with equivalent meaning.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 230,
+        "completionTokens": 1108,
+        "totalTokens": 1338
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 357,
+        "completionTokens": 193,
+        "totalTokens": 550
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-14-seg-006",
+      "source_text": "Where are we shooting tomorrow?",
+      "window_seconds": 2.066666666666667,
+      "spark_open_translation": "\u00BFD\u00F3nde rodamos ma\u00F1ana?",
+      "estimated_seconds": 1.4666666666666666,
+      "max_chars": 34,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves who (we), action (shooting/filming), location question (where), and time (tomorrow) with natural Spanish idiom \u0027rodamos\u0027.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 227,
+        "completionTokens": 1481,
+        "totalTokens": 1708
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 352,
+        "completionTokens": 242,
+        "totalTokens": 594
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-15-seg-007",
+      "source_text": "Thank you for joining us today.",
+      "window_seconds": 2.066666666666667,
+      "spark_open_translation": "Gracias por acompa\u00F1arnos hoy.",
+      "estimated_seconds": 1.9333333333333333,
+      "max_chars": 34,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately conveys gratitude for joining today, with \u0027acompa\u00F1arnos\u0027 as a natural equivalent of \u0027joining us\u0027 preserving subject, action, and time.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 228,
+        "completionTokens": 848,
+        "totalTokens": 1076
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 354,
+        "completionTokens": 190,
+        "totalTokens": 544
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-16-voa10-003",
+      "source_text": "Okay, my apartment is across from a big department store.",
+      "window_seconds": 3.8,
+      "spark_open_translation": "Mi apartamento est\u00E1 frente a unos grandes almacenes.",
+      "estimated_seconds": 3.466666666666667,
+      "max_chars": 62,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves subject (my apartment), location (across from / frente a), and object (big department store / grandes almacenes), with plural form being idiomatic Spanish for a single department store.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 233,
+        "completionTokens": 1880,
+        "totalTokens": 2113
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 363,
+        "completionTokens": 440,
+        "totalTokens": 803
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-17-fpc-002",
+      "source_text": "Hi Anna! I\u0027m coming to your apartment. Where is your apartment?",
+      "window_seconds": 4.2,
+      "spark_open_translation": "\u00A1Hola Anna! Voy a tu apartamento. \u00BFD\u00F3nde est\u00E1 tu apartamento?",
+      "estimated_seconds": 4.066666666666666,
+      "max_chars": 69,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves subject, action, and question about location of apartment with equivalent Spanish phrasing.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 235,
+        "completionTokens": 931,
+        "totalTokens": 1166
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 370,
+        "completionTokens": 136,
+        "totalTokens": 506
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-18-seg-002",
+      "source_text": "We need one more take.",
+      "window_seconds": 1.4666666666666666,
+      "spark_open_translation": "Necesitamos una toma m\u00E1s.",
+      "estimated_seconds": 1.6666666666666667,
+      "max_chars": 24,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately preserves subject, modality, and quantity: \u0027one more take\u0027 -\u003E \u0027una toma m\u00E1s\u0027.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 227,
+        "completionTokens": 807,
+        "totalTokens": 1034
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 355,
+        "completionTokens": 166,
+        "totalTokens": 521
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-19-voa10-006",
+      "source_text": "Okay. See you soon.",
+      "window_seconds": 1.2666666666666666,
+      "spark_open_translation": "Vale. Nos vemos pronto.",
+      "estimated_seconds": 1.5333333333333334,
+      "max_chars": 20,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately preserves both propositions: acknowledgment (\u0027Vale\u0027) and intention to meet soon (\u0027Nos vemos pronto\u0027).",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 227,
+        "completionTokens": 1576,
+        "totalTokens": 1803
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 353,
+        "completionTokens": 191,
+        "totalTokens": 544
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-20-seg-002",
+      "source_text": "We need one more take.",
+      "window_seconds": 1.4666666666666666,
+      "spark_open_translation": "Necesitamos una toma m\u00E1s.",
+      "estimated_seconds": 1.6666666666666667,
+      "max_chars": 24,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately preserves subject (we), modality (need), and object/quantity (one more take) as \u0027Necesitamos una toma m\u00E1s\u0027.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 227,
+        "completionTokens": 749,
+        "totalTokens": 976
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 355,
+        "completionTokens": 188,
+        "totalTokens": 543
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-21-meet-002",
+      "source_text": "I love having my friends over. Come on!",
+      "window_seconds": 2.6,
+      "spark_open_translation": "Me encanta invitar a mis amigos a casa. \u00A1Vamos!",
+      "estimated_seconds": 3.1333333333333333,
+      "max_chars": 42,
+      "timing_verdict": "Fail",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves subject, action, and invitation intent: \u0027invitar a mis amigos a casa\u0027 accurately conveys \u0027having my friends over\u0027, and \u0027\u00A1Vamos!\u0027 is a natural idiomatic equivalent of \u0027Come on!\u0027.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Fail",
+      "spark_open_usage": {
+        "promptTokens": 231,
+        "completionTokens": 1319,
+        "totalTokens": 1550
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 365,
+        "completionTokens": 230,
+        "totalTokens": 595
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-22-seg-008",
+      "source_text": "We will see you on the next stage.",
+      "window_seconds": 2.2666666666666666,
+      "spark_open_translation": "Nos vemos en el pr\u00F3ximo escenario.",
+      "estimated_seconds": 2.2666666666666666,
+      "max_chars": 37,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately preserves subject, action, and location \u2014 \u0027We will see you\u0027 -\u003E \u0027Nos vemos\u0027 and \u0027next stage\u0027 -\u003E \u0027pr\u00F3ximo escenario\u0027 \u2014 with no material change.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 230,
+        "completionTokens": 765,
+        "totalTokens": 995
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 357,
+        "completionTokens": 186,
+        "totalTokens": 543
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-23-seg-006",
+      "source_text": "Where are we shooting tomorrow?",
+      "window_seconds": 2.066666666666667,
+      "spark_open_translation": "\u00BFD\u00F3nde grabamos ma\u00F1ana?",
+      "estimated_seconds": 1.5333333333333334,
+      "max_chars": 34,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate preserves subject (we), action (shooting/filming = grabamos), location question (where/d\u00F3nde), and time (tomorrow/ma\u00F1ana) with natural idiomatic translation.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 227,
+        "completionTokens": 2069,
+        "totalTokens": 2296
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 352,
+        "completionTokens": 163,
+        "totalTokens": 515
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    },
+    {
+      "id": "seeded-24-seg-007",
+      "source_text": "Thank you for joining us today.",
+      "window_seconds": 2.066666666666667,
+      "spark_open_translation": "Gracias por acompa\u00F1arnos hoy.",
+      "estimated_seconds": 1.9333333333333333,
+      "max_chars": 34,
+      "timing_verdict": "Pass",
+      "meaning_verdict": "Pass",
+      "meaning_issues": [],
+      "meaning_explanation": "Candidate accurately conveys gratitude for joining today, preserving subject, action, and temporal meaning.",
+      "meaning_model_id": "muse-spark-1.1",
+      "combined_verdict": "Pass",
+      "spark_open_usage": {
+        "promptTokens": 228,
+        "completionTokens": 793,
+        "totalTokens": 1021
+      },
+      "hosted_meaning_usage": {
+        "promptTokens": 354,
+        "completionTokens": 174,
+        "totalTokens": 528
+      },
+      "hosted_translation": null,
+      "translation_error": null
+    }
+  ]
+}
