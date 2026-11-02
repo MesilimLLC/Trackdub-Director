@@ -43,15 +43,9 @@ public static class DurationEstimator
     /// </summary>
     public static bool Fits(double estimatedSeconds, double windowSeconds, double toleranceFraction)
     {
-        if (windowSeconds < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(windowSeconds));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegative(windowSeconds);
 
-        if (toleranceFraction < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(toleranceFraction));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegative(toleranceFraction);
 
         double allowed = windowSeconds * (1.0 + toleranceFraction);
         return estimatedSeconds <= allowed;
@@ -59,15 +53,9 @@ public static class DurationEstimator
 
     public static int MaxCharsForWindow(double windowSeconds, double charactersPerSecond)
     {
-        if (windowSeconds < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(windowSeconds));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegative(windowSeconds);
 
-        if (charactersPerSecond <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(charactersPerSecond));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(charactersPerSecond);
 
         return (int)Math.Floor(windowSeconds * charactersPerSecond);
     }

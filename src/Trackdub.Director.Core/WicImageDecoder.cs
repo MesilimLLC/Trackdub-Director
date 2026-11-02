@@ -155,7 +155,7 @@ public static class WicImageDecoder
             rgb = new byte[raw.Length * 3];
             for (int i = 0; i < raw.Length; i++)
             {
-                rgb[i * 3] = rgb[i * 3 + 1] = rgb[i * 3 + 2] = raw[i];
+                rgb[i * 3] = rgb[(i * 3) + 1] = rgb[(i * 3) + 2] = raw[i];
             }
 
             return rgb;
@@ -170,8 +170,8 @@ public static class WicImageDecoder
             if (format == Format24BppBgr)
             {
                 b = raw[p * 3];
-                g = raw[p * 3 + 1];
-                r = raw[p * 3 + 2];
+                g = raw[(p * 3) + 1];
+                r = raw[(p * 3) + 2];
             }
             else
             {
@@ -189,8 +189,8 @@ public static class WicImageDecoder
             }
 
             rgb[p * 3] = r;
-            rgb[p * 3 + 1] = g;
-            rgb[p * 3 + 2] = b;
+            rgb[(p * 3) + 1] = g;
+            rgb[(p * 3) + 2] = b;
         }
 
         return rgb;

@@ -264,8 +264,6 @@ public sealed class SceneContextService
 
     private async Task<SceneSegmentResult?> AccumulateConceptsAsync(SegmentationAccumulator accumulator, SegmentWork work, CancellationToken cancellationToken)
     {
-        
-
         foreach (string concept in work.Concepts)
         {
             SceneSegmentResult? failure = await AccumulateConceptAsync(accumulator, work, concept, cancellationToken).ConfigureAwait(false);

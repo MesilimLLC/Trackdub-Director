@@ -40,10 +40,7 @@ public sealed class RecoveryAgentService
         _meta = meta ?? throw new ArgumentNullException(nameof(meta));
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceLanguage);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguage);
-        if (toleranceFraction < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(toleranceFraction));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegative(toleranceFraction);
 
         _sourceLanguage = sourceLanguage;
         _targetLanguage = targetLanguage;

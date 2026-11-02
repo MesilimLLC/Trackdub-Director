@@ -16,10 +16,10 @@ public sealed class StaticShotCompositorTests
         {
             for (int x = 0; x < W; x++)
             {
-                int i = (y * W + x) * 3;
-                rgb[i] = (byte)((x * 7 + y * 13 + seed) % 256);
-                rgb[i + 1] = (byte)((x * 11 + y * 3 + seed) % 256);
-                rgb[i + 2] = (byte)((x * 5 + y * 17 + seed) % 256);
+                int i = ((y * W) + x) * 3;
+                rgb[i] = (byte)(((x * 7) + (y * 13) + seed) % 256);
+                rgb[i + 1] = (byte)(((x * 11) + (y * 3) + seed) % 256);
+                rgb[i + 2] = (byte)(((x * 5) + (y * 17) + seed) % 256);
             }
         }
 
@@ -47,7 +47,7 @@ public sealed class StaticShotCompositorTests
         {
             for (int x = rect.X1; x < rect.X2; x++)
             {
-                int i = (y * W + x) * 3;
+                int i = ((y * W) + x) * 3;
                 rgb[i] = rgb[i + 1] = rgb[i + 2] = value;
             }
         }

@@ -147,7 +147,7 @@ public sealed class StaticShotCompositor
     private static int[] BlockOrigins(int start, int end)
     {
         int full = (end - start) / BlockSize;
-        IEnumerable<int> origins = Enumerable.Range(0, full).Select(i => start + i * BlockSize);
+        IEnumerable<int> origins = Enumerable.Range(0, full).Select(i => start + (i * BlockSize));
         return (end - start) % BlockSize == 0 ? origins.ToArray() : origins.Append(end - BlockSize).ToArray();
     }
 
@@ -172,17 +172,17 @@ public sealed class StaticShotCompositor
         const double n = BlockSize * BlockSize;
         double muA = sumA / n;
         double muB = sumB / n;
-        double varA = sumAA / n - muA * muA;
-        double varB = sumBB / n - muB * muB;
-        double cov = sumAB / n - muA * muB;
-        double ssim = ((2 * muA * muB + C1) * (2 * cov + C2)) / ((muA * muA + muB * muB + C1) * (varA + varB + C2));
+        double varA = (sumAA / n) - (muA * muA);
+        double varB = (sumBB / n) - (muB * muB);
+        double cov = (sumAB / n) - (muA * muB);
+        double ssim = (((2 * muA * muB) + C1) * ((2 * cov) + C2)) / (((muA * muA) + (muB * muB) + C1) * (varA + varB + C2));
         return (ssim, Math.Abs(muA - muB));
     }
 
     private static double Luma(RasterImage image, int x, int y)
     {
-        int i = (y * image.Width + x) * 3;
-        return 0.299 * image.Rgb[i] + 0.587 * image.Rgb[i + 1] + 0.114 * image.Rgb[i + 2];
+        int i = ((y * image.Width) + x) * 3;
+        return (0.299 * image.Rgb[i]) + (0.587 * image.Rgb[i + 1]) + (0.114 * image.Rgb[i + 2]);
     }
 
     private static string? ValidateThreshold(double minSsim) =>

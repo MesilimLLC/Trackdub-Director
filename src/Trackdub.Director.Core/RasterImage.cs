@@ -33,7 +33,7 @@ public sealed record RasterImage(int Width, int Height, byte[] Rgb)
         byte[] rgb = new byte[width * height * 3];
         for (int row = 0; row < height; row++)
         {
-            int src = ((y + row) * Width + x) * 3;
+            int src = (((y + row) * Width) + x) * 3;
             Array.Copy(Rgb, src, rgb, row * width * 3, width * 3);
         }
 
@@ -52,7 +52,7 @@ public sealed record RasterImage(int Width, int Height, byte[] Rgb)
         byte[] rgb = (byte[])Rgb.Clone();
         for (int row = 0; row < patch.Height; row++)
         {
-            int dst = ((y + row) * Width + x) * 3;
+            int dst = (((y + row) * Width) + x) * 3;
             Array.Copy(patch.Rgb, row * patch.Width * 3, rgb, dst, patch.Width * 3);
         }
 
@@ -77,22 +77,22 @@ public sealed record RasterImage(int Width, int Height, byte[] Rgb)
         double scaleY = (double)Height / targetHeight;
         for (int dy = 0; dy < targetHeight; dy++)
         {
-            double srcY = Math.Min((dy + 0.5) * scaleY - 0.5, Height - 1);
+            double srcY = Math.Min(((dy + 0.5) * scaleY) - 0.5, Height - 1);
             int y0 = Math.Max(0, (int)Math.Floor(srcY));
             int y1 = Math.Min(Height - 1, y0 + 1);
             double fy = Math.Clamp(srcY - y0, 0, 1);
             for (int dx = 0; dx < targetWidth; dx++)
             {
-                double srcX = Math.Min((dx + 0.5) * scaleX - 0.5, Width - 1);
+                double srcX = Math.Min(((dx + 0.5) * scaleX) - 0.5, Width - 1);
                 int x0 = Math.Max(0, (int)Math.Floor(srcX));
                 int x1 = Math.Min(Width - 1, x0 + 1);
                 double fx = Math.Clamp(srcX - x0, 0, 1);
-                int dst = (dy * targetWidth + dx) * 3;
+                int dst = ((dy * targetWidth) + dx) * 3;
                 for (int c = 0; c < 3; c++)
                 {
-                    double top = Rgb[(y0 * Width + x0) * 3 + c] * (1 - fx) + Rgb[(y0 * Width + x1) * 3 + c] * fx;
-                    double bottom = Rgb[(y1 * Width + x0) * 3 + c] * (1 - fx) + Rgb[(y1 * Width + x1) * 3 + c] * fx;
-                    rgb[dst + c] = (byte)Math.Clamp(Math.Round(top * (1 - fy) + bottom * fy), 0, 255);
+                    double top = (Rgb[(((y0 * Width) + x0) * 3) + c] * (1 - fx)) + (Rgb[(((y0 * Width) + x1) * 3) + c] * fx);
+                    double bottom = (Rgb[(((y1 * Width) + x0) * 3) + c] * (1 - fx)) + (Rgb[(((y1 * Width) + x1) * 3) + c] * fx);
+                    rgb[dst + c] = (byte)Math.Clamp(Math.Round((top * (1 - fy)) + (bottom * fy)), 0, 255);
                 }
             }
         }
@@ -119,7 +119,7 @@ public sealed record RasterImage(int Width, int Height, byte[] Rgb)
                     continue;
                 }
 
-                int i = (y * Width + x) * 3;
+                int i = ((y * Width) + x) * 3;
                 if (Rgb[i] != other.Rgb[i] || Rgb[i + 1] != other.Rgb[i + 1] || Rgb[i + 2] != other.Rgb[i + 2])
                 {
                     diff++;
