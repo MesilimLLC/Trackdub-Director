@@ -131,7 +131,7 @@ public sealed class GlimmerClient : IGlimmerClient, IDisposable
 
         // The returned model must be a Glimmer model; a different served model means the deployment
         // is not the one under test, so stop before the loop.
-        if (!IsGlimmerModel(returnedModel) && !IsGlimmerModel(route.Model))
+        if (!IsGlimmerModel(returnedModel))
         {
             throw new MetaApiException($"Glimmer probe returned a non-Glimmer model '{returnedModel}'; expected a Glimmer model.");
         }
