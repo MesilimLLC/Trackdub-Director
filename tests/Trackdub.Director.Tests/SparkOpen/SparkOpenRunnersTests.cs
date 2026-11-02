@@ -34,9 +34,7 @@ public sealed class SparkOpenRunnersTests
         ];
         SparkOpenProductionReport report = await new SparkOpenProductionRunner(client).RunAsync(segments, "en", "es");
 
-        Assert.Equal(nameof(TextProvider.SparkOpen), report.Provider);
-        Assert.Equal(FakeModel, report.SparkOpenModel);
-        Assert.True(report.FullyGateVerified);
+        AssertProductionReport(report);
         Assert.Equal(2, report.QaReport.Totals.FinalPassCount);
         Assert.All(report.QaReport.Segments, s => Assert.Equal(FakeModel, s.FirstAttempt!.ModelId));
     }
@@ -71,7 +69,7 @@ public sealed class SparkOpenRunnersTests
             calls++;
             return body.Contains(MeaningGate.MeaningMarker, StringComparison.Ordinal)
                 ? ChatResponse(ReasoningMeaningReply(pass: true))
-                : calls == 1 ? ChatResponse("<thinking>no answer</thinking>", total: 500) : ChatResponse("Hola.");
+                : calls == 1 ? ChatResponse("<thinking>no answer</thinking>", usage: new ChatUsage(Total: 500)) : ChatResponse("Hola.");
         });
         using var client = new SparkOpenClient(Config(), rewritingInner: rewriting, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
 
@@ -82,22 +80,15 @@ public sealed class SparkOpenRunnersTests
         ];
         SparkOpenProductionReport report = await new SparkOpenProductionRunner(client).RunAsync(segments, "en", "es");
 
-        Assert.Equal(2, report.QaReport.Segments.Length);
-        Assert.Equal(1, report.QaReport.Totals.FailedSegments);
-        Assert.Equal(1, report.QaReport.Totals.FinalPassCount);
+        AssertRunTotals(report);
         Assert.False(report.FullyGateVerified);
 
         QaSegmentReport failed = report.QaReport.Segments[0];
-        Assert.Null(failed.FirstAttempt);
-        Assert.Null(failed.FinalTranslation);
-        Assert.Equal(QaVerdict.Fail, failed.FinalVerdict);
-        Assert.Contains("no extractable final answer", failed.GenerationError, StringComparison.Ordinal);
-        Assert.Equal(500, failed.TokenUsage.TotalTokens);
+        AssertFailedGeneration(failed);
+        AssertFailedUsage(failed);
 
         QaSegmentReport ok = report.QaReport.Segments[1];
-        Assert.NotNull(ok.FirstAttempt);
-        Assert.Null(ok.GenerationError);
-        Assert.Equal(QaVerdict.Pass, ok.FinalVerdict);
+        AssertSuccessfulSegment(ok);
     }
 
     // ---- Translation runner: Spark Open translates, existing gates grade ----
@@ -117,23 +108,18 @@ public sealed class SparkOpenRunnersTests
         {
             Assert.Contains(MeaningGate.MeaningMarker, body, StringComparison.Ordinal);
             hostedMeaningCalls++;
-            return ChatResponse("{\"verdict\":\"pass\",\"issues\":[],\"explanation\":\"ok\"}", prompt: 300, completion: 100, total: 400, model: "muse-spark-1.1");
+            return ChatResponse("{\"verdict\":\"pass\",\"issues\":[],\"explanation\":\"ok\"}", usage: new ChatUsage(300, 100, 400), model: "muse-spark-1.1");
         });
         using var hostedClient = new MetaClient(new HttpClient(hostedMeaning));
 
         var segments = new[] { new QaSegmentInput("c1", "Hi.", 4.0) };
         var runner = new SparkOpenTranslationRunner(sparkOpen, hostedClient);
-        SparkOpenTranslationReport report = await runner.RunAsync(segments, "en", "es");
+        SparkOpenTranslationReport report = await runner.RunAsync(new TranslationRunRequest(segments, "en", "es"));
 
         SparkOpenTranslationLineResult line = report.Results[0];
-        Assert.Equal("Hola.", line.SparkOpenTranslation);
-        Assert.Equal(QaVerdict.Pass, line.TimingVerdict);   // DurationEstimator: 5 chars @ 15cps fits 4.0s
-        Assert.Equal(MeaningVerdict.Pass, line.MeaningVerdict);
-        Assert.Equal(QaVerdict.Pass, line.CombinedVerdict);
-        Assert.Equal("muse-spark-1.1", line.MeaningModelId); // meaning graded by the HOSTED gate
-        Assert.Equal(1, hostedMeaningCalls);
-        Assert.Equal(nameof(TextProvider.SparkOpen), report.TranslationProvider);
-        Assert.Equal(nameof(TextProvider.Hosted), report.MeaningProvider);
+        AssertTimingAndMeaning(line);
+        AssertCombinedAndModel(line, hostedMeaningCalls);
+        AssertProviderProvenance(report);
     }
 
     [Fact]
@@ -155,12 +141,10 @@ public sealed class SparkOpenRunnersTests
         using var hostedClient = new MetaClient(new HttpClient(hostedMeaning));
 
         var segments = new[] { new QaSegmentInput("c1", "Hi.", 0.4) };
-        SparkOpenTranslationReport report = await new SparkOpenTranslationRunner(sparkOpen, hostedClient).RunAsync(segments, "en", "es");
+        SparkOpenTranslationReport report = await new SparkOpenTranslationRunner(sparkOpen, hostedClient).RunAsync(new TranslationRunRequest(segments, "en", "es"));
 
         SparkOpenTranslationLineResult line = report.Results[0];
-        Assert.Equal(QaVerdict.Fail, line.TimingVerdict);
-        Assert.Equal(MeaningVerdict.Pass, line.MeaningVerdict);
-        Assert.Equal(QaVerdict.Fail, line.CombinedVerdict);
+        AssertTimingFailure(line);
         Assert.Equal(1, hostedMeaningCalls);
     }
 
@@ -176,10 +160,9 @@ public sealed class SparkOpenRunnersTests
         using var hostedClient = new MetaClient(new HttpClient(hostedMeaning));
 
         var segments = new[] { new QaSegmentInput("c1", "Hi.", 4.0) };
-        SparkOpenTranslationReport report = await new SparkOpenTranslationRunner(sparkOpen, hostedClient).RunAsync(segments, "en", "es");
+        SparkOpenTranslationReport report = await new SparkOpenTranslationRunner(sparkOpen, hostedClient).RunAsync(new TranslationRunRequest(segments, "en", "es"));
 
-        Assert.Equal(MeaningVerdict.Error, report.Results[0].MeaningVerdict);
-        Assert.Equal(QaVerdict.Fail, report.Results[0].CombinedVerdict);
+        AssertMeaningError(report.Results[0]);
         Assert.Equal(1, report.Summary.MeaningErrors);
         Assert.Equal(0, report.Summary.CombinedPass);
     }
@@ -196,7 +179,7 @@ public sealed class SparkOpenRunnersTests
 
         var segments = new[] { new QaSegmentInput("voa10-001", "Hi, Ashley.", 4.0) };
         var hosted = new Dictionary<string, string> { ["voa10-001"] = "Hola, Ashley (hosted)." };
-        SparkOpenTranslationReport report = await new SparkOpenTranslationRunner(sparkOpen, hostedClient).RunAsync(segments, "en", "es", hosted);
+        SparkOpenTranslationReport report = await new SparkOpenTranslationRunner(sparkOpen, hostedClient).RunAsync(new TranslationRunRequest(segments, "en", "es", hosted));
 
         Assert.Equal("Hola, Ashley (hosted).", report.Results[0].HostedTranslation);
     }
@@ -229,22 +212,18 @@ public sealed class SparkOpenRunnersTests
         var sparkTranslate = new HandlerStub((_, _) =>
         {
             calls++;
-            return calls == 1 ? ChatResponse("<thinking>no answer</thinking>", total: 500) : ChatResponse("Hola.");
+            return calls == 1 ? ChatResponse("<thinking>no answer</thinking>", usage: new ChatUsage(Total: 500)) : ChatResponse("Hola.");
         });
         using var sparkOpen = new SparkOpenClient(Config(), rewritingInner: sparkTranslate, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
         var hostedMeaning = new HandlerStub((_, _) => ChatResponse("{\"verdict\":\"pass\",\"issues\":[],\"explanation\":\"ok\"}", model: "muse-spark-1.1"));
         using var hostedClient = new MetaClient(new HttpClient(hostedMeaning));
 
         var segments = new[] { new QaSegmentInput("c1", "Hi.", 4.0), new QaSegmentInput("c2", "Bye.", 4.0) };
-        SparkOpenTranslationReport report = await new SparkOpenTranslationRunner(sparkOpen, hostedClient).RunAsync(segments, "en", "es");
+        SparkOpenTranslationReport report = await new SparkOpenTranslationRunner(sparkOpen, hostedClient).RunAsync(new TranslationRunRequest(segments, "en", "es"));
 
-        Assert.Equal(2, report.Summary.Lines);
-        Assert.Equal(1, report.Summary.TranslationErrors);
-        Assert.NotNull(report.Results[0].TranslationError);
-        Assert.Equal(500, report.Results[0].SparkOpenTranslationUsage?.TotalTokens);
-        Assert.Equal(QaVerdict.Fail, report.Results[0].CombinedVerdict);
-        Assert.Null(report.Results[1].TranslationError);
-        Assert.Equal("Hola.", report.Results[1].SparkOpenTranslation);
+        AssertTranslationErrorSummary(report);
+        AssertFailedLineUsage(report.Results[0]);
+        AssertSuccessfulLine(report.Results[1]);
     }
 
     [Fact]
@@ -255,6 +234,92 @@ public sealed class SparkOpenRunnersTests
         using var hostedClient = new MetaClient(new HttpClient(new HandlerStub((_, _) => ChatResponse("{}"))));
 
         var runner = new SparkOpenTranslationRunner(sparkOpen, hostedClient);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync([], "en", "es"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync(new TranslationRunRequest([], "en", "es")));
+    }
+
+    private static void AssertProductionReport(SparkOpenProductionReport report)
+    {
+        Assert.Equal(nameof(TextProvider.SparkOpen), report.Provider);
+        Assert.Equal(FakeModel, report.SparkOpenModel);
+        Assert.True(report.FullyGateVerified);
+    }
+
+    private static void AssertRunTotals(SparkOpenProductionReport report)
+    {
+        Assert.Equal(2, report.QaReport.Segments.Length);
+        Assert.Equal(1, report.QaReport.Totals.FailedSegments);
+        Assert.Equal(1, report.QaReport.Totals.FinalPassCount);
+    }
+
+    private static void AssertFailedGeneration(QaSegmentReport failed)
+    {
+        Assert.Null(failed.FirstAttempt);
+        Assert.Null(failed.FinalTranslation);
+        Assert.Equal(QaVerdict.Fail, failed.FinalVerdict);
+    }
+
+    private static void AssertFailedUsage(QaSegmentReport failed)
+    {
+        Assert.Contains("no extractable final answer", failed.GenerationError, StringComparison.Ordinal);
+        Assert.Equal(500, failed.TokenUsage.TotalTokens);
+    }
+
+    private static void AssertSuccessfulSegment(QaSegmentReport ok)
+    {
+        Assert.NotNull(ok.FirstAttempt);
+        Assert.Null(ok.GenerationError);
+        Assert.Equal(QaVerdict.Pass, ok.FinalVerdict);
+    }
+
+    private static void AssertTimingAndMeaning(SparkOpenTranslationLineResult line)
+    {
+        Assert.Equal("Hola.", line.SparkOpenTranslation);
+        Assert.Equal(QaVerdict.Pass, line.TimingVerdict);
+        Assert.Equal(MeaningVerdict.Pass, line.MeaningVerdict);
+    }
+
+    private static void AssertCombinedAndModel(SparkOpenTranslationLineResult line, int hostedMeaningCalls)
+    {
+        Assert.Equal(QaVerdict.Pass, line.CombinedVerdict);
+        Assert.Equal("muse-spark-1.1", line.MeaningModelId);
+        Assert.Equal(1, hostedMeaningCalls);
+    }
+
+    private static void AssertProviderProvenance(SparkOpenTranslationReport report)
+    {
+        Assert.Equal(nameof(TextProvider.SparkOpen), report.TranslationProvider);
+        Assert.Equal(nameof(TextProvider.Hosted), report.MeaningProvider);
+    }
+
+    private static void AssertTimingFailure(SparkOpenTranslationLineResult line)
+    {
+        Assert.Equal(QaVerdict.Fail, line.TimingVerdict);
+        Assert.Equal(MeaningVerdict.Pass, line.MeaningVerdict);
+        Assert.Equal(QaVerdict.Fail, line.CombinedVerdict);
+    }
+
+    private static void AssertMeaningError(SparkOpenTranslationLineResult line)
+    {
+        Assert.Equal(MeaningVerdict.Error, line.MeaningVerdict);
+        Assert.Equal(QaVerdict.Fail, line.CombinedVerdict);
+    }
+
+    private static void AssertTranslationErrorSummary(SparkOpenTranslationReport report)
+    {
+        Assert.Equal(2, report.Summary.Lines);
+        Assert.Equal(1, report.Summary.TranslationErrors);
+        Assert.NotNull(report.Results[0].TranslationError);
+    }
+
+    private static void AssertFailedLineUsage(SparkOpenTranslationLineResult line)
+    {
+        Assert.Equal(500, line.SparkOpenTranslationUsage?.TotalTokens);
+        Assert.Equal(QaVerdict.Fail, line.CombinedVerdict);
+    }
+
+    private static void AssertSuccessfulLine(SparkOpenTranslationLineResult line)
+    {
+        Assert.Null(line.TranslationError);
+        Assert.Equal("Hola.", line.SparkOpenTranslation);
     }
 }

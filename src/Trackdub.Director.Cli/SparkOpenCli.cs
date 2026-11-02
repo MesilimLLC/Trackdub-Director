@@ -17,34 +17,40 @@ internal static class SparkOpenCli
 {
     public static async Task<int> RunAsync(string[] args)
     {
-        if (args.Length == 0 || args[0] is "-h" or "--help")
+        var command = new CommandArgs(args);
+        if (command.Count == 0 || command.WantsHelp())
         {
             PrintHelp();
-            return args.Length == 0 ? 1 : 0;
+            return command.Count == 0 ? 1 : 0;
         }
 
-        string sub = args[0].ToLowerInvariant();
-        string[] rest = args[1..];
-        if (rest.Any(arg => arg is "-h" or "--help"))
+        Subcommand sub = command.Subcommand();
+        CommandArgs rest = command.Rest();
+        if (rest.WantsHelp())
         {
             // Subcommand help must never trigger a metered Spark Open call.
             PrintHelp();
             return 0;
         }
 
-        return sub switch
+        return await DispatchAsync(sub, rest).ConfigureAwait(false);
+    }
+
+    private static Task<int> DispatchAsync(Subcommand sub, CommandArgs rest)
+    {
+        return sub.Value switch
         {
-            "judge" => await RunJudgeAsync(rest).ConfigureAwait(false),
-            "production" => await RunProductionAsync(rest).ConfigureAwait(false),
-            "translation" => await RunTranslationAsync(rest).ConfigureAwait(false),
-            "smoke" => await RunSmokeAsync(rest).ConfigureAwait(false),
-            _ => UnknownSub(sub),
+            "judge" => RunJudgeAsync(rest),
+            "production" => RunProductionAsync(rest),
+            "translation" => RunTranslationAsync(rest),
+            "smoke" => RunSmokeAsync(rest),
+            _ => Task.FromResult(UnknownSub(sub)),
         };
     }
 
-    private static int UnknownSub(string sub)
+    private static int UnknownSub(Subcommand sub)
     {
-        Console.Error.WriteLine($"Unknown spark-open subcommand '{sub}'. Expected 'judge', 'production', 'translation', or 'smoke'.");
+        Console.Error.WriteLine($"Unknown spark-open subcommand '{sub.Value}'. Expected 'judge', 'production', 'translation', or 'smoke'.");
         PrintHelp();
         return 1;
     }
@@ -60,17 +66,16 @@ internal static class SparkOpenCli
         return false;
     }
 
-    private static async Task<int> RunJudgeAsync(string[] args)
+    private static async Task<int> RunJudgeAsync(CommandArgs args)
     {
-        var opts = ParseCommon(args, out string? error);
+        CommonOptions? opts = ParseCommon(args, out ParseError? error);
         if (opts is null)
         {
-            Console.Error.WriteLine($"error: {error}");
+            Console.Error.WriteLine($"error: {error?.Value}");
             return 1;
         }
 
-        if (!string.Equals(opts.From, "en", StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(opts.To, "es", StringComparison.OrdinalIgnoreCase))
+        if (!opts.IsEnglishToSpanish())
         {
             // The captured judge inputs are all en->es; judging them under any other pair would diff
             // Spark Open verdicts against hosted verdicts recorded for a different target language.
@@ -83,42 +88,30 @@ internal static class SparkOpenCli
             return 2;
         }
 
-        try
+        return await GuardAsync(async () =>
         {
             IReadOnlyList<JudgeItem> items = await JudgeItemLoader.LoadAsync(
-                opts.CasesPath, opts.PressurePath, opts.UniformPaths).ConfigureAwait(false);
-            Console.WriteLine($"Spark Open judge: {items.Count} items ({opts.From}->{opts.To}).");
+                opts.CasesPath.Value,
+                opts.PressurePath.Value,
+                opts.UniformPaths.Select(p => p.Value).ToArray()).ConfigureAwait(false);
+            Console.WriteLine($"Spark Open judge: {items.Count} items ({opts.From.Value}->{opts.To.Value}).");
 
             using var client = new SparkOpenClient();
             var runner = new SparkOpenJudgeRunner(client);
-            JudgeAgreementReport report = await runner.RunAsync(items, opts.From, opts.To).ConfigureAwait(false);
-            await runner.WriteReportAsync(opts.Output, report).ConfigureAwait(false);
+            JudgeAgreementReport report = await runner.RunAsync(items, opts.From.Value, opts.To.Value).ConfigureAwait(false);
+            await runner.WriteReportAsync(opts.Output.Value, report).ConfigureAwait(false);
 
             JudgeAgreementSummary s = report.Summary;
             Console.WriteLine($"  compared {s.Compared}/{s.TotalItems}: agree {s.Agree}, disagree {s.Disagree}, excluded {s.Excluded}, agreement {Percent(s.AgreementRate)}, tokens {s.TotalTokens}");
-            Console.WriteLine($"Report written to {opts.Output}");
+            Console.WriteLine($"Report written to {opts.Output.Value}");
             return 0;
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or IOException or SparkOpenException or MetaApiException)
-        {
-            Console.Error.WriteLine($"error: {ex.Message}");
-            return 1;
-        }
+        }).ConfigureAwait(false);
     }
 
-    private static async Task<int> RunProductionAsync(string[] args)
+    private static async Task<int> RunProductionAsync(CommandArgs args)
     {
-        string? input = GetValue(args, "--input");
-        string? output = GetValue(args, "--output");
-        if (string.IsNullOrWhiteSpace(input) || string.IsNullOrWhiteSpace(output))
+        if (!TryResolveInputOutput(args, out FilePath input, out FilePath output))
         {
-            Console.Error.WriteLine("error: --input <segments.json> and --output <report.json> are required.");
-            return 1;
-        }
-
-        if (SameFile(input, output))
-        {
-            Console.Error.WriteLine("error: --output must not be the same path as --input.");
             return 1;
         }
 
@@ -127,38 +120,20 @@ internal static class SparkOpenCli
             return 2;
         }
 
-        try
+        return await RunReportLaneAsync(input, output, async (segments, reportPath) =>
         {
-            IReadOnlyList<QaSegmentInput> segments = await QaService.LoadSegmentsAsync(Path.GetFullPath(input)).ConfigureAwait(false);
             using var client = new SparkOpenClient();
             var runner = new SparkOpenProductionRunner(client, QaOptions.FromEnvironment());
             SparkOpenProductionReport report = await runner.RunAsync(segments, "en", "es").ConfigureAwait(false);
-            await runner.WriteReportAsync(Path.GetFullPath(output), report).ConfigureAwait(false);
-
-            Console.WriteLine($"Spark Open production: {report.QaReport.Totals.FinalPassCount}/{report.QaReport.Totals.TotalSegments} final pass, failed {report.QaReport.Totals.FailedSegments}, fully gate-verified={report.FullyGateVerified}, tokens {report.QaReport.Totals.TotalTokens}");
-            Console.WriteLine($"Report written to {output}");
-            return 0;
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or IOException or SparkOpenException or MetaApiException)
-        {
-            Console.Error.WriteLine($"error: {ex.Message}");
-            return 1;
-        }
+            await runner.WriteReportAsync(reportPath.FullPath, report).ConfigureAwait(false);
+            return $"Spark Open production: {report.QaReport.Totals.FinalPassCount}/{report.QaReport.Totals.TotalSegments} final pass, failed {report.QaReport.Totals.FailedSegments}, fully gate-verified={report.FullyGateVerified}, tokens {report.QaReport.Totals.TotalTokens}";
+        }).ConfigureAwait(false);
     }
 
-    private static async Task<int> RunTranslationAsync(string[] args)
+    private static async Task<int> RunTranslationAsync(CommandArgs args)
     {
-        string? input = GetValue(args, "--input");
-        string? output = GetValue(args, "--output");
-        if (string.IsNullOrWhiteSpace(input) || string.IsNullOrWhiteSpace(output))
+        if (!TryResolveInputOutput(args, out FilePath input, out FilePath output))
         {
-            Console.Error.WriteLine("error: --input <segments.json> and --output <report.json> are required.");
-            return 1;
-        }
-
-        if (SameFile(input, output))
-        {
-            Console.Error.WriteLine("error: --output must not be the same path as --input.");
             return 1;
         }
 
@@ -167,37 +142,30 @@ internal static class SparkOpenCli
             return 2;
         }
 
-        try
+        return await RunReportLaneAsync(input, output, async (segments, reportPath) =>
         {
-            IReadOnlyList<QaSegmentInput> segments = await QaService.LoadSegmentsAsync(Path.GetFullPath(input)).ConfigureAwait(false);
             using var sparkOpen = new SparkOpenClient();
             using var hosted = new MetaClient();
             var runner = new SparkOpenTranslationRunner(sparkOpen, hosted, QaOptions.FromEnvironment());
             IReadOnlyDictionary<string, string> hostedTranslations = await LoadHostedTranslationsAsync().ConfigureAwait(false);
-            SparkOpenTranslationReport report = await runner.RunAsync(segments, "en", "es", hostedTranslations).ConfigureAwait(false);
-            await runner.WriteReportAsync(Path.GetFullPath(output), report).ConfigureAwait(false);
+            SparkOpenTranslationReport report = await runner.RunAsync(
+                new TranslationRunRequest(segments, "en", "es", hostedTranslations)).ConfigureAwait(false);
+            await runner.WriteReportAsync(reportPath.FullPath, report).ConfigureAwait(false);
 
             SparkOpenTranslationSummary s = report.Summary;
-            Console.WriteLine($"Spark Open translation lane: timing {Percent(s.TimingPassRate)}, meaning {Percent(s.MeaningPassRate)}, combined {Percent(s.CombinedPassRate)} over {s.Lines} lines");
-            Console.WriteLine($"Report written to {output}");
-            return 0;
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or IOException or SparkOpenException or MetaApiException)
-        {
-            Console.Error.WriteLine($"error: {ex.Message}");
-            return 1;
-        }
+            return $"Spark Open translation lane: timing {Percent(s.TimingPassRate)}, meaning {Percent(s.MeaningPassRate)}, combined {Percent(s.CombinedPassRate)} over {s.Lines} lines";
+        }).ConfigureAwait(false);
     }
 
-    private static async Task<int> RunSmokeAsync(string[] args)
+    private static async Task<int> RunSmokeAsync(CommandArgs args)
     {
-        string text = GetValue(args, "--text") ?? "Hello.";
+        string text = args.ValueOf(Option.Text) ?? "Hello.";
         if (!EnsureConfigured())
         {
             return 2;
         }
 
-        try
+        return await GuardAsync(async () =>
         {
             using var client = new SparkOpenClient();
             MetaClient meta = client.AsMetaClient();
@@ -205,65 +173,132 @@ internal static class SparkOpenCli
                 new MetaClient.ChatRequest([new MetaClient.ChatMessage("user", $"Reply with the JSON object {{\"ok\":true}} on the final line. Context: {text}")])).ConfigureAwait(false);
             Console.WriteLine($"Spark Open smoke OK: model={result.Model}, usage total={result.Usage?.TotalTokens ?? 0}");
             return 0;
+        }).ConfigureAwait(false);
+    }
+
+    private static async Task<int> RunReportLaneAsync(
+        FilePath input,
+        FilePath output,
+        Func<IReadOnlyList<QaSegmentInput>, FilePath, Task<string>> run)
+    {
+        return await GuardAsync(async () =>
+        {
+            IReadOnlyList<QaSegmentInput> segments = await QaService.LoadSegmentsAsync(input.FullPath).ConfigureAwait(false);
+            string summary = await run(segments, output).ConfigureAwait(false);
+            Console.WriteLine(summary);
+            Console.WriteLine($"Report written to {output.Value}");
+            return 0;
+        }).ConfigureAwait(false);
+    }
+
+    private static async Task<int> GuardAsync(Func<Task<int>> action)
+    {
+        try
+        {
+            return await action().ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is SparkOpenException or MetaApiException)
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or SparkOpenException or MetaApiException)
         {
             Console.Error.WriteLine($"error: {ex.Message}");
             return 1;
         }
     }
 
-    private sealed record CommonOptions(string CasesPath, string PressurePath, IReadOnlyList<string> UniformPaths, string Output, string From, string To);
-
-    private static readonly string[] JudgeFlags =
-    [
-        "--cases", "--pressure", "--output", "--from", "--to", "--uniform-scale", "--uniform-voa10",
-    ];
-
-    private static CommonOptions? ParseCommon(string[] args, out string? error)
+    private static bool TryResolveInputOutput(CommandArgs args, out FilePath input, out FilePath output)
     {
-        for (int i = 0; i < args.Length; i++)
+        input = new FilePath(args.ValueOf(Option.Input) ?? string.Empty);
+        output = new FilePath(args.ValueOf(Option.Output) ?? string.Empty);
+        if (string.IsNullOrWhiteSpace(input.Value) || string.IsNullOrWhiteSpace(output.Value))
         {
-            if (args[i].StartsWith("--", StringComparison.Ordinal) && !JudgeFlags.Contains(args[i], StringComparer.Ordinal))
-            {
-                error = $"Unknown option '{args[i]}' for 'spark-open judge'.";
-                return null;
-            }
+            Console.Error.WriteLine("error: --input <segments.json> and --output <report.json> are required.");
+            return false;
         }
 
-        string cases = GetValue(args, "--cases") ?? Path.Combine("samples", "meaning-eval", "cases.json");
-        string pressure = GetValue(args, "--pressure") ?? Path.Combine("samples", "meaning-eval", "qa-report-pressure-70.json");
-        string? output = GetValue(args, "--output");
-        string from = GetValue(args, "--from") ?? "en";
-        string to = GetValue(args, "--to") ?? "es";
-
-        string[] uniform =
-        [
-            GetValue(args, "--uniform-scale") ?? Path.Combine("samples", "voa10-scale", "qa-report-scale.json"),
-            GetValue(args, "--uniform-voa10") ?? Path.Combine("samples", "voa10-scale", "qa-report-voa10.json"),
-        ];
-
-        if (string.IsNullOrWhiteSpace(output))
+        if (SameFile(input, output))
         {
-            error = "--output <report.json> is required.";
+            Console.Error.WriteLine("error: --output must not be the same path as --input.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private sealed record CommonOptions(FilePath Output, JudgeInputs Inputs, LanguagePair Languages)
+    {
+        public FilePath CasesPath => Inputs.CasesPath;
+
+        public FilePath PressurePath => Inputs.PressurePath;
+
+        public IReadOnlyList<FilePath> UniformPaths => Inputs.UniformPaths;
+
+        public LanguageCode From => Languages.From;
+
+        public LanguageCode To => Languages.To;
+
+        public bool IsEnglishToSpanish()
+        {
+            if (!string.Equals(From.Value, "en", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return string.Equals(To.Value, "es", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private static CommonOptions? ParseCommon(CommandArgs args, out ParseError? error)
+    {
+        string? unknown = args.FirstUnknownOption();
+        if (unknown is not null)
+        {
+            error = new ParseError($"Unknown option '{unknown}' for 'spark-open judge'.");
             return null;
         }
 
-        // The report is written over --output after the calls; it must never clobber an input file.
-        string outputFull = Path.GetFullPath(output);
-        string[] inputs = [Path.GetFullPath(cases), Path.GetFullPath(pressure), .. uniform.Select(Path.GetFullPath)];
-        if (inputs.Any(inputPath => string.Equals(inputPath, outputFull, StringComparison.OrdinalIgnoreCase)))
+        string? outputValue = args.ValueOf(Option.Output);
+        if (string.IsNullOrWhiteSpace(outputValue))
         {
-            error = "--output must not name an input file (--cases, --pressure, or --uniform-*).";
+            error = new ParseError("--output <report.json> is required.");
+            return null;
+        }
+
+        CommonOptions options = BuildOptions(args, new FilePath(outputValue));
+
+        // The report is written over --output after the calls; it must never clobber an input file.
+        if (options.Output.NamesAnyInput(options.CasesPath, options.PressurePath, options.UniformPaths))
+        {
+            error = new ParseError("--output must not name an input file (--cases, --pressure, or --uniform-*).");
             return null;
         }
 
         error = null;
-        return new CommonOptions(Path.GetFullPath(cases), Path.GetFullPath(pressure), uniform.Select(Path.GetFullPath).ToArray(), outputFull, from, to);
+        return options;
     }
 
-    private static bool SameFile(string input, string output)
-        => string.Equals(Path.GetFullPath(input), Path.GetFullPath(output), StringComparison.OrdinalIgnoreCase);
+    private static CommonOptions BuildOptions(CommandArgs args, FilePath output)
+    {
+        FilePath cases = new(args.ValueOf(Option.Cases) ?? Path.Combine("samples", "meaning-eval", "cases.json"));
+        FilePath pressure = new(args.ValueOf(Option.Pressure) ?? Path.Combine("samples", "meaning-eval", "qa-report-pressure-70.json"));
+        LanguageCode from = new(args.ValueOf(Option.From) ?? "en");
+        LanguageCode to = new(args.ValueOf(Option.To) ?? "es");
+
+        FilePath[] uniform =
+        [
+            new(args.ValueOf(Option.UniformScale) ?? Path.Combine("samples", "voa10-scale", "qa-report-scale.json")),
+            new(args.ValueOf(Option.UniformVoa10) ?? Path.Combine("samples", "voa10-scale", "qa-report-voa10.json")),
+        ];
+
+        return new CommonOptions(
+            new FilePath(output.FullPath),
+            new JudgeInputs(
+                new FilePath(cases.FullPath),
+                new FilePath(pressure.FullPath),
+                uniform.Select(p => new FilePath(p.FullPath)).ToArray()),
+            new LanguagePair(from, to));
+    }
+
+    private static bool SameFile(FilePath input, FilePath output)
+        => string.Equals(input.FullPath, output.FullPath, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Loads the recorded hosted translations (the meaning-eval candidates) keyed by segment id, so
@@ -282,19 +317,6 @@ internal static class SparkOpenCli
         return cases
             .Where(c => !string.IsNullOrWhiteSpace(c.Candidate))
             .ToDictionary(c => c.Id, c => c.Candidate!, StringComparer.Ordinal);
-    }
-
-    private static string? GetValue(string[] args, string flag)
-    {
-        for (int i = 0; i < args.Length - 1; i++)
-        {
-            if (string.Equals(args[i], flag, StringComparison.Ordinal))
-            {
-                return args[i + 1];
-            }
-        }
-
-        return null;
     }
 
     private static string Percent(double? value) => value is null ? "-" : value.Value.ToString("P1", CultureInfo.InvariantCulture);
@@ -320,5 +342,109 @@ internal static class SparkOpenCli
         Console.WriteLine($"  {SparkOpenAuth.ApiKeyEnv}    Deployment key. Never logged, printed, committed, or stored.");
         Console.WriteLine($"  {SparkOpenAuth.ModelEnv}      Deployment name Michael set.");
         Console.WriteLine("  translation also needs META_API_KEY: meaning grading uses the hosted gate (muse-spark-1.1).");
+    }
+
+    private readonly record struct CommandArgs(IReadOnlyList<string> Values)
+    {
+        public int Count => Values.Count;
+
+        public bool WantsHelp() => Values.Any(value => value is "-h" or "--help");
+
+        public Subcommand Subcommand() => new(Values[0].ToLowerInvariant());
+
+        public CommandArgs Rest() => new(Values.Skip(1).ToArray());
+
+        public string? ValueOf(Option option)
+        {
+            string flag = OptionFlags.ToFlag(option);
+            for (int i = 0; i < Values.Count - 1; i++)
+            {
+                if (string.Equals(Values[i], flag, StringComparison.Ordinal))
+                {
+                    return Values[i + 1];
+                }
+            }
+
+            return null;
+        }
+
+        public string? FirstUnknownOption()
+        {
+            foreach (string value in Values)
+            {
+                if (value.StartsWith("--", StringComparison.Ordinal) && !OptionFlags.IsKnown(value))
+                {
+                    return value;
+                }
+            }
+
+            return null;
+        }
+    }
+
+    private readonly record struct Subcommand(string Value);
+
+    private readonly record struct FilePath(string Value)
+    {
+        public string FullPath => Path.GetFullPath(Value);
+
+        public bool NamesAnyInput(FilePath cases, FilePath pressure, IReadOnlyList<FilePath> uniform)
+        {
+            if (SameAs(cases))
+            {
+                return true;
+            }
+
+            if (SameAs(pressure))
+            {
+                return true;
+            }
+
+            return uniform.Any(SameAs);
+        }
+
+        private bool SameAs(FilePath other)
+            => string.Equals(FullPath, other.FullPath, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private readonly record struct JudgeInputs(FilePath CasesPath, FilePath PressurePath, IReadOnlyList<FilePath> UniformPaths);
+
+    private readonly record struct LanguagePair(LanguageCode From, LanguageCode To);
+
+    private readonly record struct LanguageCode(string Value);
+
+    private readonly record struct ParseError(string Value);
+
+    private enum Option
+    {
+        Cases,
+        Pressure,
+        Output,
+        From,
+        To,
+        UniformScale,
+        UniformVoa10,
+        Input,
+        Text,
+    }
+
+    private static class OptionFlags
+    {
+        private static readonly IReadOnlyDictionary<Option, string> Flags = new Dictionary<Option, string>
+        {
+            [Option.Cases] = "--cases",
+            [Option.Pressure] = "--pressure",
+            [Option.Output] = "--output",
+            [Option.From] = "--from",
+            [Option.To] = "--to",
+            [Option.UniformScale] = "--uniform-scale",
+            [Option.UniformVoa10] = "--uniform-voa10",
+            [Option.Input] = "--input",
+            [Option.Text] = "--text",
+        };
+
+        public static string ToFlag(Option option) => Flags[option];
+
+        public static bool IsKnown(string flag) => Flags.Values.Contains(flag, StringComparer.Ordinal);
     }
 }

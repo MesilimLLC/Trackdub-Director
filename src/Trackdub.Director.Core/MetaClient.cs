@@ -133,16 +133,7 @@ public sealed class MetaClient : IDisposable
         try
         {
             using JsonDocument doc = JsonDocument.Parse(body);
-            JsonElement root = doc.RootElement;
-            if (root.ValueKind == JsonValueKind.Object
-                && root.TryGetProperty("usage", out JsonElement usage)
-                && usage.ValueKind == JsonValueKind.Object)
-            {
-                return new TokenUsage(
-                    ReadUsageInt(usage, "prompt_tokens"),
-                    ReadUsageInt(usage, "completion_tokens"),
-                    ReadUsageInt(usage, "total_tokens"));
-            }
+            return TryReadUsage(doc.RootElement, out TokenUsage? usage) ? usage : null;
         }
         catch (JsonException)
         {
@@ -150,6 +141,37 @@ public sealed class MetaClient : IDisposable
         }
 
         return null;
+    }
+
+    private static bool TryReadUsage(JsonElement root, out TokenUsage? usage)
+    {
+        usage = null;
+        if (!TryGetObjectProperty(root, "usage", out JsonElement usageElement))
+        {
+            return false;
+        }
+
+        usage = new TokenUsage(
+            ReadUsageInt(usageElement, "prompt_tokens"),
+            ReadUsageInt(usageElement, "completion_tokens"),
+            ReadUsageInt(usageElement, "total_tokens"));
+        return true;
+    }
+
+    private static bool TryGetObjectProperty(JsonElement root, string name, out JsonElement value)
+    {
+        value = default;
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        if (!root.TryGetProperty(name, out value))
+        {
+            return false;
+        }
+
+        return value.ValueKind == JsonValueKind.Object;
     }
 
     private static int ReadUsageInt(JsonElement obj, string name)
@@ -690,31 +712,10 @@ public sealed class MetaClient : IDisposable
 
         private static IEnumerable<string> TextParts(JsonElement root)
         {
-            if (!root.TryGetProperty("output", out JsonElement output) || output.ValueKind != JsonValueKind.Array)
-            {
-                throw new MetaApiException("Unexpected Meta Model API response shape: missing or non-array 'output'.");
-            }
-
             var parts = new List<string>();
-            foreach (JsonElement item in output.EnumerateArray())
+            foreach (JsonElement item in OutputItems(root))
             {
-                if (item.ValueKind != JsonValueKind.Object)
-                {
-                    throw new MetaApiException("Unexpected Meta Model API output item shape.");
-                }
-
-                foreach (JsonElement part in ContentParts(item))
-                {
-                    if (part.ValueKind != JsonValueKind.Object)
-                    {
-                        throw new MetaApiException("Unexpected Meta Model API output content shape.");
-                    }
-
-                    if (IsOutputText(part))
-                    {
-                        parts.Add(part.GetProperty("text").GetString() ?? string.Empty);
-                    }
-                }
+                CollectTextParts(item, parts);
             }
 
             // A concept miss is represented by an explicit empty output_text part.
@@ -725,6 +726,47 @@ public sealed class MetaClient : IDisposable
             }
 
             return parts;
+        }
+
+        private static JsonElement OutputItems(JsonElement root)
+        {
+            if (!root.TryGetProperty("output", out JsonElement output))
+            {
+                throw new MetaApiException("Unexpected Meta Model API response shape: missing or non-array 'output'.");
+            }
+
+            if (output.ValueKind != JsonValueKind.Array)
+            {
+                throw new MetaApiException("Unexpected Meta Model API response shape: missing or non-array 'output'.");
+            }
+
+            return output;
+        }
+
+        private static void CollectTextParts(JsonElement item, List<string> parts)
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                throw new MetaApiException("Unexpected Meta Model API output item shape.");
+            }
+
+            foreach (JsonElement part in ContentParts(item))
+            {
+                AddTextPart(part, parts);
+            }
+        }
+
+        private static void AddTextPart(JsonElement part, List<string> parts)
+        {
+            if (part.ValueKind != JsonValueKind.Object)
+            {
+                throw new MetaApiException("Unexpected Meta Model API output content shape.");
+            }
+
+            if (IsOutputText(part))
+            {
+                parts.Add(part.GetProperty("text").GetString() ?? string.Empty);
+            }
         }
 
         private static IEnumerable<JsonElement> ContentParts(JsonElement item)

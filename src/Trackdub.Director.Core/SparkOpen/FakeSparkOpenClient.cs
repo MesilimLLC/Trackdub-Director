@@ -58,15 +58,13 @@ public sealed class FakeSparkOpenClient : ISparkOpenClient
     public int JudgeCalls => _judgeCalls;
 
     public Task<MeaningCheckResult> JudgeMeaningAsync(
-        string sourceText,
-        string candidate,
-        string sourceLanguage,
-        string targetLanguage,
+        JudgeMeaningRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
         Interlocked.Increment(ref _judgeCalls);
-        JudgeCallsRecorded.Add((sourceText, candidate));
+        JudgeCallsRecorded.Add((request.SourceText, request.Candidate));
 
         if (_judgeReplies.Count == 0)
         {
@@ -81,7 +79,10 @@ public sealed class FakeSparkOpenClient : ISparkOpenClient
                 "Spark Open reply carried no extractable final JSON answer.", Model, null, EndpointHost));
         }
 
-        return Task.FromResult(SparkOpenClient.ParseStrictMeaningVerdict(finalAnswer, Model, null, EndpointHost));
+        return Task.FromResult(SparkOpenClient.ParseStrictMeaningVerdict(
+            new SparkOpenClient.ReplyJson(finalAnswer),
+            new SparkOpenClient.Provenance(Model, EndpointHost),
+            null));
     }
 
     public MetaClient AsMetaClient()

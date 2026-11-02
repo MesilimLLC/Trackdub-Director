@@ -49,16 +49,15 @@ public sealed class SparkOpenChatHandler : DelegatingHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        if (request.Content is null || request.RequestUri is null
-            || !request.RequestUri.AbsolutePath.EndsWith("/chat/completions", StringComparison.Ordinal))
+        if (!IsChatCompletion(request))
         {
             // Not a chat completion (e.g. a models listing): forward untouched to the Spark Open base.
             RedirectToSparkOpen(request, request.RequestUri?.AbsolutePath ?? "/");
             return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
         }
 
-        string originalBody = await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        string rewrittenBody = RewriteRequestBody(originalBody);
+        string originalBody = await request.Content!.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        string rewrittenBody = RewriteRequestBody(new JsonBody(originalBody));
 
         RedirectToSparkOpen(request, "/chat/completions");
         request.Content = new StringContent(rewrittenBody, Encoding.UTF8, "application/json");
@@ -72,7 +71,22 @@ public sealed class SparkOpenChatHandler : DelegatingHandler
         }
 
         string responseBody = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        return RewriteResponse(response, responseBody);
+        return RewriteResponse(response, new JsonBody(responseBody));
+    }
+
+    private static bool IsChatCompletion(HttpRequestMessage request)
+    {
+        if (request.Content is null)
+        {
+            return false;
+        }
+
+        if (request.RequestUri is null)
+        {
+            return false;
+        }
+
+        return request.RequestUri.AbsolutePath.EndsWith("/chat/completions", StringComparison.Ordinal);
     }
 
     private void RedirectToSparkOpen(HttpRequestMessage request, string path)
@@ -81,12 +95,12 @@ public sealed class SparkOpenChatHandler : DelegatingHandler
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _config.ApiKey);
     }
 
-    private string RewriteRequestBody(string body)
+    private string RewriteRequestBody(JsonBody body)
     {
         JsonNode? root;
         try
         {
-            root = JsonNode.Parse(body);
+            root = JsonNode.Parse(body.Value);
         }
         catch (JsonException ex)
         {
@@ -131,48 +145,71 @@ public sealed class SparkOpenChatHandler : DelegatingHandler
         messages.Insert(0, new JsonObject { ["role"] = "system", ["content"] = FinalAnswerInstruction });
     }
 
-    private HttpResponseMessage RewriteResponse(HttpResponseMessage response, string body)
+    private HttpResponseMessage RewriteResponse(HttpResponseMessage response, JsonBody body)
     {
         JsonNode? root;
         try
         {
-            root = JsonNode.Parse(body);
+            root = JsonNode.Parse(body.Value);
         }
         catch (JsonException)
         {
-            return FailedCall(response, body, "Spark Open response was not valid JSON.");
+            return FailedCall(response, body, new FailureReason("Spark Open response was not valid JSON."));
         }
 
-        if (root is not JsonObject obj || obj["choices"] is not JsonArray { Count: > 0 } choices
-            || choices[0] is not JsonObject choice || choice["message"] is not JsonObject message)
+        if (!TryGetAssistantMessage(root, out JsonObject rootObject, out JsonObject message))
         {
-            return FailedCall(response, body, "Spark Open response had no assistant message.");
+            return FailedCall(response, body, new FailureReason("Spark Open response had no assistant message."));
         }
 
         string rawContent = message["content"]?.GetValue<string>() ?? string.Empty;
         if (!SparkOpenReasoningParser.TryExtractFinalAnswer(rawContent, out string finalAnswer))
         {
             // Preserve usage on the failed call: the API billed for it regardless.
-            return FailedCall(response, body, "Spark Open reply carried no extractable final answer.");
+            return FailedCall(response, body, new FailureReason("Spark Open reply carried no extractable final answer."));
         }
 
         // The injected instruction asks for a JSON final object, so a translation reply arrives as
         // {"translation":"..."} — unwrap it so timing estimates, meaning checks, and saved translations
         // see the plain line, never the wrapper. Meaning verdicts stay as JSON for the gate.
-        if (TryUnwrapTranslation(finalAnswer, out string unwrapped))
-        {
-            finalAnswer = unwrapped;
-        }
-
-        message["content"] = finalAnswer;
-        obj["model"] ??= _config.Model;
+        message["content"] = TryUnwrapTranslation(finalAnswer, out string unwrapped) ? unwrapped : finalAnswer;
+        rootObject["model"] ??= _config.Model;
 
         var rewritten = new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent(obj.ToJsonString(JsonOptions), Encoding.UTF8, "application/json"),
+            Content = new StringContent(rootObject.ToJsonString(JsonOptions), Encoding.UTF8, "application/json"),
         };
         response.Dispose();
         return rewritten;
+    }
+
+    private static bool TryGetAssistantMessage(JsonNode? root, out JsonObject rootObject, out JsonObject message)
+    {
+        rootObject = null!;
+        message = null!;
+        if (root is not JsonObject obj)
+        {
+            return false;
+        }
+
+        if (obj["choices"] is not JsonArray { Count: > 0 } choices)
+        {
+            return false;
+        }
+
+        if (choices[0] is not JsonObject choice)
+        {
+            return false;
+        }
+
+        if (choice["message"] is not JsonObject assistant)
+        {
+            return false;
+        }
+
+        rootObject = obj;
+        message = assistant;
+        return true;
     }
 
     /// <summary>
@@ -185,22 +222,46 @@ public sealed class SparkOpenChatHandler : DelegatingHandler
         try
         {
             using JsonDocument doc = JsonDocument.Parse(finalAnswer);
-            JsonElement root = doc.RootElement;
-            if (root.ValueKind == JsonValueKind.Object
-                && root.TryGetProperty("translation", out JsonElement translation)
-                && translation.ValueKind == JsonValueKind.String
-                && !string.IsNullOrWhiteSpace(translation.GetString()))
+            if (!IsTranslationObject(doc.RootElement, out JsonElement translation))
             {
-                unwrapped = translation.GetString()!.Trim();
-                return true;
+                return false;
             }
+
+            unwrapped = translation.GetString()!.Trim();
+            return true;
         }
         catch (JsonException)
         {
             // Not JSON: leave the answer as-is.
+            return false;
+        }
+    }
+
+    private static bool IsTranslationObject(JsonElement root, out JsonElement translation)
+    {
+        translation = default;
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return false;
         }
 
-        return false;
+        if (!root.TryGetProperty("translation", out JsonElement candidate))
+        {
+            return false;
+        }
+
+        if (candidate.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(candidate.GetString()))
+        {
+            return false;
+        }
+
+        translation = candidate;
+        return true;
     }
 
     /// <summary>
@@ -208,10 +269,10 @@ public sealed class SparkOpenChatHandler : DelegatingHandler
     /// caller's error path records tokens, and the 502 status drives the caller to its fail path rather
     /// than any retry under a different label.
     /// </summary>
-    private static HttpResponseMessage FailedCall(HttpResponseMessage original, string body, string reason)
+    private static HttpResponseMessage FailedCall(HttpResponseMessage original, JsonBody body, FailureReason reason)
     {
         string usageJson = ExtractUsageJson(body);
-        var payload = $"{{\"error\":{{\"message\":{JsonSerializer.Serialize(reason)}}},\"usage\":{usageJson}}}";
+        var payload = $"{{\"error\":{{\"message\":{JsonSerializer.Serialize(reason.Value)}}},\"usage\":{usageJson}}}";
         var failed = new HttpResponseMessage(HttpStatusCode.BadGateway)
         {
             Content = new StringContent(payload, Encoding.UTF8, "application/json"),
@@ -220,11 +281,11 @@ public sealed class SparkOpenChatHandler : DelegatingHandler
         return failed;
     }
 
-    private static string ExtractUsageJson(string body)
+    private static string ExtractUsageJson(JsonBody body)
     {
         try
         {
-            if (JsonNode.Parse(body) is JsonObject obj && obj["usage"] is JsonObject usage)
+            if (JsonNode.Parse(body.Value) is JsonObject obj && obj["usage"] is JsonObject usage)
             {
                 return usage.ToJsonString(JsonOptions);
             }
@@ -236,4 +297,8 @@ public sealed class SparkOpenChatHandler : DelegatingHandler
 
         return "null";
     }
+
+    private readonly record struct JsonBody(string Value);
+
+    private readonly record struct FailureReason(string Value);
 }

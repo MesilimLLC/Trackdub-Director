@@ -30,10 +30,7 @@ public interface ISparkOpenClient : IDisposable
     /// a one-line reason, and usage. Never throws for a model-level failure — it records Error instead.
     /// </summary>
     Task<MeaningCheckResult> JudgeMeaningAsync(
-        string sourceText,
-        string candidate,
-        string sourceLanguage,
-        string targetLanguage,
+        JudgeMeaningRequest request,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -43,3 +40,10 @@ public interface ISparkOpenClient : IDisposable
     /// </summary>
     MetaClient AsMetaClient();
 }
+
+/// <summary>The source line, candidate translation, and language pair to judge.</summary>
+public sealed record JudgeMeaningRequest(
+    string SourceText,
+    string Candidate,
+    string SourceLanguage,
+    string TargetLanguage);

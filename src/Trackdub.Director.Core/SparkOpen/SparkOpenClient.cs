@@ -63,19 +63,17 @@ public sealed class SparkOpenClient : ISparkOpenClient
     public MetaClient AsMetaClient() => _metaClient;
 
     public async Task<MeaningCheckResult> JudgeMeaningAsync(
-        string sourceText,
-        string candidate,
-        string sourceLanguage,
-        string targetLanguage,
+        JudgeMeaningRequest request,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(sourceText);
-        ArgumentException.ThrowIfNullOrWhiteSpace(candidate);
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.SourceText);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Candidate);
 
         try
         {
-            string srcLang = MetaClient.LanguageDisplayName(sourceLanguage);
-            string tgtLang = MetaClient.LanguageDisplayName(targetLanguage);
+            string srcLang = MetaClient.LanguageDisplayName(request.SourceLanguage);
+            string tgtLang = MetaClient.LanguageDisplayName(request.TargetLanguage);
             var payload = new
             {
                 model = _config.Model,
@@ -84,26 +82,26 @@ public sealed class SparkOpenClient : ISparkOpenClient
                     // Same meaning-v1 criteria the hosted gate uses, plus the final-line JSON instruction
                     // so the verdict is separable from the reasoning Spark Open always produces.
                     new { role = "system", content = $"{MeaningGate.BuildSystemPrompt()}\n\n{SparkOpenChatHandler.FinalAnswerInstruction}" },
-                    new { role = "user", content = MeaningGate.BuildUserPrompt(sourceText, candidate, srcLang, tgtLang) },
+                    new { role = "user", content = MeaningGate.BuildUserPrompt(request.SourceText, request.Candidate, srcLang, tgtLang) },
                 },
             };
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{_config.BaseUrl}/chat/completions")
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{_config.BaseUrl}/chat/completions")
             {
                 Content = new StringContent(JsonSerializer.Serialize(payload, JsonOptions), Encoding.UTF8, "application/json"),
             };
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _config.ApiKey);
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _config.ApiKey);
 
-            using HttpResponseMessage response = await _rawHttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            using HttpResponseMessage response = await _rawHttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
             string body = response.Content is null ? string.Empty : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 // Azure error bodies carry a message field (deployment/request errors); keep a bounded
                 // copy in the recorded reason so the report shows why the judgement failed, not just a status.
-                return MeaningGate.ForError(BuildHttpErrorReason(response.StatusCode, body), _config.Model, null, _config.EndpointHost);
+                return MeaningGate.ForError(BuildHttpErrorReason(response.StatusCode, new ReplyJson(body)), _config.Model, null, _config.EndpointHost);
             }
 
-            return ParseJudgeReply(body);
+            return ParseJudgeReply(new ReplyJson(body));
         }
         catch (Exception ex) when (
             ex is HttpRequestException or InvalidOperationException
@@ -118,22 +116,16 @@ public sealed class SparkOpenClient : ISparkOpenClient
     /// normalizer. No extractable JSON verdict → Error (a failed judgement), never a guessed Pass/Fail.
     /// Usage is preserved from the reply even on a failed parse.
     /// </summary>
-    private MeaningCheckResult ParseJudgeReply(string body)
+    private MeaningCheckResult ParseJudgeReply(ReplyJson body)
     {
         MetaClient.TokenUsage? usage = null;
         string rawContent;
         try
         {
-            using JsonDocument doc = JsonDocument.Parse(body);
+            using JsonDocument doc = JsonDocument.Parse(body.Value);
             JsonElement root = doc.RootElement;
             usage = ReadUsage(root);
-            rawContent = root.TryGetProperty("choices", out JsonElement choices)
-                && choices.ValueKind == JsonValueKind.Array && choices.GetArrayLength() > 0
-                && choices[0].TryGetProperty("message", out JsonElement message)
-                && message.TryGetProperty("content", out JsonElement content)
-                && content.ValueKind == JsonValueKind.String
-                ? content.GetString() ?? string.Empty
-                : string.Empty;
+            rawContent = ReadAssistantContent(root);
         }
         catch (JsonException)
         {
@@ -145,15 +137,42 @@ public sealed class SparkOpenClient : ISparkOpenClient
             return MeaningGate.ForError("Spark Open reply carried no extractable final JSON verdict.", _config.Model, usage, _config.EndpointHost);
         }
 
-        return ParseStrictMeaningVerdict(verdictJson, _config.Model, usage, _config.EndpointHost);
+        return ParseStrictMeaningVerdict(new ReplyJson(verdictJson), ProvenanceInfo, usage);
     }
+
+    private static string ReadAssistantContent(JsonElement root)
+    {
+        if (!root.TryGetProperty("choices", out JsonElement choices))
+        {
+            return string.Empty;
+        }
+
+        if (choices.ValueKind != JsonValueKind.Array || choices.GetArrayLength() == 0)
+        {
+            return string.Empty;
+        }
+
+        if (!choices[0].TryGetProperty("message", out JsonElement message))
+        {
+            return string.Empty;
+        }
+
+        if (!message.TryGetProperty("content", out JsonElement content))
+        {
+            return string.Empty;
+        }
+
+        return content.ValueKind == JsonValueKind.String ? content.GetString() ?? string.Empty : string.Empty;
+    }
+
+    private Provenance ProvenanceInfo => new(_config.Model, _config.EndpointHost);
 
     /// <summary>
     /// Builds the recorded reason for a failed judge call: the HTTP status plus a bounded copy of the
     /// error body's <c>message</c> (Azure deployments report deployment/request errors there), so the
     /// report shows why the call failed rather than only a status code.
     /// </summary>
-    private static string BuildHttpErrorReason(HttpStatusCode status, string body)
+    private static string BuildHttpErrorReason(HttpStatusCode status, ReplyJson body)
     {
         string? message = ExtractErrorMessage(body);
         return message is null
@@ -161,48 +180,68 @@ public sealed class SparkOpenClient : ISparkOpenClient
             : $"Spark Open HTTP {(int)status}: {message}";
     }
 
-    private static string? ExtractErrorMessage(string body)
+    private static string? ExtractErrorMessage(ReplyJson body)
     {
-        if (string.IsNullOrWhiteSpace(body))
+        if (string.IsNullOrWhiteSpace(body.Value))
         {
             return null;
         }
 
         try
         {
-            using JsonDocument doc = JsonDocument.Parse(body);
-            JsonElement root = doc.RootElement;
-            JsonElement message = default;
-            if (root.ValueKind == JsonValueKind.Object
-                && root.TryGetProperty("error", out JsonElement error)
-                && error.ValueKind == JsonValueKind.Object
-                && error.TryGetProperty("message", out JsonElement errorMessage))
-            {
-                message = errorMessage;
-            }
-            else if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("message", out JsonElement topMessage))
-            {
-                message = topMessage;
-            }
-
-            if (message.ValueKind != JsonValueKind.String)
-            {
-                return null;
-            }
-
-            string text = message.GetString()?.Trim() ?? string.Empty;
-            if (text.Length == 0)
-            {
-                return null;
-            }
-
-            const int maxLength = 200;
-            return text.Length <= maxLength ? text : $"{text[..maxLength]}...";
+            using JsonDocument doc = JsonDocument.Parse(body.Value);
+            return ReadErrorMessage(doc.RootElement);
         }
         catch (JsonException)
         {
             return null;
         }
+    }
+
+    private static string? ReadErrorMessage(JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        string? message = ReadNestedErrorMessage(root) ?? ReadTopLevelMessage(root);
+        return message is null ? null : Truncate(message);
+    }
+
+    private static string? ReadNestedErrorMessage(JsonElement root)
+    {
+        if (!root.TryGetProperty("error", out JsonElement error))
+        {
+            return null;
+        }
+
+        if (error.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return error.TryGetProperty("message", out JsonElement message) ? AsText(message) : null;
+    }
+
+    private static string? ReadTopLevelMessage(JsonElement root)
+        => root.TryGetProperty("message", out JsonElement message) ? AsText(message) : null;
+
+    private static string? AsText(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        string text = element.GetString()?.Trim() ?? string.Empty;
+        return text.Length == 0 ? null : text;
+    }
+
+    private static string Truncate(string text)
+    {
+        const int maxLength = 200;
+        return text.Length <= maxLength ? text : $"{text[..maxLength]}...";
     }
 
     /// <summary>
@@ -215,55 +254,95 @@ public sealed class SparkOpenClient : ISparkOpenClient
     /// judgements follow the same exclusion rule.
     /// </summary>
     internal static MeaningCheckResult ParseStrictMeaningVerdict(
-        string verdictJson,
-        string model,
-        MetaClient.TokenUsage? usage,
-        string endpointHost)
+        ReplyJson verdictJson,
+        Provenance provenance,
+        MetaClient.TokenUsage? usage)
     {
         try
         {
-            using JsonDocument doc = JsonDocument.Parse(verdictJson);
-            JsonElement root = doc.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
-            {
-                return MeaningGate.ForError("Spark Open final verdict was not a JSON object.", model, usage, endpointHost);
-            }
-
-            if (!root.TryGetProperty("verdict", out JsonElement verdictEl) || verdictEl.ValueKind != JsonValueKind.String)
-            {
-                return MeaningGate.ForError("Spark Open final verdict had no pass/fail verdict.", model, usage, endpointHost);
-            }
-
-            string verdict = verdictEl.GetString()?.Trim() ?? string.Empty;
-            if (!string.Equals(verdict, "pass", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(verdict, "fail", StringComparison.OrdinalIgnoreCase))
-            {
-                return MeaningGate.ForError($"Spark Open final verdict was not pass/fail (got '{verdict}').", model, usage, endpointHost);
-            }
-
-            if (root.TryGetProperty("issues", out JsonElement issuesEl))
-            {
-                if (issuesEl.ValueKind != JsonValueKind.Array)
-                {
-                    return MeaningGate.ForError("Spark Open final verdict 'issues' was not an array.", model, usage, endpointHost);
-                }
-
-                foreach (JsonElement item in issuesEl.EnumerateArray())
-                {
-                    if (item.ValueKind != JsonValueKind.String)
-                    {
-                        return MeaningGate.ForError("Spark Open final verdict 'issues' must be strings.", model, usage, endpointHost);
-                    }
-                }
-            }
-
-            return MeaningGate.ParseAndNormalize(verdictJson, model, usage, endpointHost);
+            using JsonDocument doc = JsonDocument.Parse(verdictJson.Value);
+            return ParseVerdictRoot(doc.RootElement, verdictJson, provenance, usage);
         }
         catch (JsonException)
         {
-            return MeaningGate.ForError("Spark Open final verdict was not valid JSON.", model, usage, endpointHost);
+            return Error("Spark Open final verdict was not valid JSON.", provenance, usage);
         }
     }
+
+    private static MeaningCheckResult ParseVerdictRoot(JsonElement root, ReplyJson verdictJson, Provenance provenance, MetaClient.TokenUsage? usage)
+    {
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return Error("Spark Open final verdict was not a JSON object.", provenance, usage);
+        }
+
+        if (!TryReadVerdict(root, out string verdict))
+        {
+            return Error("Spark Open final verdict had no pass/fail verdict.", provenance, usage);
+        }
+
+        if (!IsPassOrFail(verdict))
+        {
+            return Error($"Spark Open final verdict was not pass/fail (got '{verdict}').", provenance, usage);
+        }
+
+        if (!IssuesAreStrings(root, out string? issueError))
+        {
+            return Error(issueError!, provenance, usage);
+        }
+
+        return MeaningGate.ParseAndNormalize(verdictJson.Value, provenance.Model, usage, provenance.EndpointHost);
+    }
+
+    private static bool TryReadVerdict(JsonElement root, out string verdict)
+    {
+        verdict = string.Empty;
+        if (!root.TryGetProperty("verdict", out JsonElement verdictEl))
+        {
+            return false;
+        }
+
+        if (verdictEl.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        verdict = verdictEl.GetString()?.Trim() ?? string.Empty;
+        return true;
+    }
+
+    private static bool IsPassOrFail(string verdict)
+        => string.Equals(verdict, "pass", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(verdict, "fail", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IssuesAreStrings(JsonElement root, out string? error)
+    {
+        error = null;
+        if (!root.TryGetProperty("issues", out JsonElement issuesEl))
+        {
+            return true;
+        }
+
+        if (issuesEl.ValueKind != JsonValueKind.Array)
+        {
+            error = "Spark Open final verdict 'issues' was not an array.";
+            return false;
+        }
+
+        foreach (JsonElement item in issuesEl.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String)
+            {
+                error = "Spark Open final verdict 'issues' must be strings.";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static MeaningCheckResult Error(string message, Provenance provenance, MetaClient.TokenUsage? usage)
+        => MeaningGate.ForError(message, provenance.Model, usage, provenance.EndpointHost);
 
     private static MetaClient.TokenUsage? ReadUsage(JsonElement root)
     {
@@ -273,13 +352,13 @@ public sealed class SparkOpenClient : ISparkOpenClient
         }
 
         return new MetaClient.TokenUsage(
-            GetInt(usage, "prompt_tokens"),
-            GetInt(usage, "completion_tokens"),
-            GetInt(usage, "total_tokens"));
+            GetInt(usage, new FieldName("prompt_tokens")),
+            GetInt(usage, new FieldName("completion_tokens")),
+            GetInt(usage, new FieldName("total_tokens")));
     }
 
-    private static int GetInt(JsonElement obj, string name)
-        => obj.TryGetProperty(name, out JsonElement v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out int n) ? n : 0;
+    private static int GetInt(JsonElement obj, FieldName name)
+        => obj.TryGetProperty(name.Value, out JsonElement value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out int number) ? number : 0;
 
     public void Dispose()
     {
@@ -293,4 +372,10 @@ public sealed class SparkOpenClient : ISparkOpenClient
             _rawHttpClient.Dispose();
         }
     }
+
+    internal readonly record struct ReplyJson(string Value);
+
+    internal sealed record Provenance(string Model, string EndpointHost);
+
+    private readonly record struct FieldName(string Value);
 }

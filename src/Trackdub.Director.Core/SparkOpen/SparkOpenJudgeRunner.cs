@@ -40,7 +40,7 @@ public sealed class SparkOpenJudgeRunner
         {
             cancellationToken.ThrowIfCancellationRequested();
             MeaningCheckResult judged = await _client.JudgeMeaningAsync(
-                item.SourceText, item.Candidate, sourceLanguage, targetLanguage, cancellationToken).ConfigureAwait(false);
+                new JudgeMeaningRequest(item.SourceText, item.Candidate, sourceLanguage, targetLanguage), cancellationToken).ConfigureAwait(false);
             results.Add(Compare(item, judged));
         }
 

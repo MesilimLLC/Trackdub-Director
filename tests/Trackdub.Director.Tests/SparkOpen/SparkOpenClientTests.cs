@@ -17,10 +17,11 @@ public sealed class SparkOpenClientTests
     [Fact]
     public async Task Judge_parses_a_reasoning_prefixed_verdict_and_preserves_usage()
     {
-        var raw = new HandlerStub((_, _) => ChatResponse(ReasoningMeaningReply(pass: false, explanation: "number changed", "number"), total: 1600));
+        var raw = new HandlerStub((_, _) => ChatResponse(ReasoningMeaningReply(pass: false, explanation: "number changed", "number"), usage: new ChatUsage(Total: 1600)));
         using var client = new SparkOpenClient(Config(), rewritingInner: new HandlerStub((_, _) => ChatResponse("{}")), rawInner: raw);
 
-        MeaningCheckResult result = await client.JudgeMeaningAsync("We need one more take.", "Necesitamos dos tomas.", "en", "es");
+        MeaningCheckResult result = await client.JudgeMeaningAsync(
+            new JudgeMeaningRequest("We need one more take.", "Necesitamos dos tomas.", "en", "es"));
 
         Assert.Equal(MeaningVerdict.Fail, result.Verdict);
         Assert.Equal(1600, result.Usage?.TotalTokens);
@@ -31,10 +32,10 @@ public sealed class SparkOpenClientTests
     public async Task Judge_fails_closed_to_Error_when_no_verdict_can_be_extracted()
     {
         // Reasoning only, no JSON verdict: a failed judgement (Error), never a guessed Pass/Fail.
-        var raw = new HandlerStub((_, _) => ChatResponse("<thinking>I am still deliberating and never answer.</thinking>\nStill thinking.", total: 900));
+        var raw = new HandlerStub((_, _) => ChatResponse("<thinking>I am still deliberating and never answer.</thinking>\nStill thinking.", usage: new ChatUsage(Total: 900)));
         using var client = new SparkOpenClient(Config(), rewritingInner: new HandlerStub((_, _) => ChatResponse("{}")), rawInner: raw);
 
-        MeaningCheckResult result = await client.JudgeMeaningAsync("Hi.", "Hola.", "en", "es");
+        MeaningCheckResult result = await client.JudgeMeaningAsync(new JudgeMeaningRequest("Hi.", "Hola.", "en", "es"));
 
         Assert.Equal(MeaningVerdict.Error, result.Verdict);
         Assert.Equal(900, result.Usage?.TotalTokens);
@@ -49,7 +50,7 @@ public sealed class SparkOpenClientTests
         });
         using var client = new SparkOpenClient(Config(), rewritingInner: new HandlerStub((_, _) => ChatResponse("{}")), rawInner: raw);
 
-        MeaningCheckResult result = await client.JudgeMeaningAsync("Hi.", "Hola.", "en", "es");
+        MeaningCheckResult result = await client.JudgeMeaningAsync(new JudgeMeaningRequest("Hi.", "Hola.", "en", "es"));
         Assert.Equal(MeaningVerdict.Error, result.Verdict);
     }
 
@@ -64,7 +65,7 @@ public sealed class SparkOpenClientTests
         });
         using var client = new SparkOpenClient(Config(), rewritingInner: new HandlerStub((_, _) => ChatResponse("{}")), rawInner: raw);
 
-        MeaningCheckResult result = await client.JudgeMeaningAsync("Hi.", "Hola.", "en", "es");
+        MeaningCheckResult result = await client.JudgeMeaningAsync(new JudgeMeaningRequest("Hi.", "Hola.", "en", "es"));
 
         Assert.Equal(MeaningVerdict.Error, result.Verdict);
         Assert.Contains("Deployment 'spark-open-816b' is not found.", result.Explanation);
@@ -154,7 +155,7 @@ public sealed class SparkOpenClientTests
     [InlineData("https://x/v1", "key", null)]
     public void Any_missing_env_var_fails_closed(string? baseUrl, string? key, string? model)
     {
-        using var _ = new SparkOpenEnvScope(baseUrl, key, model);
+        using var _ = new SparkOpenEnvScope(new SparkOpenEnv { BaseUrl = baseUrl, ApiKey = key, Model = model });
         Assert.False(SparkOpenAuth.IsConfigured());
         Assert.Throws<SparkOpenConfigException>(() => SparkOpenAuth.Resolve());
     }
@@ -162,7 +163,7 @@ public sealed class SparkOpenClientTests
     [Fact]
     public void A_non_absolute_base_url_fails_closed()
     {
-        using var _ = new SparkOpenEnvScope(baseUrl: "not-a-url", apiKey: "k", model: "m");
+        using var _ = new SparkOpenEnvScope(new SparkOpenEnv { BaseUrl = "not-a-url", ApiKey = "k", Model = "m" });
         Assert.Throws<SparkOpenConfigException>(() => SparkOpenAuth.Resolve());
     }
 
@@ -185,14 +186,14 @@ public sealed class SparkOpenClientTests
     [Fact]
     public void A_plaintext_http_endpoint_fails_closed()
     {
-        using var _ = new SparkOpenEnvScope(baseUrl: "http://deployment.example/v1", apiKey: "k", model: "m");
+        using var _ = new SparkOpenEnvScope(new SparkOpenEnv { BaseUrl = "http://deployment.example/v1", ApiKey = "k", Model = "m" });
         Assert.Throws<SparkOpenConfigException>(() => SparkOpenAuth.Resolve());
     }
 
     [Fact]
     public void A_loopback_http_endpoint_is_allowed()
     {
-        using var _ = new SparkOpenEnvScope(baseUrl: "http://localhost:8000/v1", apiKey: "k", model: "m");
+        using var _ = new SparkOpenEnvScope(new SparkOpenEnv { BaseUrl = "http://localhost:8000/v1", ApiKey = "k", Model = "m" });
         SparkOpenConfig config = SparkOpenAuth.Resolve();
         Assert.Equal("localhost", config.EndpointHost);
     }
@@ -200,7 +201,7 @@ public sealed class SparkOpenClientTests
     [Fact]
     public void A_base_url_with_a_query_or_fragment_fails_closed()
     {
-        using var _ = new SparkOpenEnvScope(baseUrl: "https://host/v1?api-version=2024-01-01", apiKey: "k", model: "m");
+        using var _ = new SparkOpenEnvScope(new SparkOpenEnv { BaseUrl = "https://host/v1?api-version=2024-01-01", ApiKey = "k", Model = "m" });
         Assert.Throws<SparkOpenConfigException>(() => SparkOpenAuth.Resolve());
     }
 
@@ -209,10 +210,10 @@ public sealed class SparkOpenClientTests
     {
         // A verdict that is neither pass nor fail is a failed judgement, never a normalized Fail that
         // could count as agreement with a hosted Fail.
-        var raw = new HandlerStub((_, _) => ChatResponse("<thinking>I considered.</thinking>\n{\"verdict\":\"banana\",\"issues\":[],\"explanation\":\"x\"}", total: 700));
+        var raw = new HandlerStub((_, _) => ChatResponse("<thinking>I considered.</thinking>\n{\"verdict\":\"banana\",\"issues\":[],\"explanation\":\"x\"}", usage: new ChatUsage(Total: 700)));
         using var client = new SparkOpenClient(Config(), rewritingInner: new HandlerStub((_, _) => ChatResponse("{}")), rawInner: raw);
 
-        MeaningCheckResult result = await client.JudgeMeaningAsync("Hi.", "Hola.", "en", "es");
+        MeaningCheckResult result = await client.JudgeMeaningAsync(new JudgeMeaningRequest("Hi.", "Hola.", "en", "es"));
 
         Assert.Equal(MeaningVerdict.Error, result.Verdict);
         Assert.Equal(700, result.Usage?.TotalTokens);
@@ -224,7 +225,7 @@ public sealed class SparkOpenClientTests
         var raw = new HandlerStub((_, _) => ChatResponse("{\"verdict\":\"pass\",\"issues\":\"not-an-array\",\"explanation\":\"x\"}"));
         using var client = new SparkOpenClient(Config(), rewritingInner: new HandlerStub((_, _) => ChatResponse("{}")), rawInner: raw);
 
-        MeaningCheckResult result = await client.JudgeMeaningAsync("Hi.", "Hola.", "en", "es");
+        MeaningCheckResult result = await client.JudgeMeaningAsync(new JudgeMeaningRequest("Hi.", "Hola.", "en", "es"));
 
         Assert.Equal(MeaningVerdict.Error, result.Verdict);
     }
@@ -236,7 +237,7 @@ public sealed class SparkOpenClientTests
         // The handler's 502 body carries the billed usage; MetaClient must surface it on the exception
         // so a failed meaning reply is not accounted as zero tokens.
         var rewriting = new HandlerStub((_, body) => body.Contains(MeaningGate.MeaningMarker, StringComparison.Ordinal)
-            ? ChatResponse("<thinking>no answer</thinking>", total: 900)
+            ? ChatResponse("<thinking>no answer</thinking>", usage: new ChatUsage(Total: 900))
             : ChatResponse("Hola."));
         using var client = new SparkOpenClient(Config(), rewritingInner: rewriting, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
 
