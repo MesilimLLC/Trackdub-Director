@@ -161,7 +161,7 @@ public sealed class AuditionService
     // revisions, each with a meaning check, plus a meaning check for every candidate
     // that QA left unevaluated, plus one variants call and a meaning check per alternate.
     // The speed variant reuses an already-passing text and costs no Meta call.
-    private int WorstCaseCallsPerSegment() => 2 * (_options.MaxAttempts + 1) + MaxTakesPerSegment + 1 + MaxAlternateVariants;
+    private int WorstCaseCallsPerSegment() => (2 * (_options.MaxAttempts + 1)) + MaxTakesPerSegment + 1 + MaxAlternateVariants;
 
     private async Task<Dictionary<string, QaSegmentReport>> GenerateCandidatesAsync(
         IReadOnlyList<AuditionSegmentInput> segments,

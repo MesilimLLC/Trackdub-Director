@@ -292,7 +292,7 @@ public sealed class QaServiceTests
         Assert.Equal((QaVerdict.Pass, 0, 1, 1, "Traduccion corta"), (seg.FinalVerdict, report.Totals.FirstPassCount, report.Totals.FinalPassCount, report.Totals.TotalRevisions, seg.FinalTranslation));
 
         // Token usage: 2 translations (10+10 prompt, 5+5 comp) + 1 meaning (7+4).
-        Assert.Equal((2 * TranslationTokens.Prompt + MeaningTokens.Prompt, 2 * TranslationTokens.Completion + MeaningTokens.Completion), (seg.TokenUsage.PromptTokens, seg.TokenUsage.CompletionTokens));
+        Assert.Equal(((2 * TranslationTokens.Prompt) + MeaningTokens.Prompt, (2 * TranslationTokens.Completion) + MeaningTokens.Completion), (seg.TokenUsage.PromptTokens, seg.TokenUsage.CompletionTokens));
     }
 
     [Fact]
@@ -399,7 +399,7 @@ public sealed class QaServiceTests
         AssertMeaningTokensRecorded(unfaithful, faithful);
 
         // 3 translations (30 prompt, 15 comp) + 2 meanings (14 prompt, 8 comp).
-        Assert.Equal((3 * TranslationTokens.Prompt + 2 * MeaningTokens.Prompt, 3 * TranslationTokens.Completion + 2 * MeaningTokens.Completion), (seg.TokenUsage.PromptTokens, seg.TokenUsage.CompletionTokens));
+        Assert.Equal(((3 * TranslationTokens.Prompt) + (2 * MeaningTokens.Prompt), (3 * TranslationTokens.Completion) + (2 * MeaningTokens.Completion)), (seg.TokenUsage.PromptTokens, seg.TokenUsage.CompletionTokens));
     }
 
     [Fact]
