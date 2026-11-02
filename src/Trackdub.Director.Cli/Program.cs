@@ -39,6 +39,7 @@ static async Task<int> RunEvidenceCommandAsync(string verb, string[] args)
     {
         "sign-shot" => SignShotCli.Run(args[1..]),
         "meaning-eval" => await MeaningEvalCli.RunAsync(args[1..]).ConfigureAwait(false),
+        "spark-open" => await SparkOpenCli.RunAsync(args[1..]).ConfigureAwait(false),
         "verify-only" => VerifyOnlyCli.Run(args[1..]),
         "recover" => await RecoverCli.RunAsync(args[1..]).ConfigureAwait(false),
         _ => UnknownCommand(args[0]),
@@ -47,7 +48,7 @@ static async Task<int> RunEvidenceCommandAsync(string verb, string[] args)
 
 static int UnknownCommand(string raw)
 {
-    Console.Error.WriteLine($"Unknown command '{raw}'. Expected 'smoke', 'translate', 'models', 'qa', 'ingest', 'pipeline', 'sign-shot', 'meaning-eval', 'verify-only', or 'recover'.");
+    Console.Error.WriteLine($"Unknown command '{raw}'. Expected 'smoke', 'translate', 'models', 'qa', 'ingest', 'pipeline', 'sign-shot', 'meaning-eval', 'spark-open', 'verify-only', or 'recover'.");
     PrintUsage();
     return 1;
 }
@@ -252,6 +253,7 @@ static void PrintUsage()
     Console.WriteLine("  pipeline   Run the lanes in order: transcribe (with --audio), translation + QA, scene, audition (opt-in).");
     Console.WriteLine("  sign-shot  Extend a localised sign frame across a shot, gated on the shot being static.");
     Console.WriteLine("  meaning-eval  Score the meaning gate on labeled cases (catch rate, false alarms).");
+    Console.WriteLine("  spark-open    Opt-in Azure Muse Spark Open lane: judge / production / translation / smoke.");
     Console.WriteLine("  verify-only   Zero-call gate over a captured run: recompute verdicts, write a hash-sealed receipt.");
     Console.WriteLine("  recover       Glimmer recovery agent over refused candidates: Glimmer proposes, the existing gates dispose.");
     Console.WriteLine();
