@@ -1,11 +1,11 @@
 # Metrics Snapshot: Trackdub-Director (Nov 2 freeze)
 
-Date: 2026-10-31 (freeze pass for the Nov 2 submission; test counts and the
-static-shot and meaning-eval lanes refreshed the same day).
-Main SHA at the first freeze pass: `e9b3dffb12c0b259a82a673f08557461b2ceb7b0`
-(PR #14 merged; tree clean except the then-untracked `samples/voa10-scale/`).
-Test counts below were re-measured at `82959c7`, the PR #16 head that merged
-as `eddfd94`; the two later `main` commits touch only LICENSE and README.
+Date: 2026-11-02 (freeze pass 2; reflects merged main including the Spark
+Open and Glimmer open-weight lanes).
+Main SHA: `9ababf0f0b550746f0a543a52a2bc6854d2a3298` (PR #21 Glimmer lane,
+PR #22 Spark Open lane, plus the merged Phase 2 outputs under
+`samples/spark-open/` and `samples/glimmer-recovery/`).
+Test counts below were re-measured at `9ababf0` in freeze pass 2, part 1.
 Method: `docs/metrics-definitions.md`. Every figure is captured from merged main
 and a named report file; nothing is estimated. Token arithmetic below was
 re-added from per-attempt/per-take fields and matches each report's own totals.
@@ -14,20 +14,20 @@ re-added from per-attempt/per-take fields and matches each report's own totals.
 
 ### Test snapshot (supersedes every earlier stage figure)
 
-Captured 2026-10-31 at `82959c7` (merged to main in PR #16, `eddfd94`).
+Captured 2026-11-02 at `9ababf0` (freeze pass 2, part 1).
 **This snapshot supersedes all earlier stage figures** — including "36 passed",
 "66 cases / 48 methods", "76 / 54", "93 / 69", "104 cases / 79 methods", and
-the earlier freeze figure of 229 cases on `e9b3dff` — none of which describe
+the earlier freeze figure on `e9b3dff` — none of which describe
 current main.
 
-- .NET (`dotnet test --list-tests`, then a full `dotnet test` in the same
-  session): **259 cases discovered; executed run: 261 passed, 0 failed,
-  0 skipped** (total 261). The two differ because one theory over
-  record-typed data (`LocalisationBox`) is discovered as a single case and
-  runs three rows. The quotable figure is **259 automated test cases**
-  (discovered); 261 is the executed row count. The method count was not
-  re-measured.
-- Web (`npm test`, vitest): **11 tests passed** (1 test file).
+- .NET (`dotnet test Trackdub.Director.slnx -m:1 --list-tests`, then
+  `dotnet test Trackdub.Director.slnx -m:1`): **484 cases listed;
+  executed run: 486 passed, 0 failed, 0 skipped** (total 486). The two
+  differ by the known listing artifact (two theory rows truncate in the
+  lister output). The quotable figure is **486 executed and passed** at
+  `9ababf0`. This supersedes every earlier count in circulation (259,
+  322, 331, 333, 366, 368, 395).
+- Web (`npm test`, vitest): **12 tests passed** (1 test file).
 
 ### Cold start (first measurement of this metric)
 
@@ -149,6 +149,47 @@ same `CheckMeaningAsync` call the QA loop makes, one call per case.
   `seeded-15` is that run's failed "Gracias todos" attempt, edited to
   "Gracias a todos." so the case tests the dropped reason, not the grammar.
 - Tokens: **24,440** across **40** Meta calls.
+
+## Open-weight lanes (measured 2026-11-02, Azure Foundry managed compute)
+
+### Spark Open (`meta-models--muse-spark-open-816b-a42b-nvfp4`)
+
+Named reports: `samples/spark-open/judge-report.json`,
+`samples/spark-open/production-report.json`,
+`samples/spark-open/translation-report.json`; route facts in
+`samples/spark-open/NOTES.md`.
+
+- Judge agreement: **73/75 items agreed (97.3%)**, 2 disagreed, 0 excluded;
+  98,627 tokens.
+- Production (6 voa10 demo lines through the QA loop): **6/6 final pass,
+  fully gate-verified** (5 first-pass, 1 revision); 20,009 tokens.
+- Translation (40-line labeled eval): **meaning 40/40, timing 22/40**,
+  combined 22/40; Spark 63,016 tokens, hosted meaning grading 22,058 tokens.
+- Smoke through the lane handler is structurally incompatible (HTTP 502,
+  592 billed tokens); see `samples/spark-open/NOTES.md`. Judge bypasses
+  that handler.
+
+### Glimmer recovery (`meta-models--muse-glimmer-30b`)
+
+Named report: `samples/glimmer-recovery/recovery-report.json`; notes in
+`samples/glimmer-recovery/NOTES.md`.
+
+- Recovery: **4 of 4 refused attempts recovered, across 3 of 3 distinct
+  lines** (3 attempts max per item; timing then hosted meaning-v1 gates).
+  Disclosure: two of the winning lines are telegraphic
+  ("¿Dónde rodar mañ?" and "Gracias venir" — gate-passed as
+  meaning-preserving, visibly compressed).
+- Usage: 8 Glimmer calls / 36,886 tokens (probe included), 4 hosted Meta
+  meaning calls / 3,479 tokens. Caps 45/35, neither approached.
+
+### QA token cost per minute of translated dialogue
+
+Re-added from the uniform hosted runs above
+(`qa-report-scale.json` + `qa-report-voa10.json`): 10,247 QA tokens
+(translation + meaning across all attempts) over 49.0 s of source dialogue
+windows — **roughly 12,400 QA tokens per minute of translated dialogue**
+(12,547/min by direct division; quoted rounded). The retired
+tokens-per-finished-minute label from the voa10-full capture is not used.
 
 ## Token usage and call counts per lane (re-added from the named reports)
 
@@ -282,7 +323,7 @@ captured by `trackdub-director sign-shot` over `media/demo/demo-dub.mp4`
 - outside_box_diff is counted on decoded RGB before the h264 encode; the
   output video is lossy everywhere, including outside the box.
 - Tests when this stage landed (PR #15): `dotnet test --list-tests` **246 cases
-  discovered** (229 at the first freeze + 17); the full run executed **248
+  discovered** (first freeze + 17); the full run executed **248
   passed, 0 failed**, because the invalid-box theory over `LocalisationBox`
   data is discovered as one case and runs three rows. Current totals are in
   the Test snapshot above.
