@@ -38,7 +38,7 @@ public sealed class SparkOpenRunnersTests
         Assert.Equal(FakeModel, report.SparkOpenModel);
         Assert.True(report.FullyGateVerified);
         Assert.Equal(2, report.QaReport.Totals.FinalPassCount);
-        Assert.All(report.QaReport.Segments, s => Assert.Equal(FakeModel, s.FirstAttempt.ModelId));
+        Assert.All(report.QaReport.Segments, s => Assert.Equal(FakeModel, s.FirstAttempt!.ModelId));
     }
 
     [Fact]
@@ -56,6 +56,48 @@ public sealed class SparkOpenRunnersTests
 
         Assert.False(report.FullyGateVerified);
         Assert.Equal(0, report.QaReport.Totals.FinalPassCount);
+    }
+
+    [Fact]
+    public async Task Production_runner_records_a_failed_generation_and_continues()
+    {
+        using var _ = new HostedEnvScope();
+        // The first line's generation is unextractable (the handler 502s, billing 500 tokens); the
+        // second line succeeds. The failed segment is recorded on the report (error + billed usage)
+        // and the run still finishes, with the completed segment and totals preserved.
+        int calls = 0;
+        var rewriting = new HandlerStub((_, body) =>
+        {
+            calls++;
+            return body.Contains(MeaningGate.MeaningMarker, StringComparison.Ordinal)
+                ? ChatResponse(ReasoningMeaningReply(pass: true))
+                : calls == 1 ? ChatResponse("<thinking>no answer</thinking>", total: 500) : ChatResponse("Hola.");
+        });
+        using var client = new SparkOpenClient(Config(), rewritingInner: rewriting, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
+
+        QaSegmentInput[] segments =
+        [
+            new("voa10-001", "Hi, Ashley.", 4.0),
+            new("voa10-002", "Okay. See you soon.", 4.0),
+        ];
+        SparkOpenProductionReport report = await new SparkOpenProductionRunner(client).RunAsync(segments, "en", "es");
+
+        Assert.Equal(2, report.QaReport.Segments.Length);
+        Assert.Equal(1, report.QaReport.Totals.FailedSegments);
+        Assert.Equal(1, report.QaReport.Totals.FinalPassCount);
+        Assert.False(report.FullyGateVerified);
+
+        QaSegmentReport failed = report.QaReport.Segments[0];
+        Assert.Null(failed.FirstAttempt);
+        Assert.Null(failed.FinalTranslation);
+        Assert.Equal(QaVerdict.Fail, failed.FinalVerdict);
+        Assert.Contains("no extractable final answer", failed.GenerationError, StringComparison.Ordinal);
+        Assert.Equal(500, failed.TokenUsage.TotalTokens);
+
+        QaSegmentReport ok = report.QaReport.Segments[1];
+        Assert.NotNull(ok.FirstAttempt);
+        Assert.Null(ok.GenerationError);
+        Assert.Equal(QaVerdict.Pass, ok.FinalVerdict);
     }
 
     // ---- Translation runner: Spark Open translates, existing gates grade ----
@@ -173,7 +215,7 @@ public sealed class SparkOpenRunnersTests
         var segments = new[] { new QaSegmentInput("voa10-001", "Hi, Ashley.", 4.0) };
         SparkOpenProductionReport report = await new SparkOpenProductionRunner(client).RunAsync(segments, "en", "es");
 
-        QaAttemptReport attempt = report.QaReport.Segments[0].FirstAttempt;
+        QaAttemptReport attempt = report.QaReport.Segments[0].FirstAttempt!;
         Assert.Equal("spark-open.test.azure", attempt.MeaningEndpointHost);
     }
 

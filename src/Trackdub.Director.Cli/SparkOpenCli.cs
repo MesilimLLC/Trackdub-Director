@@ -135,7 +135,7 @@ internal static class SparkOpenCli
             SparkOpenProductionReport report = await runner.RunAsync(segments, "en", "es").ConfigureAwait(false);
             await runner.WriteReportAsync(Path.GetFullPath(output), report).ConfigureAwait(false);
 
-            Console.WriteLine($"Spark Open production: {report.QaReport.Totals.FinalPassCount}/{report.QaReport.Totals.TotalSegments} final pass, fully gate-verified={report.FullyGateVerified}, tokens {report.QaReport.Totals.TotalTokens}");
+            Console.WriteLine($"Spark Open production: {report.QaReport.Totals.FinalPassCount}/{report.QaReport.Totals.TotalSegments} final pass, failed {report.QaReport.Totals.FailedSegments}, fully gate-verified={report.FullyGateVerified}, tokens {report.QaReport.Totals.TotalTokens}");
             Console.WriteLine($"Report written to {output}");
             return 0;
         }

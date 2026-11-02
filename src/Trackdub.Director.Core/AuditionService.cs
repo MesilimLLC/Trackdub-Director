@@ -225,7 +225,12 @@ public sealed class AuditionService
 
     private static IEnumerable<QaAttemptReport> AllAttempts(QaSegmentReport segment)
     {
-        yield return segment.FirstAttempt;
+        // A failed generation (generation_error, null first_attempt) contributes no attempts.
+        if (segment.FirstAttempt is not null)
+        {
+            yield return segment.FirstAttempt;
+        }
+
         foreach (QaAttemptReport revision in segment.Revisions)
         {
             yield return revision;

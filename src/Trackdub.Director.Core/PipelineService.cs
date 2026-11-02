@@ -101,9 +101,9 @@ public sealed class PipelineService
             return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), segments, transcribe, null, null, null);
         }
 
-        if (HasTerminalMeaningError(qa))
+        if (TerminalQaError(qa) is { } terminalError)
         {
-            stages.Add(new PipelineStageReport(StageQa, PipelineStageStatus.Failed, Error: "Meaning check failed with an upstream error."));
+            stages.Add(new PipelineStageReport(StageQa, PipelineStageStatus.Failed, Error: terminalError));
             AppendNotRun(stages, StageScene, StageAudition);
             return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), segments, transcribe, qa, null, null);
         }
@@ -186,22 +186,34 @@ public sealed class PipelineService
         return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), segments, transcribe, qa, scene, audition);
     }
 
-    private static bool HasTerminalMeaningError(QaReport qa)
+    /// <summary>
+    /// An upstream failure in the QA report that is terminal for the pipeline: a translation
+    /// generation that failed outright (null first_attempt) or a meaning check that errored.
+    /// Downstream stages (scene context, audition) need trustworthy translations to run, so
+    /// either condition gates the run.
+    /// </summary>
+    private static string? TerminalQaError(QaReport qa)
     {
+        if (qa.Segments.Any(s => s.FirstAttempt is null))
+        {
+            return "A translation generation failed upstream.";
+        }
+
         foreach (QaSegmentReport segment in qa.Segments)
         {
-            if (segment.FirstAttempt.MeaningVerdict == MeaningVerdict.Error)
+            // A failed generation carries no attempts; only a completed attempt can hold a meaning error.
+            if (segment.FirstAttempt?.MeaningVerdict == MeaningVerdict.Error)
             {
-                return true;
+                return "Meaning check failed with an upstream error.";
             }
 
             if (segment.Revisions.Any(r => r.MeaningVerdict == MeaningVerdict.Error))
             {
-                return true;
+                return "Meaning check failed with an upstream error.";
             }
         }
 
-        return false;
+        return null;
     }
 
     private static void AppendNotRun(List<PipelineStageReport> stages, params string[] stageNames)

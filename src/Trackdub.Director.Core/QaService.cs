@@ -83,7 +83,8 @@ public sealed class QaService
             totalTokens += report.TokenUsage.TotalTokens;
         }
 
-        int firstPass = segmentReports.Count(s => s.FirstAttempt.Verdict == QaVerdict.Pass);
+        int failedSegments = segmentReports.Count(s => s.FirstAttempt is null);
+        int firstPass = segmentReports.Count(s => s.FirstAttempt?.Verdict == QaVerdict.Pass);
         int finalPass = segmentReports.Count(s => s.FinalVerdict == QaVerdict.Pass);
         int totalRevisions = segmentReports.Sum(s => s.Revisions.Length);
 
@@ -96,7 +97,8 @@ public sealed class QaService
             FinalPassRate: segments.Count == 0 ? 0 : (double)finalPass / segments.Count,
             TotalTokens: totalTokens,
             TotalPromptTokens: totalPrompt,
-            TotalCompletionTokens: totalCompletion);
+            TotalCompletionTokens: totalCompletion,
+            FailedSegments: failedSegments);
 
         var reportOut = new QaReport(
             SourceLanguage: sourceLanguage,
@@ -135,9 +137,18 @@ public sealed class QaService
         SegmentContext context,
         CancellationToken cancellationToken)
     {
-        // Initial translation
-        MetaClient.ChatCompletionResult initial = await _client.TranslateWithUsageAsync(
-            new MetaClient.TranslationRequest(context.Segment.Text, context.SourceLanguage, context.TargetLanguage), cancellationToken).ConfigureAwait(false);
+        // Initial translation. A failed generation is recorded on this segment's report (error + any
+        // billed usage) and the run continues to the remaining segments; it is not a run-level failure.
+        MetaClient.ChatCompletionResult initial;
+        try
+        {
+            initial = await _client.TranslateWithUsageAsync(
+                new MetaClient.TranslationRequest(context.Segment.Text, context.SourceLanguage, context.TargetLanguage), cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (IsGenerationFailure(ex, cancellationToken))
+        {
+            return CreateFailedSegmentReport(context, ex);
+        }
 
         string currentTranslation = initial.Content;
         var tokenAccum = new TokenAccum(initial.Usage);
@@ -169,7 +180,8 @@ public sealed class QaService
         RevisionResult result = await RunRevisionLoopAsync(context, revisionState, cancellationToken).ConfigureAwait(false);
 
         return CreateSegmentReport(context, new SegmentOutcome(
-            firstAttempt, result.Revisions, result.FinalVerdict, result.Translation, tokenAccum.ToUsage()));
+            firstAttempt, result.Revisions, result.FinalVerdict, result.Translation, tokenAccum.ToUsage()),
+            result.Error);
     }
 
     private async Task<RevisionResult> RunRevisionLoopAsync(
@@ -184,11 +196,23 @@ public sealed class QaService
 
         for (int attempt = 1; attempt <= _options.MaxAttempts; attempt++)
         {
-            MetaClient.ChatCompletionResult revision = await _client.ReviseTranslationForTimingAsync(
-                new MetaClient.TimingRevisionRequest(
-                    context.Segment.Text, currentTranslation, context.SourceLanguage, context.TargetLanguage,
-                    context.WindowSeconds, context.MaxChars, lastMeaningIssues),
-                cancellationToken).ConfigureAwait(false);
+            // A failed revision is recorded on this segment's report: the completed first attempt and
+            // any earlier revisions stay, the failed call's billed usage is kept, and the run continues
+            // to the remaining segments.
+            MetaClient.ChatCompletionResult revision;
+            try
+            {
+                revision = await _client.ReviseTranslationForTimingAsync(
+                    new MetaClient.TimingRevisionRequest(
+                        context.Segment.Text, currentTranslation, context.SourceLanguage, context.TargetLanguage,
+                        context.WindowSeconds, context.MaxChars, lastMeaningIssues),
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (IsGenerationFailure(ex, cancellationToken))
+            {
+                state.Tokens.Add((ex as MetaApiException)?.Usage);
+                return new RevisionResult(revisions.ToArray(), QaVerdict.Fail, currentTranslation, Error: ex.Message);
+            }
 
             currentTranslation = revision.Content;
             state.Tokens.Add(revision.Usage);
@@ -224,13 +248,45 @@ public sealed class QaService
         return new RevisionResult(revisions.ToArray(), finalVerdict, currentTranslation);
     }
 
-    private static QaSegmentReport CreateSegmentReport(SegmentContext context, SegmentOutcome outcome)
+    private static QaSegmentReport CreateSegmentReport(SegmentContext context, SegmentOutcome outcome, string? generationError = null)
     {
         return new QaSegmentReport(
             context.Segment.Id, context.Segment.Text, context.WindowSeconds,
             outcome.FirstAttempt, outcome.Revisions, outcome.FinalVerdict, outcome.Translation,
-            outcome.TokenUsage);
+            outcome.TokenUsage, generationError);
     }
+
+    /// <summary>
+    /// Records a segment whose translation (or, after the attempted call, its revision) could not be
+    /// generated. The report carries the error details and any usage the API billed for the failed
+    /// call, with no attempts — processing continues with the remaining segments.
+    /// </summary>
+    private static QaSegmentReport CreateFailedSegmentReport(SegmentContext context, Exception error)
+    {
+        MetaClient.TokenUsage? usage = (error as MetaApiException)?.Usage;
+        return new QaSegmentReport(
+            context.Segment.Id,
+            context.Segment.Text,
+            context.WindowSeconds,
+            FirstAttempt: null,
+            Revisions: [],
+            FinalVerdict: QaVerdict.Fail,
+            FinalTranslation: null,
+            TokenUsage: new QaTokenUsage(
+                usage?.PromptTokens ?? 0,
+                usage?.CompletionTokens ?? 0,
+                usage?.TotalTokens ?? 0),
+            GenerationError: error.Message);
+    }
+
+    /// <summary>
+    /// The failure set a generation call (translation or revision) can surface and that a segment
+    /// report absorbs. Caller-requested cancellation is deliberately excluded: it must propagate as
+    /// <see cref="OperationCanceledException"/> rather than being recorded as a failed segment.
+    /// </summary>
+    private static bool IsGenerationFailure(Exception ex, CancellationToken cancellationToken)
+        => ex is MetaApiException or HttpRequestException or InvalidOperationException
+           || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested);
 
     private async Task<QaAttemptReport> EvaluateAttemptAsync(
         AttemptInput attempt, SegmentContext context, TokenAccum tokenAccum, CancellationToken cancellationToken)
@@ -389,7 +445,8 @@ public sealed class QaService
     private sealed record RevisionResult(
         QaAttemptReport[] Revisions,
         QaVerdict FinalVerdict,
-        string Translation);
+        string Translation,
+        string? Error = null);
 
     private sealed record AttemptInput(
         int Number, QaAttemptKind Kind, string Translation, double EstimatedSeconds,

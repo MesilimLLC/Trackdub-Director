@@ -123,6 +123,10 @@ internal static class QaCli
 
         try
         {
+            // Pre-flight auth: a missing hosted key is a configuration error, not a per-segment
+            // generation failure — fail the run up front rather than reporting every segment as failed.
+            _ = MetaAuth.GetApiKey();
+
             IReadOnlyList<QaSegmentInput> segments = await QaService.LoadSegmentsAsync(resolvedInput).ConfigureAwait(false);
             Console.WriteLine($"QA: {segments.Count} segment(s) {from}->{to} | max-attempts={options.MaxAttempts} tolerance={options.ToleranceFraction:P0} cps={options.GetCharactersPerSecond(to):0.#} reasoning={options.ReasoningEffort ?? "(default)"}");
 
@@ -149,14 +153,20 @@ internal static class QaCli
 
     public static void PrintSummary(QaReport report)
     {
-        Console.WriteLine($"Segments: {report.Totals.TotalSegments} | First-pass: {report.Totals.FirstPassCount}/{report.Totals.TotalSegments} ({report.Totals.FirstPassRate:P0}) | Final: {report.Totals.FinalPassCount}/{report.Totals.TotalSegments} ({report.Totals.FinalPassRate:P0}) | Revisions: {report.Totals.TotalRevisions} | Tokens: {report.Totals.TotalTokens} (prompt {report.Totals.TotalPromptTokens} + completion {report.Totals.TotalCompletionTokens})");
+        Console.WriteLine($"Segments: {report.Totals.TotalSegments} | First-pass: {report.Totals.FirstPassCount}/{report.Totals.TotalSegments} ({report.Totals.FirstPassRate:P0}) | Final: {report.Totals.FinalPassCount}/{report.Totals.TotalSegments} ({report.Totals.FinalPassRate:P0}) | Revisions: {report.Totals.TotalRevisions} | Failed: {report.Totals.FailedSegments} | Tokens: {report.Totals.TotalTokens} (prompt {report.Totals.TotalPromptTokens} + completion {report.Totals.TotalCompletionTokens})");
         foreach (QaSegmentReport seg in report.Segments)
         {
+            if (seg.FirstAttempt is null)
+            {
+                Console.WriteLine($"  {seg.Id}: FAILED (generation error: {seg.GenerationError ?? "unknown"}) | tokens {seg.TokenUsage.TotalTokens}");
+                continue;
+            }
+
             string flag = seg.FinalVerdict == QaVerdict.Pass ? "PASS" : "FAIL";
             string firstFlag = seg.FirstAttempt.Verdict == QaVerdict.Pass ? "pass" : "fail";
             string firstTiming = seg.FirstAttempt.TimingVerdict == QaVerdict.Pass ? "pass" : "fail";
             string firstMeaning = seg.FirstAttempt.MeaningVerdict == MeaningVerdict.NotEvaluated ? "not checked" : seg.FirstAttempt.MeaningVerdict.ToString().ToLowerInvariant();
-            Console.WriteLine($"  {seg.Id}: window {seg.WindowSeconds:0.00}s | first {firstFlag} (timing {firstTiming} meaning {firstMeaning} {seg.FirstAttempt.EstimatedSeconds:0.00}s, {seg.FirstAttempt.Translation.Length}c) | final {flag} ({seg.FinalTranslation.Length}c, {seg.TokenUsage.TotalTokens} tok) | revisions {seg.Revisions.Length}");
+            Console.WriteLine($"  {seg.Id}: window {seg.WindowSeconds:0.00}s | first {firstFlag} (timing {firstTiming} meaning {firstMeaning} {seg.FirstAttempt.EstimatedSeconds:0.00}s, {seg.FirstAttempt.Translation.Length}c) | final {flag} ({seg.FinalTranslation!.Length}c, {seg.TokenUsage.TotalTokens} tok) | revisions {seg.Revisions.Length}");
             PrintFirstMeaning(seg.FirstAttempt);
             PrintRevisions(seg.Revisions);
         }

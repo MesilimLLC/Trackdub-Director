@@ -58,15 +58,21 @@ public static class RecoverySetBuilder
 
         foreach (QaSegmentReport segment in report.Segments)
         {
-            if (segment.FirstAttempt is null || segment.Revisions is null)
+            if (segment.Revisions is null)
             {
-                throw new InvalidOperationException($"QA report '{sourceFile}' has a segment without first_attempt or revisions.");
+                throw new InvalidOperationException($"QA report '{sourceFile}' has a segment without revisions.");
             }
         }
 
         var items = new List<RecoveryItem>();
         foreach (QaSegmentReport segment in report.Segments)
         {
+            // A failed generation (generation_error, null first_attempt) carries no attempts to recover.
+            if (segment.FirstAttempt is null)
+            {
+                continue;
+            }
+
             items.AddRange(QualifyingItems(report, segment, sourceFile));
         }
 
@@ -75,7 +81,7 @@ public static class RecoverySetBuilder
 
     private static IEnumerable<RecoveryItem> QualifyingItems(QaReport report, QaSegmentReport segment, string sourceFile)
     {
-        QaAttemptReport[] allAttempts = new[] { segment.FirstAttempt }.Concat(segment.Revisions).ToArray();
+        QaAttemptReport[] allAttempts = new[] { segment.FirstAttempt! }.Concat(segment.Revisions).ToArray();
         bool segmentExhausted = segment.FinalVerdict != QaVerdict.Pass;
 
         foreach (QaAttemptReport attempt in allAttempts)

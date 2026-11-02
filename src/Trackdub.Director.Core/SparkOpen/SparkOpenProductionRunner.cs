@@ -65,7 +65,8 @@ public sealed class SparkOpenProductionRunner
 
         var segments = report.Segments.Select(segment => segment with
         {
-            FirstAttempt = Fix(segment.FirstAttempt),
+            // A failed generation (generation_error) has no attempts and therefore no meaning host.
+            FirstAttempt = segment.FirstAttempt is null ? null : Fix(segment.FirstAttempt),
             Revisions = segment.Revisions.Select(Fix).ToArray(),
         }).ToArray();
 

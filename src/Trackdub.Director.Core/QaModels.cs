@@ -53,11 +53,12 @@ public sealed record QaSegmentReport(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("text")] string Text,
     [property: JsonPropertyName("window_seconds")] double WindowSeconds,
-    [property: JsonPropertyName("first_attempt")] QaAttemptReport FirstAttempt,
+    [property: JsonPropertyName("first_attempt")] QaAttemptReport? FirstAttempt,
     [property: JsonPropertyName("revisions")] QaAttemptReport[] Revisions,
     [property: JsonPropertyName("final_verdict")] QaVerdict FinalVerdict,
-    [property: JsonPropertyName("final_translation")] string FinalTranslation,
-    [property: JsonPropertyName("token_usage")] QaTokenUsage TokenUsage);
+    [property: JsonPropertyName("final_translation")] string? FinalTranslation,
+    [property: JsonPropertyName("token_usage")] QaTokenUsage TokenUsage,
+    [property: JsonPropertyName("generation_error")] string? GenerationError = null);
 
 public sealed record QaTokenUsage(
     [property: JsonPropertyName("prompt_tokens")] int PromptTokens,
@@ -80,7 +81,8 @@ public sealed record QaTotals(
     [property: JsonPropertyName("final_pass_rate")] double FinalPassRate,
     [property: JsonPropertyName("total_tokens")] int TotalTokens,
     [property: JsonPropertyName("prompt_tokens")] int TotalPromptTokens,
-    [property: JsonPropertyName("completion_tokens")] int TotalCompletionTokens);
+    [property: JsonPropertyName("completion_tokens")] int TotalCompletionTokens,
+    [property: JsonPropertyName("failed_segments")] int FailedSegments = 0);
 
 public sealed record QaReport(
     [property: JsonPropertyName("source_language")] string SourceLanguage,

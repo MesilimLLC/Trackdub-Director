@@ -54,6 +54,10 @@ public sealed class QaServiceTests
 
         public Queue<Exception> MeaningExceptions { get; init; } = new();
 
+        public Queue<HttpResponseMessage> TranslationErrorResponses { get; init; } = new();
+
+        public Queue<HttpResponseMessage> RevisionErrorResponses { get; init; } = new();
+
         public Action<string>? InspectRevisionBody { get; init; }
 
         public int MeaningCalls => _meaningCalls;
@@ -68,9 +72,18 @@ public sealed class QaServiceTests
                 return NextMeaningResponse();
             }
 
-            if (body.Contains("Revise", StringComparison.Ordinal))
+            bool isRevision = body.Contains("Revise", StringComparison.Ordinal);
+            if (isRevision)
             {
                 InspectRevisionBody?.Invoke(body);
+                if (RevisionErrorResponses.Count > 0)
+                {
+                    return RevisionErrorResponses.Dequeue();
+                }
+            }
+            else if (TranslationErrorResponses.Count > 0)
+            {
+                return TranslationErrorResponses.Dequeue();
             }
 
             if (Translations.Count == 0)
@@ -150,6 +163,13 @@ public sealed class QaServiceTests
     private static string MeaningFailJson(params string[] issues)
         => JsonSerializer.Serialize(new { verdict = "fail", issues, explanation = "Meaning changed." });
 
+    /// <summary>A non-2xx response whose body carries a billed usage block, as the Spark Open handler's 502 does.</summary>
+    private static HttpResponseMessage ErrorResponse(string body)
+        => new(HttpStatusCode.BadGateway)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        };
+
     private static async Task<string> ReadBodyAsync(HttpRequestMessage request, CancellationToken ct)
         => request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
@@ -171,7 +191,17 @@ public sealed class QaServiceTests
     }
 
     private static IEnumerable<QaAttemptReport> AllAttempts(QaSegmentReport seg)
-        => new[] { seg.FirstAttempt }.Concat(seg.Revisions);
+    {
+        if (seg.FirstAttempt is not null)
+        {
+            yield return seg.FirstAttempt;
+        }
+
+        foreach (QaAttemptReport revision in seg.Revisions)
+        {
+            yield return revision;
+        }
+    }
 
     /// <summary>
     /// An attempt that failed timing: meaning was never evaluated and carries no provenance.
@@ -221,7 +251,7 @@ public sealed class QaServiceTests
         Assert.True(report.Totals.TotalTokens > 0);
 
         QaSegmentReport seg = report.Segments[0];
-        QaAttemptReport first = seg.FirstAttempt;
+        QaAttemptReport first = seg.FirstAttempt!;
         Assert.Equal((QaVerdict.Pass, QaVerdict.Pass, MeaningVerdict.Pass, QaVerdict.Pass), (first.Verdict, first.TimingVerdict, first.MeaningVerdict, seg.FinalVerdict));
         Assert.Empty(first.MeaningIssues ?? []);
         Assert.Empty(seg.Revisions);
@@ -252,7 +282,7 @@ public sealed class QaServiceTests
             [new QaSegmentInput("seg-b", "This is a long source line that will overrun", DurationSeconds: 1.0)]);
 
         QaSegmentReport seg = report.Segments[0];
-        QaAttemptReport first = seg.FirstAttempt;
+        QaAttemptReport first = seg.FirstAttempt!;
         Assert.Equal((QaVerdict.Fail, QaVerdict.Fail, MeaningVerdict.NotEvaluated), (first.Verdict, first.TimingVerdict, first.MeaningVerdict));
         Assert.Equal(0, first.MeaningPromptTokens);
         Assert.Single(seg.Revisions);
@@ -286,7 +316,7 @@ public sealed class QaServiceTests
             [new QaSegmentInput("seg-c", "Hello world", DurationSeconds: 0.4)]);
 
         QaSegmentReport seg = report.Segments[0];
-        Assert.Equal((QaVerdict.Fail, QaVerdict.Fail), (seg.FirstAttempt.Verdict, seg.FirstAttempt.TimingVerdict));
+        Assert.Equal((QaVerdict.Fail, QaVerdict.Fail), (seg.FirstAttempt!.Verdict, seg.FirstAttempt!.TimingVerdict));
         Assert.Equal(3, seg.Revisions.Length);
         foreach (QaAttemptReport rev in seg.Revisions)
         {
@@ -316,7 +346,7 @@ public sealed class QaServiceTests
             [new QaSegmentInput("seg-d", "Hi", DurationSeconds: null)]);
 
         QaSegmentReport seg = report.Segments[0];
-        Assert.Equal((QaVerdict.Fail, QaVerdict.Fail), (seg.FirstAttempt.Verdict, seg.FirstAttempt.TimingVerdict));
+        Assert.Equal((QaVerdict.Fail, QaVerdict.Fail), (seg.FirstAttempt!.Verdict, seg.FirstAttempt!.TimingVerdict));
         Assert.Single(seg.Revisions);
         Assert.Equal((QaVerdict.Pass, QaVerdict.Pass, MeaningVerdict.Pass), (seg.FinalVerdict, seg.Revisions[0].TimingVerdict, seg.Revisions[0].MeaningVerdict));
     }
@@ -352,7 +382,7 @@ public sealed class QaServiceTests
             [new QaSegmentInput("seg-reg", "We need one more take.", DurationSeconds: 1.4)]);
 
         QaSegmentReport seg = report.Segments[0];
-        QaAttemptReport first = seg.FirstAttempt;
+        QaAttemptReport first = seg.FirstAttempt!;
         Assert.Equal((QaVerdict.Fail, QaVerdict.Fail, MeaningVerdict.NotEvaluated), (first.Verdict, first.TimingVerdict, first.MeaningVerdict));
         Assert.Equal((0, 0), (first.MeaningPromptTokens, first.MeaningTotalTokens));
         Assert.Equal(2, seg.Revisions.Length);
@@ -402,14 +432,14 @@ public sealed class QaServiceTests
         Assert.Equal(3, seg.Revisions.Length);
         Assert.Equal(
             (MeaningVerdict.Fail, MeaningVerdict.NotEvaluated, MeaningVerdict.Fail, MeaningVerdict.Pass, QaVerdict.Pass),
-            (seg.FirstAttempt.MeaningVerdict, seg.Revisions[0].MeaningVerdict, seg.Revisions[1].MeaningVerdict, seg.Revisions[2].MeaningVerdict, seg.FinalVerdict));
+            (seg.FirstAttempt!.MeaningVerdict, seg.Revisions[0].MeaningVerdict, seg.Revisions[1].MeaningVerdict, seg.Revisions[2].MeaningVerdict, seg.FinalVerdict));
 
         string[] requiredPhrases =
         [
             "Fix the listed meaning issues and restore lost meaning",
             "without shortening further than necessary",
             "restore the lost meaning",
-            $"at most {seg.FirstAttempt.MaxChars} characters",
+            $"at most {seg.FirstAttempt!.MaxChars} characters",
         ];
         Assert.Equal(3, revisionPrompts.Count);
         Assert.Contains("dropped modality", revisionPrompts[0], StringComparison.Ordinal);
@@ -444,8 +474,8 @@ public sealed class QaServiceTests
             [new QaSegmentInput("invalid-root", "Hello.", 4.2)]);
 
         QaSegmentReport seg = report.Segments[0];
-        Assert.Equal(MeaningVerdict.Fail, seg.FirstAttempt.MeaningVerdict);
-        Assert.Equal(new[] { "unparseable meaning response" }, seg.FirstAttempt.MeaningIssues);
+        Assert.Equal(MeaningVerdict.Fail, seg.FirstAttempt!.MeaningVerdict);
+        Assert.Equal(new[] { "unparseable meaning response" }, seg.FirstAttempt!.MeaningIssues);
         Assert.Single(seg.Revisions);
 
         QaAttemptReport revision = seg.Revisions[0];
@@ -505,7 +535,7 @@ public sealed class QaServiceTests
             [new QaSegmentInput("seg-exh", "We need one more take.", DurationSeconds: 1.4)]);
 
         QaSegmentReport seg = report.Segments[0];
-        Assert.Equal((QaVerdict.Fail, 2), (seg.FirstAttempt.TimingVerdict, seg.Revisions.Length));
+        Assert.Equal((QaVerdict.Fail, 2), (seg.FirstAttempt!.TimingVerdict, seg.Revisions.Length));
         Assert.All(seg.Revisions, r => Assert.Equal((QaVerdict.Fail, MeaningVerdict.Fail), (r.Verdict, r.MeaningVerdict)));
         Assert.Equal((QaVerdict.Fail, "Una toma mas."), (seg.FinalVerdict, seg.FinalTranslation));
     }
@@ -646,7 +676,7 @@ public sealed class QaServiceTests
             [new QaSegmentInput("seg-err", "Hello.", DurationSeconds: 4.2)]);
 
         QaSegmentReport seg = report.Segments[0];
-        QaAttemptReport first = seg.FirstAttempt;
+        QaAttemptReport first = seg.FirstAttempt!;
         Assert.Equal((QaVerdict.Fail, QaVerdict.Pass, MeaningVerdict.Error, QaVerdict.Fail), (first.Verdict, first.TimingVerdict, first.MeaningVerdict, seg.FinalVerdict));
         Assert.Contains("transport timeout", first.MeaningExplanation ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(seg.Revisions);
@@ -678,7 +708,7 @@ public sealed class QaServiceTests
         Assert.Single(seg.Revisions);
 
         QaAttemptReport revision = seg.Revisions[0];
-        Assert.Equal((MeaningVerdict.NotEvaluated, MeaningVerdict.Error), (seg.FirstAttempt.MeaningVerdict, revision.MeaningVerdict));
+        Assert.Equal((MeaningVerdict.NotEvaluated, MeaningVerdict.Error), (seg.FirstAttempt!.MeaningVerdict, revision.MeaningVerdict));
         Assert.Contains("502", revision.MeaningExplanation ?? string.Empty, StringComparison.Ordinal);
     }
 
@@ -703,7 +733,7 @@ public sealed class QaServiceTests
             [new QaSegmentInput("seg-norm", "Hello.", DurationSeconds: 4.2)]);
 
         QaSegmentReport seg = report.Segments[0];
-        Assert.Equal((MeaningVerdict.Fail, QaVerdict.Fail), (seg.FirstAttempt.MeaningVerdict, seg.FirstAttempt.Verdict));
+        Assert.Equal((MeaningVerdict.Fail, QaVerdict.Fail), (seg.FirstAttempt!.MeaningVerdict, seg.FirstAttempt!.Verdict));
         Assert.Single(seg.Revisions);
         Assert.Equal(QaVerdict.Fail, seg.FinalVerdict);
     }
@@ -724,11 +754,113 @@ public sealed class QaServiceTests
             [new QaSegmentInput("seg-idiom", "We need one more take.", DurationSeconds: 2.0)]);
 
         QaSegmentReport seg = report.Segments[0];
-        QaAttemptReport first = seg.FirstAttempt;
+        QaAttemptReport first = seg.FirstAttempt!;
         Assert.Equal((QaVerdict.Pass, QaVerdict.Pass, MeaningVerdict.Pass), (first.Verdict, first.TimingVerdict, first.MeaningVerdict));
         AssertMeaningProvenance(first);
         Assert.Empty(seg.Revisions);
         Assert.Equal((QaVerdict.Pass, "Nos hace falta una toma mas."), (seg.FinalVerdict, seg.FinalTranslation));
+    }
+
+    [Fact]
+    public async Task Translation_failure_is_recorded_on_the_segment_and_the_run_continues()
+    {
+        using var _ = FakeAuth();
+
+        // The first segment's generation fails (a billed 502 carrying usage); the second succeeds.
+        // The failed segment is recorded with its error and usage, and the run still returns a report.
+        var meaning = new ScriptedMeta
+        {
+            Translations = new Queue<string>(["Hola."]),
+            MeaningJsons = new Queue<string>([MeaningPassJson()]),
+            TranslationErrorResponses = new Queue<HttpResponseMessage>(
+            [
+                ErrorResponse(JsonSerializer.Serialize(new
+                {
+                    error = new { message = "unextractable answer" },
+                    usage = new { prompt_tokens = 10, completion_tokens = 5, total_tokens = 15 },
+                })),
+            ]),
+        };
+        QaReport report = await RunSegments(
+            meaning.ToHandler(),
+            new QaOptions { MaxAttempts = 3, ToleranceFraction = 0.10 },
+            [
+                new QaSegmentInput("seg-fail", "Hello.", 4.2),
+                new QaSegmentInput("seg-ok", "Bye.", 4.2),
+            ]);
+
+        Assert.Equal(2, report.Segments.Length);
+        Assert.Equal(1, report.Totals.FailedSegments);
+
+        QaSegmentReport failed = report.Segments[0];
+        Assert.Null(failed.FirstAttempt);
+        Assert.Null(failed.FinalTranslation);
+        Assert.Equal(QaVerdict.Fail, failed.FinalVerdict);
+        Assert.Empty(failed.Revisions);
+        Assert.Contains("unextractable answer", failed.GenerationError, StringComparison.Ordinal);
+        Assert.Equal(15, failed.TokenUsage.TotalTokens);
+
+        QaSegmentReport ok = report.Segments[1];
+        Assert.NotNull(ok.FirstAttempt);
+        Assert.Null(ok.GenerationError);
+        Assert.Equal(QaVerdict.Pass, ok.FinalVerdict);
+    }
+
+    [Fact]
+    public async Task Revision_failure_is_recorded_keeping_the_completed_first_attempt()
+    {
+        using var _ = FakeAuth();
+
+        // The initial translation overruns the window (timing fails), and the first revision call fails
+        // (a billed 502). The segment keeps the completed first attempt plus the failed call's billed
+        // usage and records the revision error — the run does not lose the evidence or the tokens.
+        var meaning = new ScriptedMeta
+        {
+            Translations = new Queue<string>([
+                "Traduccion larguisima que no cabe en la ventana asignada definitivamente",
+            ]),
+            RevisionErrorResponses = new Queue<HttpResponseMessage>(
+            [
+                ErrorResponse(JsonSerializer.Serialize(new
+                {
+                    error = new { message = "revision generation failed" },
+                    usage = new { prompt_tokens = 20, completion_tokens = 10, total_tokens = 30 },
+                })),
+            ]),
+        };
+        QaReport report = await RunSegments(
+            meaning.ToHandler(),
+            new QaOptions { MaxAttempts = 3, ToleranceFraction = 0.10 },
+            [new QaSegmentInput("seg-rev", "Hello.", DurationSeconds: 4.2)]);
+
+        QaSegmentReport seg = report.Segments[0];
+        Assert.NotNull(seg.FirstAttempt);
+        Assert.Equal(QaVerdict.Fail, seg.FirstAttempt!.TimingVerdict);
+        Assert.Empty(seg.Revisions);
+        Assert.Equal(QaVerdict.Fail, seg.FinalVerdict);
+        Assert.NotNull(seg.FinalTranslation);
+        Assert.Contains("revision generation failed", seg.GenerationError, StringComparison.Ordinal);
+        Assert.Equal(0, report.Totals.FailedSegments); // first attempt completed, so the segment is not "failed"
+        Assert.Equal(15 + 30, seg.TokenUsage.TotalTokens); // first attempt usage + failed revision's billed usage
+    }
+
+    [Fact]
+    public async Task Caller_cancellation_propagates_instead_of_being_recorded_as_a_failure()
+    {
+        using var _ = FakeAuth();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var meaning = new ScriptedMeta
+        {
+            Translations = new Queue<string>(["Hola."]),
+        };
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            RunSegments(
+                meaning.ToHandler(),
+                new QaOptions { MaxAttempts = 3, ToleranceFraction = 0.10 },
+                [new QaSegmentInput("seg-ct", "Hello.", 4.2)],
+                cts.Token));
     }
 
     private static bool HasRealApiKey

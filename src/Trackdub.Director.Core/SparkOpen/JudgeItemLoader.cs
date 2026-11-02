@@ -91,12 +91,19 @@ public static class JudgeItemLoader
         var items = new List<JudgeItem>();
         foreach (QaSegmentReport segment in report.Segments)
         {
-            if (segment.FirstAttempt is null || segment.Revisions is null)
+            if (segment.Revisions is null)
             {
-                throw new InvalidOperationException($"QA report '{reportPath}' segment '{segment.Id}' is missing 'first_attempt' or 'revisions'.");
+                throw new InvalidOperationException($"QA report '{reportPath}' segment '{segment.Id}' is missing 'revisions'.");
             }
 
-            foreach (QaAttemptReport attempt in new[] { segment.FirstAttempt }.Concat(segment.Revisions))
+            // A failed generation (generation_error, null first_attempt) was never meaning-evaluated,
+            // so it carries no hosted verdict to diff against.
+            if (segment.FirstAttempt is null)
+            {
+                continue;
+            }
+
+            foreach (QaAttemptReport attempt in new[] { segment.FirstAttempt! }.Concat(segment.Revisions))
             {
                 if (attempt.MeaningVerdict is not (MeaningVerdict.Pass or MeaningVerdict.Fail))
                 {
