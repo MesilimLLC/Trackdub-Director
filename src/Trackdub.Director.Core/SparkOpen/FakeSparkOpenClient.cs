@@ -40,7 +40,7 @@ public sealed class FakeSparkOpenClient : ISparkOpenClient
         {
             var config = new SparkOpenConfig("https://spark-open.fake.local/v1", "fake-key", model, endpointHost);
             _httpClient = new HttpClient(new SparkOpenChatHandler(config, qaInnerHandler));
-            _metaClient = new MetaClient(_httpClient);
+            _metaClient = new MetaClient(_httpClient, config.ApiKey);
         }
     }
 
@@ -74,7 +74,7 @@ public sealed class FakeSparkOpenClient : ISparkOpenClient
                 "Spark Open reply carried no extractable final JSON answer.", Model, null, EndpointHost));
         }
 
-        return Task.FromResult(MeaningGate.ParseAndNormalize(finalAnswer, Model, null, EndpointHost));
+        return Task.FromResult(SparkOpenClient.ParseStrictMeaningVerdict(finalAnswer, Model, null, EndpointHost));
     }
 
     public MetaClient AsMetaClient()

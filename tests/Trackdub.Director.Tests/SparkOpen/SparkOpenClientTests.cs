@@ -9,6 +9,7 @@ namespace Trackdub.Director.Tests.SparkOpen;
 /// a reasoning-prefixed reply parses to its final answer for both the judge and the QA/translation
 /// paths, an unextractable reply fails closed, and a missing config makes zero calls.
 /// </summary>
+[Collection("SparkOpenEnv")]
 public sealed class SparkOpenClientTests
 {
     private static SparkOpenConfig Config() => new("https://spark-open.test.azure/v1", "test-key", FakeModel, "spark-open.test.azure");
@@ -111,7 +112,7 @@ public sealed class SparkOpenClientTests
     public async Task QA_path_fails_a_call_whose_reply_has_no_extractable_answer()
     {
         using var _ = new HostedEnvScope();
-        var rewriting = new HandlerStub((_, _) => ChatResponse("<think>no answer</think>"));
+        var rewriting = new HandlerStub((_, _) => ChatResponse("<thinking>no answer</thinking>"));
         using var client = new SparkOpenClient(Config(), rewritingInner: rewriting, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
 
         // MetaClient surfaces the handler's 502 as a MetaApiException: a failed call, not a guess.
@@ -146,5 +147,107 @@ public sealed class SparkOpenClientTests
     {
         using var _ = new SparkOpenEnvScope(baseUrl: "not-a-url", apiKey: "k", model: "m");
         Assert.Throws<SparkOpenConfigException>(() => SparkOpenAuth.Resolve());
+    }
+
+    [Fact]
+    public async Task QA_path_unwraps_a_translation_wrapped_json_object_to_the_plain_line()
+    {
+        using var _ = new HostedEnvScope();
+        // The injected instruction asks for a JSON final object, so Spark Open may reply with
+        // {"translation":"..."}; the handler must unwrap it so timing estimates, meaning checks,
+        // and saved translations see the plain line, never the wrapper.
+        var rewriting = new HandlerStub((_, _) => ChatResponse(ReasoningTranslationReply("Hola, Ashley.")));
+        using var client = new SparkOpenClient(Config(), rewritingInner: rewriting, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
+
+        MetaClient.ChatCompletionResult result = await client.AsMetaClient().TranslateWithUsageAsync(
+            new MetaClient.TranslationRequest("Hi, Ashley.", "en", "es"));
+
+        Assert.Equal("Hola, Ashley.", result.Content);
+    }
+
+    [Fact]
+    public void A_plaintext_http_endpoint_fails_closed()
+    {
+        using var _ = new SparkOpenEnvScope(baseUrl: "http://deployment.example/v1", apiKey: "k", model: "m");
+        Assert.Throws<SparkOpenConfigException>(() => SparkOpenAuth.Resolve());
+    }
+
+    [Fact]
+    public void A_loopback_http_endpoint_is_allowed()
+    {
+        using var _ = new SparkOpenEnvScope(baseUrl: "http://localhost:8000/v1", apiKey: "k", model: "m");
+        SparkOpenConfig config = SparkOpenAuth.Resolve();
+        Assert.Equal("localhost", config.EndpointHost);
+    }
+
+    [Fact]
+    public async Task Judge_fails_closed_to_Error_on_an_unknown_verdict()
+    {
+        // A verdict that is neither pass nor fail is a failed judgement, never a normalized Fail that
+        // could count as agreement with a hosted Fail.
+        var raw = new HandlerStub((_, _) => ChatResponse("<thinking>I considered.</thinking>\n{\"verdict\":\"banana\",\"issues\":[],\"explanation\":\"x\"}", total: 700));
+        using var client = new SparkOpenClient(Config(), rewritingInner: new HandlerStub((_, _) => ChatResponse("{}")), rawInner: raw);
+
+        MeaningCheckResult result = await client.JudgeMeaningAsync("Hi.", "Hola.", "en", "es");
+
+        Assert.Equal(MeaningVerdict.Error, result.Verdict);
+        Assert.Equal(700, result.Usage?.TotalTokens);
+    }
+
+    [Fact]
+    public async Task Judge_fails_closed_to_Error_on_a_malformed_issues_array()
+    {
+        var raw = new HandlerStub((_, _) => ChatResponse("{\"verdict\":\"pass\",\"issues\":\"not-an-array\",\"explanation\":\"x\"}"));
+        using var client = new SparkOpenClient(Config(), rewritingInner: new HandlerStub((_, _) => ChatResponse("{}")), rawInner: raw);
+
+        MeaningCheckResult result = await client.JudgeMeaningAsync("Hi.", "Hola.", "en", "es");
+
+        Assert.Equal(MeaningVerdict.Error, result.Verdict);
+    }
+
+    [Fact]
+    public async Task QA_failed_meaning_reply_preserves_billed_usage_in_the_failure_contract()
+    {
+        using var _ = new HostedEnvScope();
+        // The handler's 502 body carries the billed usage; MetaClient must surface it on the exception
+        // so a failed meaning reply is not accounted as zero tokens.
+        var rewriting = new HandlerStub((_, body) => body.Contains(MeaningGate.MeaningMarker, StringComparison.Ordinal)
+            ? ChatResponse("<thinking>no answer</thinking>", total: 900)
+            : ChatResponse("Hola."));
+        using var client = new SparkOpenClient(Config(), rewritingInner: rewriting, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
+
+        MetaApiException ex = await Assert.ThrowsAsync<MetaApiException>(() =>
+            client.AsMetaClient().CheckMeaningAsync(new MetaClient.MeaningCheckRequest("Hi.", "Hola.", "en", "es")));
+
+        Assert.Equal(900, ex.Usage?.TotalTokens);
+    }
+
+    [Fact]
+    public async Task Dispose_with_caller_owned_transports_leaves_the_transports_alive()
+    {
+        using var _ = new HostedEnvScope();
+        var rewriting = new HandlerStub((_, _) => ChatResponse("Hola."));
+
+        var client = new SparkOpenClient(Config(), rewritingInner: rewriting, rawInner: new HandlerStub((_, _) => ChatResponse("{}")), ownsHttpClients: false);
+        client.Dispose();
+
+        // The caller supplied the transports, so disposal must not take them down.
+        using var http = new HttpClient(rewriting);
+        HttpResponseMessage response = await http.GetAsync("https://spark-open.test.azure/v1/chat/completions");
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task QA_path_runs_without_any_hosted_credentials()
+    {
+        using var _ = new ClearedHostedEnvScope();
+        // Only SPARKOPEN_* is configured: the Spark Open adapter must never need META_API_KEY.
+        var rewriting = new HandlerStub((_, _) => ChatResponse("Hola."));
+        using var client = new SparkOpenClient(Config(), rewritingInner: rewriting, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
+
+        MetaClient.ChatCompletionResult result = await client.AsMetaClient().TranslateWithUsageAsync(
+            new MetaClient.TranslationRequest("Hi.", "en", "es"));
+
+        Assert.Equal("Hola.", result.Content);
     }
 }

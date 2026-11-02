@@ -9,6 +9,7 @@ namespace Trackdub.Director.Tests.SparkOpen;
 /// runner grades Spark Open's output with the REAL gate code paths (DurationEstimator for timing and
 /// the hosted MeaningGate for meaning). Fake client + fake Meta handler, no live calls.
 /// </summary>
+[Collection("SparkOpenEnv")]
 public sealed class SparkOpenRunnersTests
 {
     private static SparkOpenConfig Config() => new("https://spark-open.test.azure/v1", "k", FakeModel, "spark-open.test.azure");
@@ -147,5 +148,51 @@ public sealed class SparkOpenRunnersTests
         SparkOpenTranslationReport report = await new SparkOpenTranslationRunner(sparkOpen, hostedClient).RunAsync(segments, "en", "es", hosted);
 
         Assert.Equal("Hola, Ashley (hosted).", report.Results[0].HostedTranslation);
+    }
+
+    [Fact]
+    public async Task Production_report_names_the_spark_open_endpoint_as_the_meaning_host()
+    {
+        using var _ = new HostedEnvScope();
+        // Meaning checks are served by Spark Open (the redirected transport), so the report must name
+        // the Spark Open host, not the hosted endpoint MetaAuth derives.
+        var rewriting = new HandlerStub((_, body) => body.Contains(MeaningGate.MeaningMarker, StringComparison.Ordinal)
+            ? ChatResponse(ReasoningMeaningReply(pass: true))
+            : ChatResponse("Hola."));
+        using var client = new SparkOpenClient(Config(), rewritingInner: rewriting, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
+
+        var segments = new[] { new QaSegmentInput("voa10-001", "Hi, Ashley.", 4.0) };
+        SparkOpenProductionReport report = await new SparkOpenProductionRunner(client).RunAsync(segments, "en", "es");
+
+        QaAttemptReport attempt = report.QaReport.Segments[0].FirstAttempt;
+        Assert.Equal("spark-open.test.azure", attempt.MeaningEndpointHost);
+    }
+
+    [Fact]
+    public async Task Translation_runner_records_a_failed_generation_and_continues_to_the_next_line()
+    {
+        using var _ = new HostedEnvScope();
+        // First line: the handler 502s (unextractable answer), a billed failed generation. Second line
+        // succeeds. The run must record the failed line (with usage) and still finish the others.
+        int calls = 0;
+        var sparkTranslate = new HandlerStub((_, _) =>
+        {
+            calls++;
+            return calls == 1 ? ChatResponse("<thinking>no answer</thinking>", total: 500) : ChatResponse("Hola.");
+        });
+        using var sparkOpen = new SparkOpenClient(Config(), rewritingInner: sparkTranslate, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
+        var hostedMeaning = new HandlerStub((_, _) => ChatResponse("{\"verdict\":\"pass\",\"issues\":[],\"explanation\":\"ok\"}", model: "muse-spark-1.1"));
+        using var hostedClient = new MetaClient(new HttpClient(hostedMeaning));
+
+        var segments = new[] { new QaSegmentInput("c1", "Hi.", 4.0), new QaSegmentInput("c2", "Bye.", 4.0) };
+        SparkOpenTranslationReport report = await new SparkOpenTranslationRunner(sparkOpen, hostedClient).RunAsync(segments, "en", "es");
+
+        Assert.Equal(2, report.Summary.Lines);
+        Assert.Equal(1, report.Summary.TranslationErrors);
+        Assert.NotNull(report.Results[0].TranslationError);
+        Assert.Equal(500, report.Results[0].SparkOpenTranslationUsage?.TotalTokens);
+        Assert.Equal(QaVerdict.Fail, report.Results[0].CombinedVerdict);
+        Assert.Null(report.Results[1].TranslationError);
+        Assert.Equal("Hola.", report.Results[1].SparkOpenTranslation);
     }
 }

@@ -52,36 +52,62 @@ public sealed class SparkOpenTranslationRunner
             cancellationToken.ThrowIfCancellationRequested();
             double windowSeconds = QaService.ResolveWindowSeconds(segment, _options, sourceLanguage);
             int maxChars = Math.Max(1, DurationEstimator.MaxCharsForWindow(windowSeconds * (1.0 + _options.ToleranceFraction), targetCps));
-
-            MetaClient.ChatCompletionResult translation = await translator.TranslateWithUsageAsync(
-                new MetaClient.TranslationRequest(segment.Text, sourceLanguage, targetLanguage), cancellationToken).ConfigureAwait(false);
-
-            double estimated = DurationEstimator.EstimateSeconds(translation.Content, targetCps);
-            bool fits = DurationEstimator.Fits(estimated, windowSeconds, _options.ToleranceFraction);
-
-            MeaningCheckResult meaning = await GradeMeaningAsync(segment.Text, translation.Content, sourceLanguage, targetLanguage, cancellationToken).ConfigureAwait(false);
-
-            QaVerdict timingVerdict = fits ? QaVerdict.Pass : QaVerdict.Fail;
-            QaVerdict combined = timingVerdict == QaVerdict.Pass && meaning.Verdict == MeaningVerdict.Pass ? QaVerdict.Pass : QaVerdict.Fail;
-
             string? hostedTranslation = hostedTranslations is not null && hostedTranslations.TryGetValue(segment.Id, out string? h) ? h : null;
 
-            results.Add(new SparkOpenTranslationLineResult(
-                segment.Id,
-                segment.Text,
-                windowSeconds,
-                translation.Content,
-                estimated,
-                maxChars,
-                timingVerdict,
-                meaning.Verdict,
-                meaning.Issues,
-                meaning.Explanation,
-                meaning.ModelId,
-                combined,
-                translation.Usage,
-                meaning.Usage,
-                hostedTranslation));
+            try
+            {
+                MetaClient.ChatCompletionResult translation = await translator.TranslateWithUsageAsync(
+                    new MetaClient.TranslationRequest(segment.Text, sourceLanguage, targetLanguage), cancellationToken).ConfigureAwait(false);
+
+                double estimated = DurationEstimator.EstimateSeconds(translation.Content, targetCps);
+                bool fits = DurationEstimator.Fits(estimated, windowSeconds, _options.ToleranceFraction);
+
+                MeaningCheckResult meaning = await GradeMeaningAsync(segment.Text, translation.Content, sourceLanguage, targetLanguage, cancellationToken).ConfigureAwait(false);
+
+                QaVerdict timingVerdict = fits ? QaVerdict.Pass : QaVerdict.Fail;
+                QaVerdict combined = timingVerdict == QaVerdict.Pass && meaning.Verdict == MeaningVerdict.Pass ? QaVerdict.Pass : QaVerdict.Fail;
+
+                results.Add(new SparkOpenTranslationLineResult(
+                    segment.Id,
+                    segment.Text,
+                    windowSeconds,
+                    translation.Content,
+                    estimated,
+                    maxChars,
+                    timingVerdict,
+                    meaning.Verdict,
+                    meaning.Issues,
+                    meaning.Explanation,
+                    meaning.ModelId,
+                    combined,
+                    translation.Usage,
+                    meaning.Usage,
+                    hostedTranslation));
+            }
+            catch (Exception ex) when (
+                ex is MetaApiException or SparkOpenException or HttpRequestException or InvalidOperationException
+                || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+            {
+                // A failed generation must not erase the run's evidence: record the line as failed with
+                // the billed usage (when the failure contract carried it) and continue to the next line.
+                results.Add(new SparkOpenTranslationLineResult(
+                    segment.Id,
+                    segment.Text,
+                    windowSeconds,
+                    SparkOpenTranslation: string.Empty,
+                    EstimatedSeconds: 0,
+                    MaxChars: maxChars,
+                    TimingVerdict: QaVerdict.Fail,
+                    MeaningVerdict: MeaningVerdict.NotEvaluated,
+                    MeaningIssues: null,
+                    MeaningExplanation: null,
+                    MeaningModelId: null,
+                    CombinedVerdict: QaVerdict.Fail,
+                    SparkOpenTranslationUsage: (ex as MetaApiException)?.Usage,
+                    HostedMeaningUsage: null,
+                    HostedTranslation: hostedTranslation,
+                    TranslationError: ex.Message));
+            }
         }
 
         return new SparkOpenTranslationReport(
@@ -111,7 +137,7 @@ public sealed class SparkOpenTranslationRunner
             ex is MetaApiException or HttpRequestException or InvalidOperationException
             || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
-            return MeaningGate.ForError(ex.Message, MetaAuth.GetModel(), null, HostedHost());
+            return MeaningGate.ForError(ex.Message, MetaAuth.GetModel(), (ex as MetaApiException)?.Usage, HostedHost());
         }
     }
 
@@ -129,6 +155,7 @@ public sealed class SparkOpenTranslationRunner
         int meaningPass = results.Count(r => r.MeaningVerdict == MeaningVerdict.Pass);
         int combinedPass = results.Count(r => r.CombinedVerdict == QaVerdict.Pass);
         int meaningErrors = results.Count(r => r.MeaningVerdict == MeaningVerdict.Error);
+        int translationErrors = results.Count(r => r.TranslationError is not null);
 
         return new SparkOpenTranslationSummary(
             lines,
@@ -136,6 +163,7 @@ public sealed class SparkOpenTranslationRunner
             meaningPass,
             combinedPass,
             meaningErrors,
+            translationErrors,
             Ratio(timingPass, lines),
             Ratio(meaningPass, lines),
             Ratio(combinedPass, lines),

@@ -15,11 +15,13 @@ public static class SparkOpenReasoningParser
 {
     /// <summary>
     /// Returns the balanced JSON object that carries the final answer, or null when none
-    /// can be extracted. Strategy, in order:
+    /// can be extracted. Every completed think/reasoning block is stripped first, so a verdict
+    /// quoted inside reasoning is never taken as the final answer. Strategy, in order:
     ///   1. the last non-blank line, when it parses as a JSON object (the instructed shape);
     ///   2. the last balanced top-level JSON object anywhere in the reply (reasoning that
     ///      quotes earlier braces cannot shadow the trailing answer).
-    /// Markdown code fences around the final object are tolerated.
+    /// Markdown code fences around the final object are tolerated. A reply whose reasoning ends
+    /// inside an unclosed think block yields null, so truncated reasoning never becomes a verdict.
     /// </summary>
     public static string? ExtractFinalJsonObject(string? rawContent)
     {
@@ -29,6 +31,13 @@ public static class SparkOpenReasoningParser
         }
 
         string content = StripTrailingFence(rawContent.Trim());
+        content = StripThinkBlocks(content, out bool unterminated);
+        if (unterminated)
+        {
+            // Reasoning was truncated mid-block: the last balanced object may be reasoning prose,
+            // so no verdict can be trusted. Take the failed-call path.
+            return null;
+        }
 
         string? lastLine = LastNonBlankLine(content);
         if (lastLine is not null && TryWholeObject(lastLine, out string? lineObject))
@@ -54,9 +63,11 @@ public static class SparkOpenReasoningParser
     /// Extracts the final answer as text, separating it from the reasoning that precedes it. When the
     /// reply ends in a <c>{...}</c> JSON object (a structured answer such as a meaning verdict) that
     /// object is returned so the standard JSON gate parses it; otherwise the last non-blank line is
-    /// returned (an unstructured answer such as a translated line). Any leading <c>&lt;think&gt;…&lt;/think&gt;</c>
-    /// reasoning block and trailing code fence are stripped first. Returns null when nothing remains —
-    /// a reply with no extractable final answer, which callers treat as a FAILED call.
+    /// returned (an unstructured answer such as a translated line). Every completed
+    /// <c>&lt;think&gt;…&lt;/think&gt;</c> reasoning block and trailing code fence is stripped first.
+    /// Returns null when nothing remains — a reply with no extractable final answer, which callers
+    /// treat as a FAILED call. A reply whose reasoning is truncated inside an unclosed think block is
+    /// likewise null, so a half-finished thought can never be returned as the answer.
     /// </summary>
     public static string? ExtractFinalAnswer(string? rawContent)
     {
@@ -65,7 +76,12 @@ public static class SparkOpenReasoningParser
             return null;
         }
 
-        string content = StripThinkBlock(StripTrailingFence(rawContent.Trim())).Trim();
+        string content = StripTrailingFence(rawContent.Trim());
+        content = StripThinkBlocks(content, out bool unterminated).Trim();
+        if (unterminated)
+        {
+            return null;
+        }
 
         string? jsonObject = ExtractFinalJsonObject(content);
         if (jsonObject is not null)
@@ -85,20 +101,32 @@ public static class SparkOpenReasoningParser
         return extracted is not null;
     }
 
-    private static string StripThinkBlock(string content)
+    /// <summary>
+    /// Strips every completed think/reasoning block from the reply, so reasoning prose can never
+    /// shadow a plain-text final answer below it. Reasoning models sometimes emit more than one
+    /// block, so all completed blocks are removed, not just the first. When generation stops inside
+    /// an unclosed think block, the unterminated flag is set true so callers treat the reply as
+    /// having no extractable answer.
+    /// </summary>
+    private static string StripThinkBlocks(string content, out bool unterminated)
     {
-        // Remove a leading <think>...</think> reasoning block if present, so a plain-text final answer
-        // is not shadowed by reasoning lines above it.
-        const string open = "<think>";
-        const string close = "</think>";
+        const string open = "<thinking>";
+        const string close = "</thinking>";
         int start = content.IndexOf(open, StringComparison.OrdinalIgnoreCase);
-        if (start < 0)
+        while (start >= 0)
         {
-            return content;
+            int end = content.IndexOf(close, start + open.Length, StringComparison.OrdinalIgnoreCase);
+            if (end < 0)
+            {
+                break;
+            }
+
+            content = content.Remove(start, end - start + close.Length);
+            start = content.IndexOf(open, StringComparison.OrdinalIgnoreCase);
         }
 
-        int end = content.IndexOf(close, start, StringComparison.OrdinalIgnoreCase);
-        return end < 0 ? content : content.Remove(start, end - start + close.Length);
+        unterminated = start >= 0;
+        return content;
     }
 
     private static string StripTrailingFence(string content)

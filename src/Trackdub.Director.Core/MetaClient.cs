@@ -33,8 +33,9 @@ public sealed class MetaClient : IDisposable
     private readonly HttpClient _httpClient;
     private readonly bool _ownsClient;
     private readonly CallBudget? _budget;
+    private readonly string? _apiKeyOverride;
 
-    public MetaClient(HttpClient? httpClient = null)
+    public MetaClient(HttpClient? httpClient = null, string? apiKeyOverride = null)
     {
         if (httpClient is not null)
         {
@@ -46,6 +47,8 @@ public sealed class MetaClient : IDisposable
             _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
             _ownsClient = true;
         }
+
+        _apiKeyOverride = apiKeyOverride;
     }
 
     private MetaClient(MetaClient parent, CallBudget budget)
@@ -53,6 +56,7 @@ public sealed class MetaClient : IDisposable
         _httpClient = parent._httpClient;
         _ownsClient = false;
         _budget = budget;
+        _apiKeyOverride = parent._apiKeyOverride;
     }
 
     /// <summary>
@@ -119,6 +123,41 @@ public sealed class MetaClient : IDisposable
     {
         return usage is null ? null : new TokenUsage(usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens);
     }
+
+    /// <summary>
+    /// Reads billed usage from a failed-call response body (e.g. the Spark Open handler's 502 body),
+    /// so tokens the API billed for are not lost on the error path.
+    /// </summary>
+    private static TokenUsage? ReadErrorUsage(string body)
+    {
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(body);
+            JsonElement root = doc.RootElement;
+            if (root.ValueKind == JsonValueKind.Object
+                && root.TryGetProperty("usage", out JsonElement usage)
+                && usage.ValueKind == JsonValueKind.Object)
+            {
+                return new TokenUsage(
+                    ReadUsageInt(usage, "prompt_tokens"),
+                    ReadUsageInt(usage, "completion_tokens"),
+                    ReadUsageInt(usage, "total_tokens"));
+            }
+        }
+        catch (JsonException)
+        {
+            // Not JSON or no usage object: null usage is fine.
+        }
+
+        return null;
+    }
+
+    private static int ReadUsageInt(JsonElement obj, string name)
+        => obj.TryGetProperty(name, out JsonElement value)
+            && value.ValueKind == JsonValueKind.Number
+            && value.TryGetInt32(out int number)
+            ? number
+            : 0;
 
     private static TokenUsageDetail? ToUsageDetail(UsageDto? usage)
     {
@@ -485,10 +524,12 @@ public sealed class MetaClient : IDisposable
         return imageUrl;
     }
 
-    private static HttpRequestMessage CreateAuthorizedRequest(HttpMethod method, string url, string? json)
+    private HttpRequestMessage CreateAuthorizedRequest(HttpMethod method, string url, string? json)
     {
         var request = new HttpRequestMessage(method, url);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", MetaAuth.GetApiKey());
+        // Instance-scoped override (e.g. the Spark Open adapter, whose handler re-signs the request
+        // with the deployment key) avoids a dependency on the hosted MetaAuth credentials entirely.
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKeyOverride ?? MetaAuth.GetApiKey());
         if (json is not null)
         {
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -524,7 +565,9 @@ public sealed class MetaClient : IDisposable
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new MetaApiException($"Meta Model API HTTP {(int)response.StatusCode}: {Truncate(new BodyText(body))}");
+                throw new MetaApiException(
+                    $"Meta Model API HTTP {(int)response.StatusCode}: {Truncate(new BodyText(body))}",
+                    ReadErrorUsage(body));
             }
 
             return body;

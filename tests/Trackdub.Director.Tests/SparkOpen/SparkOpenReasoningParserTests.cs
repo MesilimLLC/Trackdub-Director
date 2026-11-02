@@ -8,7 +8,7 @@ public sealed class SparkOpenReasoningParserTests
     [Fact]
     public void Reasoning_prefixed_json_verdict_parses_to_the_final_object()
     {
-        string reply = "<think>\nSubject and action are preserved; numbers match.\n</think>\n" +
+        string reply = "<thinking>\nSubject and action are preserved; numbers match.\n</thinking>\n" +
                        "My conclusion follows.\n{\"verdict\":\"pass\",\"issues\":[],\"explanation\":\"Meaning preserved.\"}";
 
         Assert.True(SparkOpenReasoningParser.TryExtractFinalJsonObject(reply, out string obj));
@@ -40,7 +40,7 @@ public sealed class SparkOpenReasoningParserTests
     public void A_plain_final_line_is_returned_as_the_answer_when_there_is_no_json()
     {
         // Translation path: the final answer is the plain translated line.
-        string reply = "<think>\nRender naturally, keep the name Ashley.\n</think>\nHola, Ashley.";
+        string reply = "<thinking>\nRender naturally, keep the name Ashley.\n</thinking>\nHola, Ashley.";
 
         Assert.True(SparkOpenReasoningParser.TryExtractFinalAnswer(reply, out string answer));
         Assert.Equal("Hola, Ashley.", answer);
@@ -58,8 +58,8 @@ public sealed class SparkOpenReasoningParserTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    [InlineData("<think>\nonly reasoning, no answer ever emitted\n</think>")]
-    [InlineData("<think></think>\n   ")]
+    [InlineData("<thinking>\nonly reasoning, no answer ever emitted\n</thinking>")]
+    [InlineData("<thinking></thinking>\n   ")]
     public void A_reply_with_no_extractable_answer_fails_closed(string? reply)
     {
         Assert.False(SparkOpenReasoningParser.TryExtractFinalAnswer(reply, out string answer));
@@ -68,10 +68,43 @@ public sealed class SparkOpenReasoningParserTests
 
     [Theory]
     [InlineData("just prose, no json object at all")]
-    [InlineData("<think>reasoning</think>\nnot a json verdict line")]
+    [InlineData("<thinking>reasoning</thinking>\nnot a json verdict line")]
     public void A_reply_with_no_json_object_yields_no_final_json_object(string reply)
     {
         // The judge path needs a JSON verdict specifically; a prose-only reply has none.
+        Assert.False(SparkOpenReasoningParser.TryExtractFinalJsonObject(reply, out _));
+    }
+
+    [Fact]
+    public void Multiple_think_blocks_are_all_stripped()
+    {
+        // Reasoning models sometimes emit more than one block; each must be stripped so the answer
+        // below them wins and reasoning prose never becomes the answer.
+        string reply = "<thinking>\nFirst reasoning pass.\n</thinking>\nSome notes.\n<thinking>\nSecond pass, still reasoning.\n</thinking>\n{\"verdict\":\"pass\",\"issues\":[],\"explanation\":\"ok\"}";
+
+        Assert.True(SparkOpenReasoningParser.TryExtractFinalJsonObject(reply, out string obj));
+        Assert.Contains("\"verdict\":\"pass\"", obj, StringComparison.Ordinal);
+        Assert.DoesNotContain("First reasoning", obj, StringComparison.Ordinal);
+        Assert.DoesNotContain("Second pass", obj, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void An_unterminated_think_block_yields_no_final_answer()
+    {
+        // Generation stopped inside a think block: truncated reasoning must never be taken as an answer.
+        string reply = "<thinking>\nSubject preserved, numbers match...";
+
+        Assert.False(SparkOpenReasoningParser.TryExtractFinalAnswer(reply, out string answer));
+        Assert.Equal(string.Empty, answer);
+        Assert.False(SparkOpenReasoningParser.TryExtractFinalJsonObject(reply, out _));
+    }
+
+    [Fact]
+    public void A_verdict_only_inside_the_reasoning_is_not_the_final_verdict()
+    {
+        // The judge must not take a verdict quoted inside a completed think block as the final answer.
+        string reply = "<thinking>Example: {\"verdict\":\"pass\",\"issues\":[],\"explanation\":\"example\"}</thinking>";
+
         Assert.False(SparkOpenReasoningParser.TryExtractFinalJsonObject(reply, out _));
     }
 }

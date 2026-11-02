@@ -50,7 +50,9 @@ public sealed class SparkOpenClient : ISparkOpenClient
         _rewritingHttpClient = new HttpClient(new SparkOpenChatHandler(config, rewritingInner)) { Timeout = TimeSpan.FromSeconds(120) };
         _rawHttpClient = new HttpClient(rawInner) { Timeout = TimeSpan.FromSeconds(120) };
         _ownsHttpClients = ownsHttpClients;
-        _metaClient = new MetaClient(_rewritingHttpClient);
+        // Instance-scoped auth: the adapter never needs the hosted META_API_KEY. The handler re-signs
+        // every request with the Spark Open key; the override only keeps MetaAuth from being read.
+        _metaClient = new MetaClient(_rewritingHttpClient, _config.ApiKey);
     }
 
     public string Model => _config.Model;
@@ -140,7 +142,67 @@ public sealed class SparkOpenClient : ISparkOpenClient
             return MeaningGate.ForError("Spark Open reply carried no extractable final JSON verdict.", _config.Model, usage, _config.EndpointHost);
         }
 
-        return MeaningGate.ParseAndNormalize(verdictJson, _config.Model, usage, _config.EndpointHost);
+        return ParseStrictMeaningVerdict(verdictJson, _config.Model, usage, _config.EndpointHost);
+    }
+
+    /// <summary>
+    /// Parses a meaning verdict STRICTLY: the verdict must be exactly "pass" or "fail" and any issues
+    /// array must be a string array. <see cref="MeaningGate.ParseAndNormalize"/> turns a missing or
+    /// unknown verdict, or a malformed issues array, into a Fail — and the judge runner would then
+    /// score that Fail and can count agreement with a hosted Fail. A malformed Spark Open reply is a
+    /// failed judgement instead: <see cref="MeaningVerdict.Error"/> with the billed usage preserved,
+    /// never a guessed verdict. Mirrored by <see cref="FakeSparkOpenClient"/> so scripted offline
+    /// judgements follow the same exclusion rule.
+    /// </summary>
+    internal static MeaningCheckResult ParseStrictMeaningVerdict(
+        string verdictJson,
+        string model,
+        MetaClient.TokenUsage? usage,
+        string endpointHost)
+    {
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(verdictJson);
+            JsonElement root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return MeaningGate.ForError("Spark Open final verdict was not a JSON object.", model, usage, endpointHost);
+            }
+
+            if (!root.TryGetProperty("verdict", out JsonElement verdictEl) || verdictEl.ValueKind != JsonValueKind.String)
+            {
+                return MeaningGate.ForError("Spark Open final verdict had no pass/fail verdict.", model, usage, endpointHost);
+            }
+
+            string verdict = verdictEl.GetString()?.Trim() ?? string.Empty;
+            if (!string.Equals(verdict, "pass", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(verdict, "fail", StringComparison.OrdinalIgnoreCase))
+            {
+                return MeaningGate.ForError($"Spark Open final verdict was not pass/fail (got '{verdict}').", model, usage, endpointHost);
+            }
+
+            if (root.TryGetProperty("issues", out JsonElement issuesEl))
+            {
+                if (issuesEl.ValueKind != JsonValueKind.Array)
+                {
+                    return MeaningGate.ForError("Spark Open final verdict 'issues' was not an array.", model, usage, endpointHost);
+                }
+
+                foreach (JsonElement item in issuesEl.EnumerateArray())
+                {
+                    if (item.ValueKind != JsonValueKind.String)
+                    {
+                        return MeaningGate.ForError("Spark Open final verdict 'issues' must be strings.", model, usage, endpointHost);
+                    }
+                }
+            }
+
+            return MeaningGate.ParseAndNormalize(verdictJson, model, usage, endpointHost);
+        }
+        catch (JsonException)
+        {
+            return MeaningGate.ForError("Spark Open final verdict was not valid JSON.", model, usage, endpointHost);
+        }
     }
 
     private static MetaClient.TokenUsage? ReadUsage(JsonElement root)
@@ -161,9 +223,12 @@ public sealed class SparkOpenClient : ISparkOpenClient
 
     public void Dispose()
     {
-        _metaClient.Dispose();
+        // Ownership contract: when the transports are caller-supplied (ownsHttpClients: false), the
+        // caller owns everything derived from them too — the MetaClient view included — so nothing is
+        // disposed here. Only a self-owned client disposes its transports.
         if (_ownsHttpClients)
         {
+            _metaClient.Dispose();
             _rewritingHttpClient.Dispose();
             _rawHttpClient.Dispose();
         }

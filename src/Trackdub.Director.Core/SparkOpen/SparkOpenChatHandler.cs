@@ -156,6 +156,14 @@ public sealed class SparkOpenChatHandler : DelegatingHandler
             return FailedCall(response, body, "Spark Open reply carried no extractable final answer.");
         }
 
+        // The injected instruction asks for a JSON final object, so a translation reply arrives as
+        // {"translation":"..."} — unwrap it so timing estimates, meaning checks, and saved translations
+        // see the plain line, never the wrapper. Meaning verdicts stay as JSON for the gate.
+        if (TryUnwrapTranslation(finalAnswer, out string unwrapped))
+        {
+            finalAnswer = unwrapped;
+        }
+
         message["content"] = finalAnswer;
         obj["model"] ??= _config.Model;
 
@@ -165,6 +173,34 @@ public sealed class SparkOpenChatHandler : DelegatingHandler
         };
         response.Dispose();
         return rewritten;
+    }
+
+    /// <summary>
+    /// Unwraps a translation-shaped <c>{"translation": "..."}</c> final object into its plain string,
+    /// and returns false (leaving the reply untouched) for any other shape — e.g. meaning verdicts.
+    /// </summary>
+    private static bool TryUnwrapTranslation(string finalAnswer, out string unwrapped)
+    {
+        unwrapped = finalAnswer;
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(finalAnswer);
+            JsonElement root = doc.RootElement;
+            if (root.ValueKind == JsonValueKind.Object
+                && root.TryGetProperty("translation", out JsonElement translation)
+                && translation.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(translation.GetString()))
+            {
+                unwrapped = translation.GetString()!.Trim();
+                return true;
+            }
+        }
+        catch (JsonException)
+        {
+            // Not JSON: leave the answer as-is.
+        }
+
+        return false;
     }
 
     /// <summary>

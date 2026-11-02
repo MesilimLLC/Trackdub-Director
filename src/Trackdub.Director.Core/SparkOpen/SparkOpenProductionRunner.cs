@@ -42,7 +42,12 @@ public sealed class SparkOpenProductionRunner
         var qa = new QaService(_client.AsMetaClient(), _options);
         QaReport report = await qa.RunAsync(segments, sourceLanguage, targetLanguage, cancellationToken).ConfigureAwait(false);
 
-        bool fullyGateVerified = report.Segments.All(s => s.FinalVerdict == QaVerdict.Pass);
+        // Meaning checks in this run were served by Spark Open (the redirected transport), but QaService
+        // derives MeaningEndpointHost from MetaAuth; normalize the provenance so the report names the
+        // actual endpoint, preserving null for attempts whose meaning check was never evaluated.
+        QaReport normalized = NormalizeMeaningEndpointHost(report, _client.EndpointHost);
+
+        bool fullyGateVerified = normalized.Segments.All(s => s.FinalVerdict == QaVerdict.Pass);
         return new SparkOpenProductionReport(
             Stage,
             nameof(TextProvider.SparkOpen),
@@ -50,7 +55,21 @@ public sealed class SparkOpenProductionRunner
             _client.EndpointHost,
             DateTime.UtcNow.ToString("O"),
             fullyGateVerified,
-            report);
+            normalized);
+    }
+
+    private static QaReport NormalizeMeaningEndpointHost(QaReport report, string sparkHost)
+    {
+        QaAttemptReport Fix(QaAttemptReport attempt)
+            => attempt.MeaningEndpointHost is null ? attempt : attempt with { MeaningEndpointHost = sparkHost };
+
+        var segments = report.Segments.Select(segment => segment with
+        {
+            FirstAttempt = Fix(segment.FirstAttempt),
+            Revisions = segment.Revisions.Select(Fix).ToArray(),
+        }).ToArray();
+
+        return report with { Segments = segments };
     }
 
     public async Task WriteReportAsync(string outputPath, SparkOpenProductionReport report, CancellationToken cancellationToken = default)

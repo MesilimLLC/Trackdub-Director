@@ -34,7 +34,8 @@ public sealed record SparkOpenTranslationLineResult(
     [property: JsonPropertyName("combined_verdict")] QaVerdict CombinedVerdict,
     [property: JsonPropertyName("spark_open_usage")] MetaClient.TokenUsage? SparkOpenTranslationUsage,
     [property: JsonPropertyName("hosted_meaning_usage")] MetaClient.TokenUsage? HostedMeaningUsage,
-    [property: JsonPropertyName("hosted_translation")] string? HostedTranslation = null);
+    [property: JsonPropertyName("hosted_translation")] string? HostedTranslation = null,
+    [property: JsonPropertyName("translation_error")] string? TranslationError = null);
 
 /// <summary>
 /// Pass rates for the Spark Open translation lane against the hosted lane's recorded rates on the
@@ -47,6 +48,7 @@ public sealed record SparkOpenTranslationSummary(
     [property: JsonPropertyName("meaning_pass")] int MeaningPass,
     [property: JsonPropertyName("combined_pass")] int CombinedPass,
     [property: JsonPropertyName("meaning_errors")] int MeaningErrors,
+    [property: JsonPropertyName("translation_errors")] int TranslationErrors,
     [property: JsonPropertyName("timing_pass_rate")] double? TimingPassRate,
     [property: JsonPropertyName("meaning_pass_rate")] double? MeaningPassRate,
     [property: JsonPropertyName("combined_pass_rate")] double? CombinedPassRate,

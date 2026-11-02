@@ -249,7 +249,9 @@ public sealed class QaService
                 ex is MetaApiException or HttpRequestException or InvalidOperationException
                 || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
             {
-                meaning = MeaningGate.ForError(ex.Message, attempt.ModelId, null, context.EndpointHost);
+                // The exception may carry usage the API billed for a failed reply; keep it so the
+                // failed meaning check's tokens are accounted for in the report.
+                meaning = MeaningGate.ForError(ex.Message, attempt.ModelId, (ex as MetaApiException)?.Usage, context.EndpointHost);
             }
 
             tokenAccum.Add(meaning.Usage);

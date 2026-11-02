@@ -1,3 +1,5 @@
+using System.Net;
+
 namespace Trackdub.Director.Core.SparkOpen;
 
 /// <summary>
@@ -37,7 +39,24 @@ public static class SparkOpenAuth
             throw new SparkOpenConfigException($"{BaseUrlEnv} must be an absolute URL (the deployment's OpenAI-compatible chat completions endpoint).");
         }
 
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) && !IsLoopback(uri))
+        {
+            // Plaintext HTTP would carry the deployment's Bearer key and source text unencrypted; only
+            // loopback endpoints may use it (local testing against a forwarded deployment).
+            throw new SparkOpenConfigException($"{BaseUrlEnv} must be an https:// URL; only loopback (localhost/127.0.0.1) endpoints may use plaintext http.");
+        }
+
         return new SparkOpenConfig(baseUrl, apiKey, model, uri.Host);
+    }
+
+    private static bool IsLoopback(Uri uri)
+    {
+        if (string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return IPAddress.TryParse(uri.Host, out IPAddress? address) && IPAddress.IsLoopback(address);
     }
 
     private static string Require(string env)
