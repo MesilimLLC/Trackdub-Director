@@ -64,7 +64,7 @@ public sealed class VisualLocalisationServiceTests
 
     private static (byte R, byte G, byte B) Pixel(RasterImage image, int x, int y)
     {
-        int i = (y * image.Width + x) * 3;
+        int i = ((y * image.Width) + x) * 3;
         return (image.Rgb[i], image.Rgb[i + 1], image.Rgb[i + 2]);
     }
 
@@ -230,8 +230,8 @@ public sealed class VisualLocalisationServiceTests
     {
         const int width = 4097;
         const int height = 4096;
-        const int stride = (width * 3 + 3) & ~3;
-        byte[] bitmap = new byte[54 + stride * height];
+        const int stride = ((width * 3) + 3) & ~3;
+        byte[] bitmap = new byte[54 + (stride * height)];
         bitmap[0] = (byte)'B';
         bitmap[1] = (byte)'M';
         BinaryPrimitives.WriteInt32LittleEndian(bitmap.AsSpan(2), bitmap.Length);

@@ -550,7 +550,6 @@ public sealed class SceneContextServiceTests
             Assert.Equal(3, visionContent.GetArrayLength());
             Assert.Equal(ExpectedVisionPrompt, visionContent[0].GetProperty("text").GetString());
             Assert.Equal("Segmentation regions already found in this frame: red rectangle box (10,10)-(29,49) in 64x64.", visionContent[1].GetProperty("text").GetString());
-            
         }
     }
 
