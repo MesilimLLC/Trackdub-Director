@@ -713,7 +713,7 @@ public sealed class MetaClient : IDisposable
         private static IEnumerable<string> TextParts(JsonElement root)
         {
             var parts = new List<string>();
-            foreach (JsonElement item in OutputItems(root))
+            foreach (JsonElement item in OutputItems(root).EnumerateArray())
             {
                 CollectTextParts(item, parts);
             }
