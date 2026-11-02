@@ -182,4 +182,46 @@ public sealed class RecoverySetBuilderTests
         Assert.Equal(15.0, item.TargetCharactersPerSecond);
         Assert.Equal(("en", "es"), (item.SourceLanguage, item.TargetLanguage));
     }
+
+    [Fact]
+    public void Report_without_qa_options_is_rejected_with_a_clean_error()
+    {
+        string json = JsonSerializer.Serialize(new
+        {
+            source_language = "en",
+            target_language = "es",
+            segments = new object[] { Segment("seg-1", "text", "Fail", Attempt(1, "x", "Fail", "Fail")) },
+        });
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => RecoverySetBuilder.FromReportJson(json, "synthetic/bad.json"));
+        Assert.Contains("qa_options", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Segment_with_null_revisions_is_rejected_with_a_clean_error()
+    {
+        var segment = new
+        {
+            id = "seg-1",
+            text = "text",
+            window_seconds = 1.0,
+            first_attempt = Attempt(1, "x", "Fail", "Fail"),
+            revisions = (object[]?)null,
+            final_verdict = "Fail",
+            final_translation = "text",
+            token_usage = new { prompt_tokens = 0, completion_tokens = 0, total_tokens = 0 },
+        };
+        string json = JsonSerializer.Serialize(new
+        {
+            source_language = "en",
+            target_language = "es",
+            qa_options = new { max_attempts = 3, tolerance_fraction = 0.10, target_cps = 15.0, source_cps = 15.0, reasoning_effort = "low" },
+            segments = new object[] { segment },
+        });
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => RecoverySetBuilder.FromReportJson(json, "synthetic/bad.json"));
+        Assert.Contains("revisions", ex.Message, StringComparison.Ordinal);
+    }
 }

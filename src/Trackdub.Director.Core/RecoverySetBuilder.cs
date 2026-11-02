@@ -51,9 +51,17 @@ public static class RecoverySetBuilder
             throw new InvalidOperationException($"Invalid QA report JSON for '{sourceFile}': {ex.Message}", ex);
         }
 
-        if (report?.Segments is null)
+        if (report?.Segments is null || report.QaOptions is null)
         {
-            throw new InvalidOperationException($"QA report '{sourceFile}' has no segments.");
+            throw new InvalidOperationException($"QA report '{sourceFile}' has no segments or qa_options.");
+        }
+
+        foreach (QaSegmentReport segment in report.Segments)
+        {
+            if (segment.FirstAttempt is null || segment.Revisions is null)
+            {
+                throw new InvalidOperationException($"QA report '{sourceFile}' has a segment without first_attempt or revisions.");
+            }
         }
 
         var items = new List<RecoveryItem>();
@@ -146,10 +154,10 @@ public static class RecoverySetBuilder
 
     private static string SourceFileLabel(string path)
     {
-        // Keep a readable, stable label: the last two path segments (folder/file).
-        string file = Path.GetFileName(path);
-        string? dir = Path.GetDirectoryName(path);
-        string folder = dir is null ? string.Empty : Path.GetFileName(dir);
-        return string.IsNullOrEmpty(folder) ? file : $"{folder}/{file}";
+        // Normalize to a stable, UNIQUE label: the full path relative to the working directory.
+        // Last-two-segments labels would collide for distinct inputs sharing folder/file names,
+        // silently merging distinct lines in the recovery report's rollup.
+        string full = Path.GetFullPath(path);
+        return Path.GetRelativePath(Directory.GetCurrentDirectory(), full).Replace('\\', '/');
     }
 }

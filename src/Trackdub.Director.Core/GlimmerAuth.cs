@@ -66,8 +66,17 @@ public static class GlimmerAuth
             throw new GlimmerNotConfiguredException(missing);
         }
 
+        string baseUrl = GetTrimmed(BaseUrlEnv)!.TrimEnd('/');
+        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out Uri? baseUri)
+            || (baseUri.Scheme != Uri.UriSchemeHttps && !baseUri.IsLoopback))
+        {
+            // The Bearer key is sent to this base URL, so it must be transport-encrypted. The
+            // exception must not echo the URL or the key.
+            throw new InvalidOperationException($"{BaseUrlEnv} must be an https URL (plaintext http is allowed only for loopback hosts).");
+        }
+
         return new GlimmerRoute(
-            GetTrimmed(BaseUrlEnv)!.TrimEnd('/'),
+            baseUrl,
             GetTrimmed(ApiKeyEnv)!,
             GetTrimmed(ModelEnv)!,
             GetReasoningEffort());
@@ -81,7 +90,13 @@ public static class GlimmerAuth
             return DefaultReasoningEffort;
         }
 
-        return raw.Trim().ToLowerInvariant();
+        string effort = raw.Trim().ToLowerInvariant();
+        if (effort is not ("low" or "medium" or "high"))
+        {
+            throw new InvalidOperationException($"{ReasoningEffortEnv} must be one of low, medium, high; got '{raw.Trim()}'.");
+        }
+
+        return effort;
     }
 
     private static bool HasValue(string env) => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(env));

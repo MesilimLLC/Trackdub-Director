@@ -53,12 +53,17 @@ public sealed class RecoveryAgentService
     /// <summary>
     /// Run the loop over every item. <paramref name="glimmerBudget"/> and
     /// <paramref name="metaBudget"/> cap the run's total Glimmer and hosted Meta calls
-    /// respectively; pass null to leave a provider uncapped (tests may).
+    /// respectively; pass null to leave a provider uncapped (tests may). The service owns
+    /// charging the Glimmer budget (one reserve per proposal), so the cap holds even for a
+    /// caller-supplied client that does not charge it. Pass the <paramref name="probe"/>
+    /// the CLI performed pre-flight so its one call, its tokens, and its details appear in
+    /// the run totals and report.
     /// </summary>
     public async Task<RecoveryReport> RunAsync(
         IReadOnlyList<RecoveryItem> items,
         CallBudget? glimmerBudget = null,
         CallBudget? metaBudget = null,
+        GlimmerProbeResult? probe = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(items);
@@ -67,19 +72,37 @@ public sealed class RecoveryAgentService
         var itemReports = new List<RecoveryItemReport>(items.Count);
         var totals = new RunAccumulator();
 
-        foreach (RecoveryItem item in items)
+        // The pre-flight probe is charged to the same Glimmer budget, so its one call and its
+        // tokens belong in the run totals; otherwise every report undercounts Glimmer usage.
+        if (probe is not null)
         {
-            RecoveryItemReport report = await ProcessItemAsync(item, meta, glimmerBudget, totals, cancellationToken).ConfigureAwait(false);
-            itemReports.Add(report);
+            totals.AddGlimmer(probe.Usage);
         }
 
-        return BuildReport(items, itemReports, totals, glimmerBudget, metaBudget);
+        // A Glimmer transport failure (HTTP error, timeout) mid-loop must not discard the items
+        // already processed: record the failure on the report so the caller can persist partial work.
+        string? runError = null;
+        try
+        {
+            foreach (RecoveryItem item in items)
+            {
+                RecoveryItemReport report = await ProcessItemAsync(item, meta, glimmerBudget, metaBudget, totals, cancellationToken).ConfigureAwait(false);
+                itemReports.Add(report);
+            }
+        }
+        catch (MetaApiException ex)
+        {
+            runError = ex.Message;
+        }
+
+        return BuildReport(items, itemReports, totals, glimmerBudget, metaBudget, probe, runError);
     }
 
     private async Task<RecoveryItemReport> ProcessItemAsync(
         RecoveryItem item,
         MetaClient meta,
         CallBudget? glimmerBudget,
+        CallBudget? metaBudget,
         RunAccumulator totals,
         CancellationToken cancellationToken)
     {
@@ -89,7 +112,9 @@ public sealed class RecoveryAgentService
 
         for (int attemptNumber = 1; attemptNumber <= MaxAttemptsPerItem; attemptNumber++)
         {
-            if (BudgetSpent(glimmerBudget))
+            // Stop before requesting another proposal when EITHER provider budget is spent:
+            // without Meta calls no candidate can be meaning-checked, so the proposal is wasted.
+            if (BudgetSpent(glimmerBudget) || BudgetSpent(metaBudget))
             {
                 outcome = RecoveryOutcome.BudgetExhausted;
                 break;
@@ -98,7 +123,21 @@ public sealed class RecoveryAgentService
             GlimmerReply reply;
             try
             {
-                var turn = new GlimmerRecoveryTurn(item, attempts.ToArray(), attemptNumber);
+                // The service owns charging the Glimmer budget, so the cap holds regardless of
+                // whether the supplied client charges it. The probe is charged by the CLI before
+                // the loop; this reserves exactly the loop's own proposals.
+                glimmerBudget?.Reserve();
+
+                // Present the run's effective direction and tolerance to Glimmer, so the prompt
+                // advertises exactly what the gates judge with — never the report's retained
+                // values that the CLI options may have overridden.
+                RecoveryItem promptItem = item with
+                {
+                    SourceLanguage = _sourceLanguage,
+                    TargetLanguage = _targetLanguage,
+                    ToleranceFraction = _toleranceFraction,
+                };
+                var turn = new GlimmerRecoveryTurn(promptItem, attempts.ToArray(), attemptNumber);
                 reply = await _glimmer.ProposeAsync(turn, cancellationToken).ConfigureAwait(false);
             }
             catch (MetaBudgetExhaustedException)
@@ -227,7 +266,9 @@ public sealed class RecoveryAgentService
         IReadOnlyList<RecoveryItemReport> itemReports,
         RunAccumulator totals,
         CallBudget? glimmerBudget,
-        CallBudget? metaBudget)
+        CallBudget? metaBudget,
+        GlimmerProbeResult? probe,
+        string? runError)
     {
         int recovered = itemReports.Count(r => r.Outcome == RecoveryOutcome.Recovered);
 
@@ -267,6 +308,17 @@ public sealed class RecoveryAgentService
             MeaningModel: MetaAuth.GetModel(),
             MeaningPromptTemplateVersion: MeaningGate.PromptTemplateVersion,
             MaxAttemptsPerItem: MaxAttemptsPerItem,
+            Probe: probe is null
+                ? null
+                : new RecoveryProbeInfo(
+                    probe.Host,
+                    probe.RequestedModel,
+                    probe.ReturnedModel,
+                    probe.Usage?.PromptTokens ?? 0,
+                    probe.Usage?.CompletionTokens ?? 0,
+                    probe.Usage?.TotalTokens ?? 0,
+                    probe.WallSeconds),
+            RunError: runError,
             Items: itemReports.ToArray(),
             Totals: totalsOut);
     }

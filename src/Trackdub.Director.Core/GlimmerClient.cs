@@ -129,17 +129,23 @@ public sealed class GlimmerClient : IGlimmerClient, IDisposable
             throw new MetaApiException($"Glimmer probe reply was not the required {{\"ok\": true}}: {Truncate(content)}");
         }
 
-        // The returned model must be a Glimmer model; a different served model means the deployment
-        // is not the one under test, so stop before the loop.
+        // The served model must be a Glimmer model AND match the requested route model; a
+        // different served model means the deployment is not the one under test, so stop
+        // before the loop.
         if (!IsGlimmerModel(returnedModel))
         {
             throw new MetaApiException($"Glimmer probe returned a non-Glimmer model '{returnedModel}'; expected a Glimmer model.");
         }
 
+        if (!string.Equals(returnedModel, route.Model, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new MetaApiException($"Glimmer probe served model '{returnedModel}' but the route requested '{route.Model}'.");
+        }
+
         return new GlimmerProbeResult(host, route.Model, returnedModel, ToUsage(parsed?.Usage), wallSeconds);
     }
 
-    /// <summary>True when the JSON object has a boolean "ok" that is true. Tolerates surrounding prose.</summary>
+    /// <summary>True when the whole reply is a JSON object with a boolean "ok" that is true.</summary>
     private static bool ProbeReplyIsOk(string content)
     {
         if (string.IsNullOrWhiteSpace(content))
@@ -147,16 +153,9 @@ public sealed class GlimmerClient : IGlimmerClient, IDisposable
             return false;
         }
 
-        int start = content.IndexOf('{');
-        int end = content.LastIndexOf('}');
-        if (start < 0 || end <= start)
-        {
-            return false;
-        }
-
         try
         {
-            using JsonDocument doc = JsonDocument.Parse(content[start..(end + 1)]);
+            using JsonDocument doc = JsonDocument.Parse(content.Trim());
             return doc.RootElement.ValueKind == JsonValueKind.Object
                 && doc.RootElement.TryGetProperty("ok", out JsonElement ok)
                 && ok.ValueKind == JsonValueKind.True;
@@ -210,7 +209,14 @@ public sealed class GlimmerClient : IGlimmerClient, IDisposable
     private async Task<string> SendForBodyAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        _budget?.Reserve();
+
+        // Fail closed when the run cap is spent BEFORE any network work, so no request is sent
+        // past the cap. The actual charge happens only once a response arrives, so transient
+        // network failures and timeouts never consume a budget slot.
+        if (_budget is not null && _budget.Remaining <= 0)
+        {
+            throw new MetaBudgetExhaustedException(_budget.Limit);
+        }
 
         HttpResponseMessage response;
         try
@@ -228,6 +234,10 @@ public sealed class GlimmerClient : IGlimmerClient, IDisposable
 
         using (response)
         {
+            // A response at all (even an error status) means the request reached the endpoint
+            // and was billed; the exception paths above never reach this point and never charge.
+            _budget?.Reserve();
+
             string body = response.Content is null
                 ? string.Empty
                 : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);

@@ -15,6 +15,14 @@ public static class GlimmerPrompt
 {
     public const string RecoveryMarker = "GLIMMER_RECOVERY_AGENT";
 
+    /// <summary>
+    /// Neutralize closing-tag sequences inside data values so a source line, refused
+    /// candidate, or gate reason containing e.g. <c>&lt;/source_line&gt;</c> cannot end its
+    /// data block early. The system prompt already treats block contents as data; this is
+    /// defense-in-depth for the prompt boundary.
+    /// </summary>
+    private static string Delimit(string value) => value.Replace("</", "&lt;/");
+
     public static string BuildSystemPrompt()
     {
         return string.Join("\n", new[]
@@ -46,17 +54,17 @@ public static class GlimmerPrompt
         sb.Append("Target window: ").Append(item.WindowSeconds.ToString("0.0##")).Append(" seconds");
         sb.Append(" (tolerance ").Append((item.ToleranceFraction * 100).ToString("0.#")).Append("%, ");
         sb.Append(item.TargetCharactersPerSecond.ToString("0.#")).Append(" chars/second).\n");
-        sb.Append("<source_line>\n").Append(item.SourceLine).Append("\n</source_line>\n");
-        sb.Append("<refused_candidate>\n").Append(item.RefusedCandidate).Append("\n</refused_candidate>\n");
+        sb.Append("<source_line>\n").Append(Delimit(item.SourceLine)).Append("\n</source_line>\n");
+        sb.Append("<refused_candidate>\n").Append(Delimit(item.RefusedCandidate)).Append("\n</refused_candidate>\n");
         sb.Append("Failure type: ").Append(item.FailureType).Append('\n');
         sb.Append("<gate_failure>\n");
         sb.Append(item.GateFailureReasons.Length == 0
             ? "(no specific reasons recorded)"
-            : string.Join("\n", item.GateFailureReasons));
+            : Delimit(string.Join("\n", item.GateFailureReasons)));
         sb.Append("\n</gate_failure>\n");
         if (!string.IsNullOrWhiteSpace(item.SceneContext))
         {
-            sb.Append("<scene_context>\n").Append(item.SceneContext.Trim()).Append("\n</scene_context>\n");
+            sb.Append("<scene_context>\n").Append(Delimit(item.SceneContext.Trim())).Append("\n</scene_context>\n");
         }
 
         if (turn.PriorAttempts.Count > 0)
@@ -97,7 +105,8 @@ public static class GlimmerPrompt
 /// Strict parser for one Glimmer action. Returns null for any reply that is not exactly
 /// one recognized, well-formed action — the caller records that as a malformed (failed)
 /// attempt and never repairs it. Extraction tolerates surrounding prose and a single
-/// fenced block, but the action object itself must be schema-valid.
+/// fenced block around the one action object, but a reply that carries an enclosing
+/// array or additional JSON objects (a second action, for example) is off-schema.
 /// </summary>
 public static class GlimmerActionParser
 {
@@ -108,11 +117,18 @@ public static class GlimmerActionParser
             return null;
         }
 
-        string? objectText = ExtractJsonObject(rawContent.Trim());
-        if (objectText is null)
+        string content = rawContent.Trim();
+
+        // Exactly ONE JSON value in the whole reply, and it must be a plain object: an
+        // enclosing array (the model replied with a list) or additional action objects are
+        // off-schema, so a valid proposal followed by a second action must not be accepted.
+        List<JsonValueSpan> values = ScanJsonValues(content);
+        if (values.Count != 1 || values[0].IsArray)
         {
             return null;
         }
+
+        string objectText = content[values[0].Start..(values[0].End + 1)];
 
         JsonElement root;
         JsonDocument doc;
@@ -166,8 +182,9 @@ public static class GlimmerActionParser
 
     private static GlimmerAction? BuildGiveUp(JsonElement root, string strategy)
     {
-        // give_up must NOT carry a non-blank text_es; a give_up with a proposal is off-schema.
-        if (TryReadString(root, "text_es", out string? textEs) && !string.IsNullOrWhiteSpace(textEs))
+        // give_up must NOT carry text_es at all — a null, blank, or mistyped value is still
+        // off-schema. give_up ends the item, so flagging it malformed preserves the attempt.
+        if (root.TryGetProperty("text_es", out _))
         {
             return null;
         }
@@ -187,16 +204,41 @@ public static class GlimmerActionParser
         return value is not null;
     }
 
-    // Extract the first balanced JSON object, tracking string literals and escapes so a
-    // brace inside a string value cannot over-extend or truncate the object.
-    private static string? ExtractJsonObject(string content)
+    // A balanced JSON value span in the raw reply: an object or an array, by its start and
+    // end indices, with whether it opened as an array.
+    private readonly record struct JsonValueSpan(int Start, int End, bool IsArray);
+
+    // Collect every balanced JSON value (object or array) in the content, tracking string
+    // literals and escapes so a brace or bracket inside a value never opens or closes a span.
+    private static List<JsonValueSpan> ScanJsonValues(string content)
     {
-        int start = content.IndexOf('{');
-        if (start < 0)
+        var values = new List<JsonValueSpan>();
+        for (int i = 0; i < content.Length; i++)
         {
-            return null;
+            char c = content[i];
+            if (c is not ('{' or '['))
+            {
+                continue;
+            }
+
+            int end = FindJsonValueEnd(content, i);
+            if (end < 0)
+            {
+                break; // unbalanced from here on; nothing more can be read reliably
+            }
+
+            values.Add(new JsonValueSpan(i, end, c == '['));
+            i = end; // the loop increment moves past the closing token
         }
 
+        return values;
+    }
+
+    // Index of the token that closes the JSON value starting at <paramref name="start"/>,
+    // or -1 when it never closes. Tracks string literals and escapes so a brace inside a
+    // string value cannot over-extend or truncate the value.
+    private static int FindJsonValueEnd(string content, int start)
+    {
         int depth = 0;
         bool inString = false;
         bool escaped = false;
@@ -222,16 +264,20 @@ public static class GlimmerActionParser
             {
                 inString = true;
             }
-            else if (c == '{')
+            else if (c is '{' or '[')
             {
                 depth++;
             }
-            else if (c == '}' && --depth == 0)
+            else if (c is '}' or ']')
             {
-                return content[start..(i + 1)];
+                depth--;
+                if (depth == 0)
+                {
+                    return i;
+                }
             }
         }
 
-        return null;
+        return -1;
     }
 }

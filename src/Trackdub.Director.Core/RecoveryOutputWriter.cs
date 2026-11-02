@@ -62,9 +62,31 @@ public static class RecoveryOutputWriter
         sb.AppendLine("must be the OpenAI-compatible base ending in `/openai/v1` (the client appends");
         sb.AppendLine("`/chat/completions` itself; passing the full `.../chat/completions` URL would double the path).");
         sb.AppendLine($"The Glimmer model string recorded for this run was `{report.GlimmerModel}`");
-        sb.AppendLine($"(reasoning_effort {report.GlimmerReasoningEffort}). The pre-flight probe records the endpoint");
-        sb.AppendLine("host (never the key), the requested and returned model strings, usage, and wall seconds in the");
-        sb.AppendLine("run log; the run proceeds to the loop only after the probe returns {\"ok\": true} from a Glimmer model.");
+        sb.AppendLine($"(reasoning_effort {report.GlimmerReasoningEffort}). The pre-flight probe result is");
+        sb.AppendLine("recorded below; the run proceeded to the loop only after the probe returned");
+        sb.AppendLine("{\"ok\": true} from the requested Glimmer model.");
+        if (report.Probe is not null)
+        {
+            sb.AppendLine();
+            sb.AppendLine("### Pre-flight probe");
+            sb.AppendLine();
+            sb.AppendLine($"- Endpoint host: `{report.Probe.Host}` (the key is never recorded)");
+            sb.AppendLine($"- Requested model: `{report.Probe.RequestedModel}`");
+            sb.AppendLine($"- Returned model: `{report.Probe.ReturnedModel}`");
+            sb.AppendLine(
+                $"- Usage: prompt={report.Probe.PromptTokens} completion={report.Probe.CompletionTokens} total={report.Probe.TotalTokens}");
+            sb.AppendLine($"- Wall seconds: {report.Probe.WallSeconds:0.000}");
+        }
+
+        if (report.RunError is not null)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Run failure");
+            sb.AppendLine();
+            sb.AppendLine($"The run stopped early after a provider failure; the completed items below are preserved.");
+            sb.AppendLine($"- Error: {report.RunError}");
+        }
+
         sb.AppendLine();
         sb.AppendLine("## Leakage rule");
         sb.AppendLine();

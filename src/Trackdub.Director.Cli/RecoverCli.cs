@@ -63,6 +63,17 @@ internal static class RecoverCli
                 return 0;
             }
 
+            // The source language is intrinsic to the report text; a --from that disagrees with
+            // the captured reports would judge the meaning gate against the wrong source language.
+            string? mismatchedSource = set.FirstOrDefault(
+                i => !string.Equals(i.SourceLanguage, options.From, StringComparison.OrdinalIgnoreCase))?.SourceLanguage;
+            if (mismatchedSource is not null)
+            {
+                Console.Error.WriteLine(
+                    $"error: recovery set has source language '{mismatchedSource}' but --from is '{options.From}'; source language cannot be overridden.");
+                return 1;
+            }
+
             // Fail closed BEFORE constructing any client or making any call; name the missing vars.
             string[] missing = MissingRouteVars();
             if (missing.Length > 0)
@@ -83,6 +94,19 @@ internal static class RecoverCli
 
     private static async Task<int> RunRecoveryAsync(Options options, IReadOnlyList<RecoveryItem> set)
     {
+        // The meaning gate cannot run without Meta credentials; fail closed BEFORE the paid
+        // Glimmer probe, so a missing key never spends the Glimmer budget on a run that can
+        // produce no recoveries.
+        try
+        {
+            _ = MetaAuth.GetApiKey();
+        }
+        catch (MetaApiException ex)
+        {
+            Console.Error.WriteLine($"error: {ex.Message}");
+            return 1;
+        }
+
         var glimmerBudget = new CallBudget(GlimmerCallCap);
         var metaBudget = new CallBudget(MetaCallCap);
 
@@ -93,13 +117,15 @@ internal static class RecoverCli
         using var glimmer = new GlimmerClient(glimmerHttp);
         using var meta = new MetaClient();
 
-        // The same budget-charged client is used for the probe and the loop, so the probe counts
+        // The same budget-charged client is used for the probe, so the probe counts
         // toward the Glimmer call cap. Exactly ONE probe call; stop the run on any probe failure
-        // before the capped loop begins. No Meta call is made during the probe.
+        // before the capped loop begins. No Meta call is made during the probe. The service owns
+        // charging the loop's Glimmer calls, so it receives the UNbudgeted client here.
         GlimmerClient budgetedGlimmer = glimmer.WithBudget(glimmerBudget);
+        GlimmerProbeResult? probe = null;
         try
         {
-            GlimmerProbeResult probe = await budgetedGlimmer.ProbeAsync().ConfigureAwait(false);
+            probe = await budgetedGlimmer.ProbeAsync().ConfigureAwait(false);
             Console.WriteLine("Probe OK:");
             Console.WriteLine($"  endpoint host : {probe.Host}");
             Console.WriteLine($"  requested model: {probe.RequestedModel}");
@@ -114,14 +140,21 @@ internal static class RecoverCli
             return 1;
         }
 
-        var service = new RecoveryAgentService(budgetedGlimmer, meta, options.From, options.To, options.Tolerance);
-        RecoveryReport report = await service.RunAsync(set, glimmerBudget, metaBudget).ConfigureAwait(false);
+        var service = new RecoveryAgentService(glimmer, meta, options.From, options.To, options.Tolerance);
+        RecoveryReport report = await service.RunAsync(set, glimmerBudget, metaBudget, probe).ConfigureAwait(false);
 
         string outputFolder = Path.GetFullPath(options.OutputFolder);
         await RecoveryOutputWriter.WriteReportAsync(outputFolder, report).ConfigureAwait(false);
         await RecoveryOutputWriter.WriteNotesAsync(outputFolder, report).ConfigureAwait(false);
 
         PrintSummary(report, outputFolder);
+        if (report.RunError is not null)
+        {
+            // A mid-loop provider failure: the completed item reports were still persisted above.
+            Console.Error.WriteLine($"error: recovery run stopped early after a provider failure: {report.RunError}");
+            return 1;
+        }
+
         return 0;
     }
 
@@ -233,7 +266,7 @@ internal static class RecoverCli
         Console.WriteLine($"Run caps: {GlimmerCallCap} Glimmer calls, {MetaCallCap} hosted Meta calls.");
         Console.WriteLine();
         Console.WriteLine("Environment (route read ONLY from env; the key is never logged, printed, committed, or stored):");
-        Console.WriteLine($"  {GlimmerAuth.BaseUrlEnv}    OpenAI-compatible chat completions endpoint (required).");
+        Console.WriteLine($"  {GlimmerAuth.BaseUrlEnv}    OpenAI-compatible chat completions endpoint (https required; http only for loopback).");
         Console.WriteLine($"  {GlimmerAuth.ApiKeyEnv}     Glimmer route API key (required).");
         Console.WriteLine($"  {GlimmerAuth.ModelEnv}       Glimmer model id (required).");
         Console.WriteLine($"  {GlimmerAuth.ReasoningEffortEnv}  Optional reasoning effort (low|medium|high; default low).");

@@ -179,6 +179,17 @@ public sealed record RecoveryTotals(
     [property: JsonPropertyName("glimmer_tokens")] GlimmerUsageRecord GlimmerTokens,
     [property: JsonPropertyName("meta_tokens")] GlimmerUsageRecord MetaTokens);
 
+/// <summary>Probe details persisted in the run report: endpoint host (never the key), the
+/// requested and served models, billed tokens, and wall seconds.</summary>
+public sealed record RecoveryProbeInfo(
+    [property: JsonPropertyName("host")] string Host,
+    [property: JsonPropertyName("requested_model")] string RequestedModel,
+    [property: JsonPropertyName("returned_model")] string ReturnedModel,
+    [property: JsonPropertyName("prompt_tokens")] int PromptTokens,
+    [property: JsonPropertyName("completion_tokens")] int CompletionTokens,
+    [property: JsonPropertyName("total_tokens")] int TotalTokens,
+    [property: JsonPropertyName("wall_seconds")] double WallSeconds);
+
 /// <summary>The full recovery run report written to samples/glimmer-recovery/recovery-report.json (Phase 2).</summary>
 public sealed record RecoveryReport(
     [property: JsonPropertyName("source_language")] string SourceLanguage,
@@ -188,5 +199,7 @@ public sealed record RecoveryReport(
     [property: JsonPropertyName("meaning_model")] string MeaningModel,
     [property: JsonPropertyName("meaning_prompt_template_version")] string MeaningPromptTemplateVersion,
     [property: JsonPropertyName("max_attempts_per_item")] int MaxAttemptsPerItem,
+    [property: JsonPropertyName("probe")] RecoveryProbeInfo? Probe,
+    [property: JsonPropertyName("run_error")] string? RunError,
     [property: JsonPropertyName("items")] RecoveryItemReport[] Items,
     [property: JsonPropertyName("totals")] RecoveryTotals Totals);

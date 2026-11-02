@@ -112,14 +112,14 @@ public sealed class RecoveryAgentServiceTests
         ["META_REASONING_EFFORT"] = "low",
     });
 
-    private static HttpResponseMessage ChatResponse(string content)
+    private static HttpResponseMessage ChatResponse(string content, string? model = null)
     {
         var payload = new
         {
             id = $"chatcmpl-{Guid.NewGuid():N}",
             @object = "chat.completion",
             created = 1234567890L,
-            model = Model,
+            model = model ?? Model,
             choices = new[] { new { index = 0, finish_reason = "stop", message = new { role = "assistant", content } } },
             usage = new { prompt_tokens = 7, completion_tokens = 4, total_tokens = 11 },
         };
@@ -160,16 +160,17 @@ public sealed class RecoveryAgentServiceTests
             SceneContext: null);
 
     private static async Task<RecoveryReport> Run(
-        FakeGlimmerClient glimmer,
+        IGlimmerClient glimmer,
         HttpMessageHandler metaHandler,
         IReadOnlyList<RecoveryItem> items,
         CallBudget? glimmerBudget = null,
-        CallBudget? metaBudget = null)
+        CallBudget? metaBudget = null,
+        GlimmerProbeResult? probe = null)
     {
         using var http = new HttpClient(metaHandler);
         using var meta = new MetaClient(http);
         var service = new RecoveryAgentService(glimmer, meta, "en", "es", 0.10);
-        return await service.RunAsync(items, glimmerBudget, metaBudget);
+        return await service.RunAsync(items, glimmerBudget, metaBudget, probe);
     }
 
     private static RecoveryItemReport Single(RecoveryReport report)
@@ -379,7 +380,7 @@ public sealed class RecoveryAgentServiceTests
         {
             Interlocked.Increment(ref calls);
             Assert.Contains("/chat/completions", request.RequestUri?.ToString() ?? string.Empty);
-            return Task.FromResult(ChatResponse("{\"ok\": true}")); // schema-constrained readiness reply
+            return Task.FromResult(ChatResponse("{\"ok\": true}", "muse-glimmer-30b")); // schema-constrained readiness reply from a Glimmer model
         });
         using var http = new HttpClient(handler);
         using var client = new GlimmerClient(http);
@@ -387,10 +388,11 @@ public sealed class RecoveryAgentServiceTests
 
         GlimmerProbeResult probe = await client.WithBudget(budget).ProbeAsync();
 
-        Assert.Equal(1, calls);        // exactly one Glimmer call
-        Assert.Equal(1, budget.Used);  // charged toward the run cap
-        Assert.Equal("glimmer.example", probe.Host);           // host only, never the key
-        Assert.Equal("muse-glimmer-30b", probe.RequestedModel); // from the route (ChatResponse echoes Model=muse-spark-1.1 as returned)
+        Assert.Equal(1, calls);                 // exactly one Glimmer call
+        Assert.Equal(1, budget.Used);           // charged toward the run cap
+        Assert.Equal("glimmer.example", probe.Host);
+        Assert.Equal("muse-glimmer-30b", probe.RequestedModel); // from the route
+        Assert.Equal("muse-glimmer-30b", probe.ReturnedModel);  // the model the endpoint reported
         Assert.NotNull(probe.Usage);
         Assert.True(probe.WallSeconds >= 0);
     }
@@ -425,6 +427,34 @@ public sealed class RecoveryAgentServiceTests
 
         MetaApiException ex = await Assert.ThrowsAsync<MetaApiException>(() => client.ProbeAsync());
         Assert.Contains("non-Glimmer", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Probe_rejects_a_served_model_that_is_not_the_requested_route_model()
+    {
+        using var _ = FakeGlimmerRoute(); // route model muse-glimmer-30b
+        // A different Glimmer variant than the one the route requested means the deployment
+        // is not the one under test.
+        var handler = new DelegatingHandlerStub((_, _) => Task.FromResult(ChatResponse("{\"ok\": true}", "muse-glimmer-7b")));
+        using var http = new HttpClient(handler);
+        using var client = new GlimmerClient(http);
+
+        MetaApiException ex = await Assert.ThrowsAsync<MetaApiException>(() => client.ProbeAsync());
+        Assert.Contains("served model", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Probe_rejects_a_reply_wrapped_in_prose()
+    {
+        using var _ = FakeGlimmerRoute();
+        // The probe contract is STRICT JSON {"ok": true}; surrounding prose fails the probe.
+        var handler = new DelegatingHandlerStub((_, _) =>
+            Task.FromResult(ChatResponse("I cannot follow strict JSON, but {\"ok\": true}", "muse-glimmer-30b")));
+        using var http = new HttpClient(handler);
+        using var client = new GlimmerClient(http);
+
+        MetaApiException ex = await Assert.ThrowsAsync<MetaApiException>(() => client.ProbeAsync());
+        Assert.Contains("ok", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -509,13 +539,10 @@ public sealed class RecoveryAgentServiceTests
         RecoveryItem itemA = MeaningItem() with { SegmentId = "seg-a" };
         RecoveryItem itemB = MeaningItem() with { SegmentId = "seg-b" };
 
-        // The fake does not itself charge the budget, so drive the budget through the real client wrapper:
-        // use a GlimmerClient-less path by charging the budget in the service via WithBudget on a real client.
-        // Simpler: assert the service stops the SECOND item once the budget is spent by the first.
-        var budgetGlimmer = new BudgetChargingGlimmer(glimmer, glimmerBudget);
+        // The service owns charging the Glimmer budget, so the plain fake needs no wrapper.
         using var http = new HttpClient(meaning.ToHandler());
         using var meta = new MetaClient(http);
-        var service = new RecoveryAgentService(budgetGlimmer, meta, "en", "es", 0.10);
+        var service = new RecoveryAgentService(glimmer, meta, "en", "es", 0.10);
         RecoveryReport report = await service.RunAsync([itemA, itemB], glimmerBudget, metaBudget);
 
         Assert.Equal(2, report.Items.Length);
@@ -525,25 +552,122 @@ public sealed class RecoveryAgentServiceTests
         Assert.Empty(report.Items[1].Attempts);
     }
 
-    /// <summary>
-    /// Wraps the fake Glimmer client and charges the run budget on each call, so the cap test
-    /// exercises the SAME budget the service checks — matching how the real GlimmerClient.WithBudget charges.
-    /// </summary>
-    private sealed class BudgetChargingGlimmer : IGlimmerClient
+    [Fact]
+    public async Task A_mid_loop_provider_failure_is_recorded_as_a_run_error_with_completed_items_preserved()
     {
-        private readonly IGlimmerClient _inner;
-        private readonly CallBudget _budget;
+        using var _ = FakeMetaAuth();
+        var glimmer = new FailingGlimmer(Propose("Dónde film mañana?"));
+        var meaning = new ScriptedMeaning { MeaningJsons = new Queue<string>([MeaningPass()]) };
 
-        public BudgetChargingGlimmer(IGlimmerClient inner, CallBudget budget)
-        {
-            _inner = inner;
-            _budget = budget;
-        }
+        RecoveryItem itemA = MeaningItem() with { SegmentId = "seg-a" };
+        RecoveryItem itemB = MeaningItem() with { SegmentId = "seg-b" };
+
+        RecoveryReport report = await Run(glimmer, meaning.ToHandler(), [itemA, itemB]);
+
+        Assert.NotNull(report.RunError);
+        Assert.Contains("503", report.RunError, StringComparison.Ordinal);
+        Assert.Single(report.Items); // the completed first item is preserved
+        Assert.Equal(RecoveryOutcome.Recovered, report.Items[0].Outcome);
+        Assert.Equal(2, glimmer.Calls); // item B's first proposal failed mid-call
+    }
+
+    /// <summary>Glimmer fake that succeeds once, then throws a transport-style provider error.</summary>
+    private sealed class FailingGlimmer : IGlimmerClient
+    {
+        private readonly GlimmerReply _first;
+
+        public FailingGlimmer(GlimmerReply first) => _first = first;
+
+        public int Calls { get; private set; }
 
         public Task<GlimmerReply> ProposeAsync(GlimmerRecoveryTurn turn, CancellationToken cancellationToken = default)
         {
-            _budget.Reserve();
-            return _inner.ProposeAsync(turn, cancellationToken);
+            Calls++;
+            if (Calls == 1)
+            {
+                return Task.FromResult(_first);
+            }
+
+            throw new MetaApiException("Glimmer HTTP 503: upstream unavailable");
         }
+    }
+
+    [Fact]
+    public async Task Network_failure_does_not_consume_a_budget_slot()
+    {
+        using var _ = FakeGlimmerRoute();
+        var handler = new DelegatingHandlerStub((_, _) => throw new HttpRequestException("connection refused"));
+        using var http = new HttpClient(handler);
+        using var client = new GlimmerClient(http);
+        var budget = new CallBudget(45);
+
+        await Assert.ThrowsAsync<MetaApiException>(() => client.WithBudget(budget).ProbeAsync());
+
+        Assert.Equal(0, budget.Used); // transient network failure never reached the endpoint -> not charged
+    }
+
+    [Fact]
+    public async Task Run_stops_requesting_proposals_when_the_meta_budget_is_spent()
+    {
+        using var _ = FakeMetaAuth();
+        // Item A spends the single Meta slot on its meaning check and recovers; item B must
+        // NOT spend another Glimmer call just to discover the Meta budget is gone.
+        var glimmer = new FakeGlimmerClient([Propose("Dónde film mañana?")]);
+        var meaning = new ScriptedMeaning { MeaningJsons = new Queue<string>([MeaningPass()]) };
+        var glimmerBudget = new CallBudget(45);
+        var metaBudget = new CallBudget(1);
+
+        RecoveryItem itemA = MeaningItem() with { SegmentId = "seg-a" };
+        RecoveryItem itemB = MeaningItem() with { SegmentId = "seg-b" };
+
+        RecoveryReport report = await Run(glimmer, meaning.ToHandler(), [itemA, itemB], glimmerBudget, metaBudget);
+
+        Assert.Equal(1, glimmer.Calls); // item B never requested a proposal
+        Assert.Equal(1, meaning.Calls);
+        Assert.Equal(RecoveryOutcome.Recovered, report.Items[0].Outcome);
+        Assert.Equal(RecoveryOutcome.BudgetExhausted, report.Items[1].Outcome);
+        Assert.Empty(report.Items[1].Attempts);
+    }
+
+    [Fact]
+    public async Task Run_totals_and_report_include_the_probe_when_supplied()
+    {
+        using var _ = FakeMetaAuth();
+        var glimmer = new FakeGlimmerClient([GiveUp()]);
+        var meaning = new ScriptedMeaning();
+        var probe = new GlimmerProbeResult("glimmer.example", "muse-glimmer-30b", "muse-glimmer-30b", new(15, 5, 20), 0.5);
+
+        RecoveryReport report = await Run(glimmer, meaning.ToHandler(), [MeaningItem()], probe: probe);
+
+        // The probe's one call and tokens belong in the run totals: 1 probe + 1 loop call.
+        Assert.Equal(2, report.Totals.GlimmerCalls);
+        Assert.Equal(GlimmerUsage.TotalTokens + 20, report.Totals.GlimmerTokens.TotalTokens);
+        Assert.Equal((0, 0), (report.Totals.MetaCalls, report.Totals.MetaTokens.TotalTokens));
+        Assert.NotNull(report.Probe);
+        Assert.Equal("glimmer.example", report.Probe!.Host);
+        Assert.Equal((15, 5, 20), (report.Probe.PromptTokens, report.Probe.CompletionTokens, report.Probe.TotalTokens));
+        Assert.Equal(0.5, report.Probe.WallSeconds);
+        Assert.Null(report.RunError);
+    }
+
+    [Fact]
+    public async Task Prompt_uses_the_effective_run_options_even_when_the_item_carries_different_values()
+    {
+        using var _ = FakeMetaAuth();
+        // The item was captured as es / 10% tolerance, but the service runs fr / 25%: the
+        // prompt must advertise exactly what the gates will judge with, so Glimmer is not
+        // asked for Spanish and then judged as French.
+        var glimmer = new FakeGlimmerClient([GiveUp()]);
+        var meaning = new ScriptedMeaning();
+        using var http = new HttpClient(meaning.ToHandler());
+        using var meta = new MetaClient(http);
+        var service = new RecoveryAgentService(glimmer, meta, "en", "fr", 0.25);
+
+        await service.RunAsync([MeaningItem()], null, null);
+
+        Assert.Single(glimmer.Turns);
+        string prompt = GlimmerPrompt.BuildUserPrompt(glimmer.Turns[0]);
+        Assert.Contains("en->fr", prompt, StringComparison.Ordinal);
+        Assert.Contains("tolerance 25%", prompt, StringComparison.Ordinal);
     }
 }
