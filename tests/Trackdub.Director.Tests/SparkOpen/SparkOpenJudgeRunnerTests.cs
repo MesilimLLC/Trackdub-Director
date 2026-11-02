@@ -34,7 +34,7 @@ public sealed class SparkOpenJudgeRunnerTests
             ReasoningMeaningReply(pass: true),
             ReasoningMeaningReply(pass: false, "number", "number"),
             ReasoningMeaningReply(pass: false, "role swap", "role_swap"),
-            "<think>still deliberating, no verdict emitted</think>",
+            "<thinking>still deliberating, no verdict emitted</thinking>",
         ]);
 
         JudgeAgreementReport report = await new SparkOpenJudgeRunner(client).RunAsync(items, "en", "es");
@@ -103,8 +103,16 @@ public sealed class SparkOpenJudgeRunnerTests
 
         await new SparkOpenJudgeRunner(client).RunAsync(items, "en", "es");
 
-        // Exactly one Spark Open judge call per item: the 75-item run bills 75 calls, no more.
+        // Exactly one Spark Open judge call per item: the 75-item run bills 75 calls, no more —
+        // and each call carries that item's actual source text and candidate, never a repeated pair.
         Assert.Equal(items.Length, client.JudgeCalls);
+        Assert.Equal(items.Length, client.JudgeCallsRecorded.Count);
+        foreach (JudgeItem item in items)
+        {
+            Assert.Contains(client.JudgeCallsRecorded,
+                r => string.Equals(r.SourceText, item.SourceText, StringComparison.Ordinal)
+                  && string.Equals(r.Candidate, item.Candidate, StringComparison.Ordinal));
+        }
     }
 
     [Fact]

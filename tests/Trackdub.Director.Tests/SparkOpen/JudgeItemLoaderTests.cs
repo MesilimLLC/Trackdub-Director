@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Trackdub.Director.Core;
 using Trackdub.Director.Core.SparkOpen;
 
@@ -84,5 +85,54 @@ public sealed class JudgeItemLoaderTests
 
         Assert.Equal(23, items.Count(i => i.Source == JudgeItemLoader.PressureSource));
         Assert.Equal(12, items.Count(i => i.Source == JudgeItemLoader.UniformSource));
+    }
+
+    [Fact]
+    public async Task Cases_hosted_verdicts_match_the_recorded_meaning_eval_report()
+    {
+        // A mapping regression that swapped Pass/Fail for two cases would flip Agree/Disagree in the
+        // judge report; each cases item must equal the hosted gate verdict recorded for its own id.
+        (string cases, string pressure, string[] uniform) = Paths();
+        IReadOnlyList<JudgeItem> items = await JudgeItemLoader.LoadAsync(cases, pressure, uniform);
+
+        string reportPath = Path.Combine(RepoRoot(), "samples", "meaning-eval", "meaning-eval-report.json");
+        string json = await File.ReadAllTextAsync(reportPath);
+        MeaningEvalReport? report = JsonSerializer.Deserialize<MeaningEvalReport>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.NotNull(report);
+
+        Dictionary<string, MeaningVerdict> recorded = report!.Results.ToDictionary(r => r.Id, r => r.Gate.Verdict, StringComparer.Ordinal);
+        foreach (JudgeItem item in items.Where(i => i.Source == JudgeItemLoader.CasesSource))
+        {
+            Assert.True(recorded.TryGetValue(item.Id, out MeaningVerdict hosted), $"no recorded gate verdict for {item.Id}");
+            Assert.Equal(hosted, item.HostedVerdict);
+        }
+    }
+
+    [Fact]
+    public async Task Repeated_uniform_report_paths_are_rejected_before_judging()
+    {
+        (string cases, string pressure, _) = Paths();
+        string dup = Path.Combine(RepoRoot(), "samples", "voa10-scale", "qa-report-scale.json");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            JudgeItemLoader.LoadAsync(cases, pressure, [dup, dup]));
+    }
+
+    [Fact]
+    public async Task A_report_missing_segments_fails_with_a_clear_error()
+    {
+        (string cases, _, _) = Paths();
+        string temp = Path.Combine(Path.GetTempPath(), $"spark-judge-{Guid.NewGuid():N}.json");
+        await File.WriteAllTextAsync(temp, "{\"source_language\":\"en\",\"target_language\":\"es\"}");
+        try
+        {
+            InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                JudgeItemLoader.LoadAsync(cases, temp, []));
+            Assert.Contains("segments", ex.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(temp);
+        }
     }
 }

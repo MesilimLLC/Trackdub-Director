@@ -16,6 +16,12 @@ public sealed class FakeSparkOpenClient : ISparkOpenClient
     private readonly HttpClient? _httpClient;
     private int _judgeCalls;
 
+    /// <summary>
+    /// Every <see cref="JudgeMeaningAsync"/> call's source/candidate pair, in call order, so a test
+    /// can assert the runner passed each item's actual text (not just the call count).
+    /// </summary>
+    public List<(string SourceText, string Candidate)> JudgeCallsRecorded { get; } = new();
+
     /// <param name="judgeReplies">
     /// Raw assistant replies for successive <see cref="JudgeMeaningAsync"/> calls, each a
     /// reasoning-prefixed string ending in a <c>{"verdict":...,"explanation":...}</c> line, or any
@@ -60,6 +66,7 @@ public sealed class FakeSparkOpenClient : ISparkOpenClient
     {
         cancellationToken.ThrowIfCancellationRequested();
         Interlocked.Increment(ref _judgeCalls);
+        JudgeCallsRecorded.Add((sourceText, candidate));
 
         if (_judgeReplies.Count == 0)
         {
@@ -67,7 +74,7 @@ public sealed class FakeSparkOpenClient : ISparkOpenClient
         }
 
         string raw = _judgeReplies.Dequeue();
-        if (!SparkOpenReasoningParser.TryExtractFinalJsonObject(raw, out string finalAnswer))
+        if (!SparkOpenReasoningParser.TryExtractFinalJsonObject(raw, out string finalAnswer, requireEndOfReply: true))
         {
             // Unextractable final answer is a failed judgement: Error, with the raw reply as context.
             return Task.FromResult(MeaningGate.ForError(

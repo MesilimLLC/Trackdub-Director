@@ -100,9 +100,16 @@ public sealed class SparkOpenRunnersTests
         using var _ = new HostedEnvScope();
 
         // A long translation overruns the tight window: timing fails, so the combined verdict is Fail.
+        // Meaning is still graded for every line, including timing failures.
         var sparkTranslate = new HandlerStub((_, _) => ChatResponse("Una traduccion demasiado larga para una ventana tan breve asignada"));
         using var sparkOpen = new SparkOpenClient(Config(), rewritingInner: sparkTranslate, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
-        var hostedMeaning = new HandlerStub((_, _) => ChatResponse("{\"verdict\":\"pass\",\"issues\":[],\"explanation\":\"ok\"}", model: "muse-spark-1.1"));
+        int hostedMeaningCalls = 0;
+        var hostedMeaning = new HandlerStub((_, body) =>
+        {
+            Assert.Contains(MeaningGate.MeaningMarker, body, StringComparison.Ordinal);
+            hostedMeaningCalls++;
+            return ChatResponse("{\"verdict\":\"pass\",\"issues\":[],\"explanation\":\"ok\"}", model: "muse-spark-1.1");
+        });
         using var hostedClient = new MetaClient(new HttpClient(hostedMeaning));
 
         var segments = new[] { new QaSegmentInput("c1", "Hi.", 0.4) };
@@ -110,7 +117,9 @@ public sealed class SparkOpenRunnersTests
 
         SparkOpenTranslationLineResult line = report.Results[0];
         Assert.Equal(QaVerdict.Fail, line.TimingVerdict);
+        Assert.Equal(MeaningVerdict.Pass, line.MeaningVerdict);
         Assert.Equal(QaVerdict.Fail, line.CombinedVerdict);
+        Assert.Equal(1, hostedMeaningCalls);
     }
 
     [Fact]
@@ -194,5 +203,16 @@ public sealed class SparkOpenRunnersTests
         Assert.Equal(QaVerdict.Fail, report.Results[0].CombinedVerdict);
         Assert.Null(report.Results[1].TranslationError);
         Assert.Equal("Hola.", report.Results[1].SparkOpenTranslation);
+    }
+
+    [Fact]
+    public async Task Translation_runner_rejects_an_empty_segments_input()
+    {
+        using var _ = new HostedEnvScope();
+        using var sparkOpen = new SparkOpenClient(Config(), rewritingInner: new HandlerStub((_, _) => ChatResponse("Hola.")), rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
+        using var hostedClient = new MetaClient(new HttpClient(new HandlerStub((_, _) => ChatResponse("{}"))));
+
+        var runner = new SparkOpenTranslationRunner(sparkOpen, hostedClient);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.RunAsync([], "en", "es"));
     }
 }

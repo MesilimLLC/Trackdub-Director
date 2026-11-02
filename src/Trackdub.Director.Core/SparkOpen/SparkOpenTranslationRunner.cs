@@ -43,6 +43,11 @@ public sealed class SparkOpenTranslationRunner
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceLanguage);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguage);
 
+        if (segments.Count == 0)
+        {
+            throw new InvalidOperationException("At least one segment is required for the Spark Open translation lane.");
+        }
+
         MetaClient translator = _sparkOpen.AsMetaClient();
         double targetCps = _options.GetCharactersPerSecond(targetLanguage);
         var results = new List<SparkOpenTranslationLineResult>(segments.Count);

@@ -35,6 +35,11 @@ public static class JudgeItemLoader
         ArgumentException.ThrowIfNullOrWhiteSpace(pressureReportPath);
         ArgumentNullException.ThrowIfNull(uniformReportPaths);
 
+        if (uniformReportPaths.Count != uniformReportPaths.Distinct(StringComparer.Ordinal).Count())
+        {
+            throw new InvalidOperationException("Uniform report paths must be unique; a repeated path judges the same candidates twice.");
+        }
+
         var items = new List<JudgeItem>();
         items.AddRange(await LoadCasesAsync(casesPath, cancellationToken).ConfigureAwait(false));
         items.AddRange(await LoadEvaluatedAttemptsAsync(pressureReportPath, PressureSource, cancellationToken).ConfigureAwait(false));
@@ -78,14 +83,29 @@ public static class JudgeItemLoader
             throw new InvalidOperationException($"Empty or null QA report in '{reportPath}'.");
         }
 
+        if (report.Segments is null)
+        {
+            throw new InvalidOperationException($"QA report '{reportPath}' has no 'segments' array.");
+        }
+
         var items = new List<JudgeItem>();
         foreach (QaSegmentReport segment in report.Segments)
         {
+            if (segment.FirstAttempt is null || segment.Revisions is null)
+            {
+                throw new InvalidOperationException($"QA report '{reportPath}' segment '{segment.Id}' is missing 'first_attempt' or 'revisions'.");
+            }
+
             foreach (QaAttemptReport attempt in new[] { segment.FirstAttempt }.Concat(segment.Revisions))
             {
                 if (attempt.MeaningVerdict is not (MeaningVerdict.Pass or MeaningVerdict.Fail))
                 {
                     continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(segment.Text) || string.IsNullOrWhiteSpace(attempt.Translation))
+                {
+                    throw new InvalidOperationException($"QA report '{reportPath}' segment '{segment.Id}' attempt {attempt.AttemptNumber} has no source text or translation.");
                 }
 
                 string id = $"{Path.GetFileNameWithoutExtension(reportPath)}:{segment.Id}:a{attempt.AttemptNumber}";

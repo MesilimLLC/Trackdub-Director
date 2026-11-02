@@ -31,7 +31,7 @@ public sealed class SparkOpenClientTests
     public async Task Judge_fails_closed_to_Error_when_no_verdict_can_be_extracted()
     {
         // Reasoning only, no JSON verdict: a failed judgement (Error), never a guessed Pass/Fail.
-        var raw = new HandlerStub((_, _) => ChatResponse("<think>I am still deliberating and never answer.</think>\nStill thinking.", total: 900));
+        var raw = new HandlerStub((_, _) => ChatResponse("<thinking>I am still deliberating and never answer.</thinking>\nStill thinking.", total: 900));
         using var client = new SparkOpenClient(Config(), rewritingInner: new HandlerStub((_, _) => ChatResponse("{}")), rawInner: raw);
 
         MeaningCheckResult result = await client.JudgeMeaningAsync("Hi.", "Hola.", "en", "es");
@@ -54,13 +54,30 @@ public sealed class SparkOpenClientTests
     }
 
     [Fact]
+    public async Task Judge_records_the_azure_error_message_in_the_failed_call_reason()
+    {
+        // Azure error bodies carry a message field; the recorded reason must keep it so the report
+        // shows why the judgement failed, not just the status code.
+        var raw = new HandlerStub((_, _) => new HttpResponseMessage(System.Net.HttpStatusCode.BadGateway)
+        {
+            Content = new StringContent("{\"error\":{\"message\":\"Deployment 'spark-open-816b' is not found.\"}}"),
+        });
+        using var client = new SparkOpenClient(Config(), rewritingInner: new HandlerStub((_, _) => ChatResponse("{}")), rawInner: raw);
+
+        MeaningCheckResult result = await client.JudgeMeaningAsync("Hi.", "Hola.", "en", "es");
+
+        Assert.Equal(MeaningVerdict.Error, result.Verdict);
+        Assert.Contains("Deployment 'spark-open-816b' is not found.", result.Explanation);
+    }
+
+    [Fact]
     public async Task QA_translation_path_surfaces_the_plain_final_line_as_the_translation()
     {
         // MetaClient requires some hosted key to build a request; the handler overwrites the
         // Authorization header with the Spark Open key, so the hosted key is never sent to Spark Open.
         using var _ = new HostedEnvScope();
         // The handler must hand the QA loop the plain translated line, not a JSON wrapper.
-        var rewriting = new HandlerStub((_, _) => ChatResponse("<think>Keep the name.</think>\nHola, Ashley."));
+        var rewriting = new HandlerStub((_, _) => ChatResponse("<thinking>Keep the name.</thinking>\nHola, Ashley."));
         using var client = new SparkOpenClient(Config(), rewritingInner: rewriting, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
 
         MetaClient.ChatCompletionResult result = await client.AsMetaClient().TranslateWithUsageAsync(
@@ -178,6 +195,13 @@ public sealed class SparkOpenClientTests
         using var _ = new SparkOpenEnvScope(baseUrl: "http://localhost:8000/v1", apiKey: "k", model: "m");
         SparkOpenConfig config = SparkOpenAuth.Resolve();
         Assert.Equal("localhost", config.EndpointHost);
+    }
+
+    [Fact]
+    public void A_base_url_with_a_query_or_fragment_fails_closed()
+    {
+        using var _ = new SparkOpenEnvScope(baseUrl: "https://host/v1?api-version=2024-01-01", apiKey: "k", model: "m");
+        Assert.Throws<SparkOpenConfigException>(() => SparkOpenAuth.Resolve());
     }
 
     [Fact]

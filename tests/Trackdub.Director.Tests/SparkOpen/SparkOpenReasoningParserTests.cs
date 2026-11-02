@@ -107,4 +107,51 @@ public sealed class SparkOpenReasoningParserTests
 
         Assert.False(SparkOpenReasoningParser.TryExtractFinalJsonObject(reply, out _));
     }
+
+    [Fact]
+    public void Bare_marker_reasoning_blocks_are_stripped_too()
+    {
+        // Some deployments emit the reasoning delimiters without brackets (" thinking" / " response").
+        string reply = " thinking\nWeigh subject and numbers.\n response\n{\"verdict\":\"pass\",\"issues\":[],\"explanation\":\"ok\"}";
+
+        Assert.True(SparkOpenReasoningParser.TryExtractFinalJsonObject(reply, out string obj));
+        Assert.Contains("\"verdict\":\"pass\"", obj, StringComparison.Ordinal);
+        Assert.DoesNotContain("Weigh subject", obj, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Judge_rejects_a_verdict_object_that_is_not_at_the_end_of_the_reply()
+    {
+        // A verdict-shaped object with prose after it is reasoning, not the final verdict.
+        string reply = "Reasoning quotes a sample verdict: {\"verdict\":\"fail\",\"issues\":[],\"explanation\":\"x\"}\nThen my conclusion follows.";
+
+        Assert.False(SparkOpenReasoningParser.TryExtractFinalJsonObject(reply, out _, requireEndOfReply: true));
+    }
+
+    [Fact]
+    public void Judge_accepts_a_multiline_final_verdict_object_at_the_end_of_the_reply()
+    {
+        string reply = "Reasoning prose above.\n{\n\"verdict\": \"pass\",\n\"issues\": [],\n\"explanation\": \"ok\"\n}";
+
+        Assert.True(SparkOpenReasoningParser.TryExtractFinalJsonObject(reply, out string obj, requireEndOfReply: true));
+        Assert.Contains("\"verdict\": \"pass\"", obj, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_multiline_plain_answer_is_kept_whole_when_there_is_no_json()
+    {
+        string reply = "Hola, Ashley.\nNos vemos pronto.";
+
+        Assert.True(SparkOpenReasoningParser.TryExtractFinalAnswer(reply, out string answer));
+        Assert.Equal("Hola, Ashley.\nNos vemos pronto.", answer);
+    }
+
+    [Fact]
+    public void An_unmatched_brace_in_reasoning_does_not_hide_a_later_final_object()
+    {
+        string reply = "A stray { without a close.\n{\n\"verdict\":\"pass\",\n\"issues\":[],\n\"explanation\":\"ok\"\n}";
+
+        Assert.True(SparkOpenReasoningParser.TryExtractFinalJsonObject(reply, out string obj));
+        Assert.Contains("\"verdict\":\"pass\"", obj, StringComparison.Ordinal);
+    }
 }

@@ -39,6 +39,12 @@ public static class SparkOpenAuth
             throw new SparkOpenConfigException($"{BaseUrlEnv} must be an absolute URL (the deployment's OpenAI-compatible chat completions endpoint).");
         }
 
+        if (!string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
+        {
+            // /chat/completions is appended to the base URL; a query/fragment would swallow that suffix.
+            throw new SparkOpenConfigException($"{BaseUrlEnv} must be an absolute URL without a query or fragment (the deployment's OpenAI-compatible chat completions endpoint).");
+        }
+
         if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) && !IsLoopback(uri))
         {
             // Plaintext HTTP would carry the deployment's Bearer key and source text unencrypted; only

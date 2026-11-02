@@ -25,6 +25,13 @@ internal static class SparkOpenCli
 
         string sub = args[0].ToLowerInvariant();
         string[] rest = args[1..];
+        if (rest.Any(arg => arg is "-h" or "--help"))
+        {
+            // Subcommand help must never trigger a metered Spark Open call.
+            PrintHelp();
+            return 0;
+        }
+
         return sub switch
         {
             "judge" => await RunJudgeAsync(rest).ConfigureAwait(false),
@@ -59,6 +66,15 @@ internal static class SparkOpenCli
         if (opts is null)
         {
             Console.Error.WriteLine($"error: {error}");
+            return 1;
+        }
+
+        if (!string.Equals(opts.From, "en", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(opts.To, "es", StringComparison.OrdinalIgnoreCase))
+        {
+            // The captured judge inputs are all en->es; judging them under any other pair would diff
+            // Spark Open verdicts against hosted verdicts recorded for a different target language.
+            Console.Error.WriteLine("error: the captured judge inputs are all en->es; --from must be 'en' and --to must be 'es'.");
             return 1;
         }
 
@@ -100,6 +116,12 @@ internal static class SparkOpenCli
             return 1;
         }
 
+        if (SameFile(input, output))
+        {
+            Console.Error.WriteLine("error: --output must not be the same path as --input.");
+            return 1;
+        }
+
         if (!EnsureConfigured())
         {
             return 2;
@@ -134,6 +156,12 @@ internal static class SparkOpenCli
             return 1;
         }
 
+        if (SameFile(input, output))
+        {
+            Console.Error.WriteLine("error: --output must not be the same path as --input.");
+            return 1;
+        }
+
         if (!EnsureConfigured())
         {
             return 2;
@@ -145,7 +173,8 @@ internal static class SparkOpenCli
             using var sparkOpen = new SparkOpenClient();
             using var hosted = new MetaClient();
             var runner = new SparkOpenTranslationRunner(sparkOpen, hosted, QaOptions.FromEnvironment());
-            SparkOpenTranslationReport report = await runner.RunAsync(segments, "en", "es").ConfigureAwait(false);
+            IReadOnlyDictionary<string, string> hostedTranslations = await LoadHostedTranslationsAsync().ConfigureAwait(false);
+            SparkOpenTranslationReport report = await runner.RunAsync(segments, "en", "es", hostedTranslations).ConfigureAwait(false);
             await runner.WriteReportAsync(Path.GetFullPath(output), report).ConfigureAwait(false);
 
             SparkOpenTranslationSummary s = report.Summary;
@@ -186,8 +215,22 @@ internal static class SparkOpenCli
 
     private sealed record CommonOptions(string CasesPath, string PressurePath, IReadOnlyList<string> UniformPaths, string Output, string From, string To);
 
+    private static readonly string[] JudgeFlags =
+    [
+        "--cases", "--pressure", "--output", "--from", "--to", "--uniform-scale", "--uniform-voa10",
+    ];
+
     private static CommonOptions? ParseCommon(string[] args, out string? error)
     {
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i].StartsWith("--", StringComparison.Ordinal) && !JudgeFlags.Contains(args[i], StringComparer.Ordinal))
+            {
+                error = $"Unknown option '{args[i]}' for 'spark-open judge'.";
+                return null;
+            }
+        }
+
         string cases = GetValue(args, "--cases") ?? Path.Combine("samples", "meaning-eval", "cases.json");
         string pressure = GetValue(args, "--pressure") ?? Path.Combine("samples", "meaning-eval", "qa-report-pressure-70.json");
         string? output = GetValue(args, "--output");
@@ -206,8 +249,39 @@ internal static class SparkOpenCli
             return null;
         }
 
+        // The report is written over --output after the calls; it must never clobber an input file.
+        string outputFull = Path.GetFullPath(output);
+        string[] inputs = [Path.GetFullPath(cases), Path.GetFullPath(pressure), .. uniform.Select(Path.GetFullPath)];
+        if (inputs.Any(inputPath => string.Equals(inputPath, outputFull, StringComparison.OrdinalIgnoreCase)))
+        {
+            error = "--output must not name an input file (--cases, --pressure, or --uniform-*).";
+            return null;
+        }
+
         error = null;
-        return new CommonOptions(Path.GetFullPath(cases), Path.GetFullPath(pressure), uniform.Select(Path.GetFullPath).ToArray(), Path.GetFullPath(output), from, to);
+        return new CommonOptions(Path.GetFullPath(cases), Path.GetFullPath(pressure), uniform.Select(Path.GetFullPath).ToArray(), outputFull, from, to);
+    }
+
+    private static bool SameFile(string input, string output)
+        => string.Equals(Path.GetFullPath(input), Path.GetFullPath(output), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Loads the recorded hosted translations (the meaning-eval candidates) keyed by segment id, so
+    /// the translation report carries each line's hosted side-by-side translation. Returns an empty
+    /// map when the eval file is absent, leaving the hosted column null.
+    /// </summary>
+    private static async Task<IReadOnlyDictionary<string, string>> LoadHostedTranslationsAsync(CancellationToken cancellationToken = default)
+    {
+        string casesPath = Path.Combine("samples", "meaning-eval", "cases.json");
+        if (!File.Exists(casesPath))
+        {
+            return new Dictionary<string, string>();
+        }
+
+        IReadOnlyList<MeaningEvalCase> cases = await MeaningEvalService.LoadCasesAsync(casesPath, cancellationToken).ConfigureAwait(false);
+        return cases
+            .Where(c => !string.IsNullOrWhiteSpace(c.Candidate))
+            .ToDictionary(c => c.Id, c => c.Candidate!, StringComparer.Ordinal);
     }
 
     private static string? GetValue(string[] args, string flag)

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -97,7 +98,9 @@ public sealed class SparkOpenClient : ISparkOpenClient
             string body = response.Content is null ? string.Empty : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                return MeaningGate.ForError($"Spark Open HTTP {(int)response.StatusCode}", _config.Model, null, _config.EndpointHost);
+                // Azure error bodies carry a message field (deployment/request errors); keep a bounded
+                // copy in the recorded reason so the report shows why the judgement failed, not just a status.
+                return MeaningGate.ForError(BuildHttpErrorReason(response.StatusCode, body), _config.Model, null, _config.EndpointHost);
             }
 
             return ParseJudgeReply(body);
@@ -137,12 +140,69 @@ public sealed class SparkOpenClient : ISparkOpenClient
             return MeaningGate.ForError("Spark Open reply was not valid JSON.", _config.Model, null, _config.EndpointHost);
         }
 
-        if (!SparkOpenReasoningParser.TryExtractFinalJsonObject(rawContent, out string verdictJson))
+        if (!SparkOpenReasoningParser.TryExtractFinalJsonObject(rawContent, out string verdictJson, requireEndOfReply: true))
         {
             return MeaningGate.ForError("Spark Open reply carried no extractable final JSON verdict.", _config.Model, usage, _config.EndpointHost);
         }
 
         return ParseStrictMeaningVerdict(verdictJson, _config.Model, usage, _config.EndpointHost);
+    }
+
+    /// <summary>
+    /// Builds the recorded reason for a failed judge call: the HTTP status plus a bounded copy of the
+    /// error body's <c>message</c> (Azure deployments report deployment/request errors there), so the
+    /// report shows why the call failed rather than only a status code.
+    /// </summary>
+    private static string BuildHttpErrorReason(HttpStatusCode status, string body)
+    {
+        string? message = ExtractErrorMessage(body);
+        return message is null
+            ? $"Spark Open HTTP {(int)status}"
+            : $"Spark Open HTTP {(int)status}: {message}";
+    }
+
+    private static string? ExtractErrorMessage(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return null;
+        }
+
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(body);
+            JsonElement root = doc.RootElement;
+            JsonElement message = default;
+            if (root.ValueKind == JsonValueKind.Object
+                && root.TryGetProperty("error", out JsonElement error)
+                && error.ValueKind == JsonValueKind.Object
+                && error.TryGetProperty("message", out JsonElement errorMessage))
+            {
+                message = errorMessage;
+            }
+            else if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("message", out JsonElement topMessage))
+            {
+                message = topMessage;
+            }
+
+            if (message.ValueKind != JsonValueKind.String)
+            {
+                return null;
+            }
+
+            string text = message.GetString()?.Trim() ?? string.Empty;
+            if (text.Length == 0)
+            {
+                return null;
+            }
+
+            const int maxLength = 200;
+            return text.Length <= maxLength ? text : $"{text[..maxLength]}...";
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

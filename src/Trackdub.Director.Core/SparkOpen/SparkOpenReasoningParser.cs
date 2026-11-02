@@ -25,6 +25,18 @@ public static class SparkOpenReasoningParser
     /// </summary>
     public static string? ExtractFinalJsonObject(string? rawContent)
     {
+        return ExtractFinalJsonObject(rawContent, requireEndOfReply: false);
+    }
+
+    /// <summary>
+    /// <see cref="ExtractFinalJsonObject(string?)"/> with the judge's stricter contract: when
+    /// <paramref name="requireEndOfReply"/> is true, a balanced object is the final verdict only if
+    /// nothing but whitespace follows its closing brace — a verdict-shaped object quoted in the
+    /// reasoning with prose after it is NOT accepted. The translation path keeps the permissive
+    /// default, because a plain-text answer needs no trailing-JSON requirement.
+    /// </summary>
+    public static string? ExtractFinalJsonObject(string? rawContent, bool requireEndOfReply)
+    {
         if (string.IsNullOrWhiteSpace(rawContent))
         {
             return null;
@@ -45,7 +57,7 @@ public static class SparkOpenReasoningParser
             return lineObject;
         }
 
-        return LastBalancedObject(content);
+        return LastBalancedObject(content, requireEndOfReply);
     }
 
     /// <summary>
@@ -54,7 +66,16 @@ public static class SparkOpenReasoningParser
     /// </summary>
     public static bool TryExtractFinalJsonObject(string? rawContent, out string finalObject)
     {
-        string? extracted = ExtractFinalJsonObject(rawContent);
+        return TryExtractFinalJsonObject(rawContent, out finalObject, requireEndOfReply: false);
+    }
+
+    /// <summary>
+    /// <see cref="TryExtractFinalJsonObject(string?, out string)"/> with the judge's stricter
+    /// end-of-reply contract (see <see cref="ExtractFinalJsonObject(string?, bool)"/>).
+    /// </summary>
+    public static bool TryExtractFinalJsonObject(string? rawContent, out string finalObject, bool requireEndOfReply)
+    {
+        string? extracted = ExtractFinalJsonObject(rawContent, requireEndOfReply);
         finalObject = extracted ?? string.Empty;
         return extracted is not null;
     }
@@ -62,8 +83,9 @@ public static class SparkOpenReasoningParser
     /// <summary>
     /// Extracts the final answer as text, separating it from the reasoning that precedes it. When the
     /// reply ends in a <c>{...}</c> JSON object (a structured answer such as a meaning verdict) that
-    /// object is returned so the standard JSON gate parses it; otherwise the last non-blank line is
-    /// returned (an unstructured answer such as a translated line). Every completed
+    /// object is returned so the standard JSON gate parses it; otherwise the remaining non-blank lines
+    /// are returned as the answer (an unstructured answer such as a translated line), preserving a
+    /// multi-line answer rather than silently dropping every line but the last. Every completed
     /// <c>&lt;think&gt;…&lt;/think&gt;</c> reasoning block and trailing code fence is stripped first.
     /// Returns null when nothing remains — a reply with no extractable final answer, which callers
     /// treat as a FAILED call. A reply whose reasoning is truncated inside an unclosed think block is
@@ -89,8 +111,7 @@ public static class SparkOpenReasoningParser
             return jsonObject;
         }
 
-        string? lastLine = LastNonBlankLine(content);
-        return string.IsNullOrWhiteSpace(lastLine) ? null : lastLine;
+        return string.IsNullOrWhiteSpace(content) ? null : content.Trim();
     }
 
     /// <summary>True when a final answer (JSON object or last line) can be extracted. Out carries it.</summary>
@@ -106,10 +127,14 @@ public static class SparkOpenReasoningParser
     /// shadow a plain-text final answer below it. Reasoning models sometimes emit more than one
     /// block, so all completed blocks are removed, not just the first. When generation stops inside
     /// an unclosed think block, the unterminated flag is set true so callers treat the reply as
-    /// having no extractable answer.
+    /// having no extractable answer. Both spellings of the markers are recognized — bracketed
+    /// <c>&lt;thinking&gt;…&lt;/thinking&gt;</c> and the bare line-start <c> thinking</c> /
+    /// <c> response</c> — so whichever the deployment emits is handled identically.
     /// </summary>
     private static string StripThinkBlocks(string content, out bool unterminated)
     {
+        content = NormalizeBareMarkers(content);
+
         const string open = "<thinking>";
         const string close = "</thinking>";
         int start = content.IndexOf(open, StringComparison.OrdinalIgnoreCase);
@@ -128,6 +153,57 @@ public static class SparkOpenReasoningParser
         unterminated = start >= 0;
         return content;
     }
+
+    /// <summary>
+    /// Rewrites a bare line-start <c> thinking</c> / <c> response</c> marker into the bracketed
+    /// <c>&lt;thinking&gt;</c> / <c>&lt;/thinking&gt;</c> form so <see cref="StripThinkBlocks"/>
+    /// treats both spellings identically. Only a standalone marker token (followed by whitespace or
+    /// the line end) is rewritten, so a translated line that merely begins with the word "thinking"
+    /// is never mistaken for a reasoning block.
+    /// </summary>
+    private static string NormalizeBareMarkers(string content)
+    {
+        string[] lines = content.Split('\n');
+        bool changed = false;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i];
+            string trimmed = line.TrimStart();
+            string? token = BareMarkerToken(trimmed);
+            if (token is null)
+            {
+                continue;
+            }
+
+            string replacement = string.Equals(token, "thinking", StringComparison.OrdinalIgnoreCase) ? "<thinking>" : "</thinking>";
+            lines[i] = string.Concat(line.AsSpan(0, line.Length - trimmed.Length), replacement, trimmed.AsSpan(token.Length));
+            changed = true;
+        }
+
+        return changed ? string.Join('\n', lines) : content;
+    }
+
+    /// <summary>
+    /// "thinking" or "response" when <paramref name="trimmed"/> starts with that bare marker token
+    /// as a standalone word, else null.
+    /// </summary>
+    private static string? BareMarkerToken(string trimmed)
+    {
+        if (trimmed.StartsWith("thinking", StringComparison.OrdinalIgnoreCase) && IsStandaloneToken(trimmed, "thinking"))
+        {
+            return "thinking";
+        }
+
+        if (trimmed.StartsWith("response", StringComparison.OrdinalIgnoreCase) && IsStandaloneToken(trimmed, "response"))
+        {
+            return "response";
+        }
+
+        return null;
+    }
+
+    private static bool IsStandaloneToken(string trimmed, string token)
+        => trimmed.Length == token.Length || char.IsWhiteSpace(trimmed[token.Length]);
 
     private static string StripTrailingFence(string content)
     {
@@ -191,11 +267,15 @@ public static class SparkOpenReasoningParser
     /// <summary>
     /// Scans for the last balanced top-level JSON object and returns it when it parses as an
     /// object. String literals and escapes are tracked so a brace inside a quoted reasoning
-    /// snippet cannot unbalance the scan.
+    /// snippet cannot unbalance the scan. An opening brace with no matching close is skipped and
+    /// the scan continues, so a stray <c>{</c> in the reasoning cannot shadow a later valid object.
+    /// When <paramref name="requireEndOfReply"/> is true, only an object whose closing brace reaches
+    /// the end of the trimmed content is accepted (the judge's strict contract).
     /// </summary>
-    private static string? LastBalancedObject(string content)
+    private static string? LastBalancedObject(string content, bool requireEndOfReply)
     {
         string? last = null;
+        int trimmedLength = requireEndOfReply ? content.TrimEnd().Length : -1;
         int i = 0;
         while (i < content.Length)
         {
@@ -204,7 +284,15 @@ public static class SparkOpenReasoningParser
                 int end = FindObjectEnd(content, i);
                 if (end < 0)
                 {
-                    break;
+                    i++;
+                    continue;
+                }
+
+                if (requireEndOfReply && end < trimmedLength)
+                {
+                    // Verdict-shaped object with prose after it is reasoning, not the final verdict.
+                    i = end;
+                    continue;
                 }
 
                 string candidate = content[i..end];
