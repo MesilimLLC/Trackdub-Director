@@ -47,6 +47,20 @@ public sealed record GlimmerReply(
 }
 
 /// <summary>
+/// Result of the single pre-flight probe call. Its existence means the probe passed (the client
+/// throws on any failure, including a reply that is not {"ok": true} or a non-Glimmer returned
+/// model). Carries only what the report needs: the endpoint <see cref="Host"/> (never the key),
+/// the <see cref="RequestedModel"/> sent and the <see cref="ReturnedModel"/> the route reported,
+/// the billed <see cref="Usage"/>, and the probe's <see cref="WallSeconds"/>.
+/// </summary>
+public sealed record GlimmerProbeResult(
+    string Host,
+    string RequestedModel,
+    string ReturnedModel,
+    MetaClient.TokenUsage? Usage,
+    double WallSeconds);
+
+/// <summary>
 /// One recovery item: a single refused candidate that the existing Spark loop had
 /// already given up on, carried into the agent with ONLY the leakage-safe input.
 /// The agent never sees any later revision, retry, or accepted candidate for the

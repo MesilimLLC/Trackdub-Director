@@ -63,11 +63,12 @@ internal static class RecoverCli
                 return 0;
             }
 
-            // Fail closed BEFORE constructing any client or making any call.
-            if (!GlimmerAuth.IsConfigured())
+            // Fail closed BEFORE constructing any client or making any call; name the missing vars.
+            string[] missing = MissingRouteVars();
+            if (missing.Length > 0)
             {
                 Console.Error.WriteLine(
-                    $"error: Glimmer route not configured; no call was made. Set {GlimmerAuth.BaseUrlEnv}, {GlimmerAuth.ApiKeyEnv}, and {GlimmerAuth.ModelEnv}.");
+                    $"error: Glimmer route not configured; no call was made. Missing: {string.Join(", ", missing)}.");
                 return 1;
             }
 
@@ -89,7 +90,28 @@ internal static class RecoverCli
         using var glimmer = new GlimmerClient(glimmerHttp);
         using var meta = new MetaClient();
 
-        var service = new RecoveryAgentService(glimmer.WithBudget(glimmerBudget), meta, options.From, options.To, options.Tolerance);
+        // The same budget-charged client is used for the probe and the loop, so the probe counts
+        // toward the Glimmer call cap. Exactly ONE probe call; stop the run on any probe failure
+        // before the capped loop begins. No Meta call is made during the probe.
+        GlimmerClient budgetedGlimmer = glimmer.WithBudget(glimmerBudget);
+        try
+        {
+            GlimmerProbeResult probe = await budgetedGlimmer.ProbeAsync().ConfigureAwait(false);
+            Console.WriteLine("Probe OK:");
+            Console.WriteLine($"  endpoint host : {probe.Host}");
+            Console.WriteLine($"  requested model: {probe.RequestedModel}");
+            Console.WriteLine($"  returned model : {(string.IsNullOrEmpty(probe.ReturnedModel) ? "(none reported)" : probe.ReturnedModel)}");
+            Console.WriteLine($"  usage         : prompt={probe.Usage?.PromptTokens ?? 0} completion={probe.Usage?.CompletionTokens ?? 0} total={probe.Usage?.TotalTokens ?? 0}");
+            Console.WriteLine($"  wall seconds  : {probe.WallSeconds:0.000}");
+            Console.WriteLine($"  Glimmer calls used: {glimmerBudget.Used}/{glimmerBudget.Limit}");
+        }
+        catch (MetaApiException ex)
+        {
+            Console.Error.WriteLine($"error: Glimmer probe failed; stopping before the loop (loop not run). {ex.Message}");
+            return 1;
+        }
+
+        var service = new RecoveryAgentService(budgetedGlimmer, meta, options.From, options.To, options.Tolerance);
         RecoveryReport report = await service.RunAsync(set, glimmerBudget, metaBudget).ConfigureAwait(false);
 
         string outputFolder = Path.GetFullPath(options.OutputFolder);
@@ -98,6 +120,16 @@ internal static class RecoverCli
 
         PrintSummary(report, outputFolder);
         return 0;
+    }
+
+    private static string Truncate(string s, int n) => s.Length <= n ? s : s[..n] + "...";
+
+    /// <summary>The route vars that are unset/blank, in a stable order; empty when the route is complete.</summary>
+    private static string[] MissingRouteVars()
+    {
+        return new[] { GlimmerAuth.BaseUrlEnv, GlimmerAuth.ApiKeyEnv, GlimmerAuth.ModelEnv }
+            .Where(v => string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(v)))
+            .ToArray();
     }
 
     private static void PrintSet(IReadOnlyList<RecoveryItem> set)

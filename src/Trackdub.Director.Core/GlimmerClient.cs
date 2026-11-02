@@ -79,6 +79,99 @@ public sealed class GlimmerClient : IGlimmerClient, IDisposable
     }
 
     /// <summary>
+    /// Exactly ONE Glimmer call that proves the route is live before the capped loop runs.
+    /// Fails closed when the route is unset (zero calls), and throws <see cref="MetaApiException"/>
+    /// on any failure so the caller stops before the loop. The reply MUST be the schema-constrained
+    /// JSON object {"ok": true}; a non-200, an unparseable body, a missing/false "ok", or a returned
+    /// model that is not a Glimmer model each fail the probe. Charges the shared budget like any send,
+    /// so the probe counts toward the run's Glimmer call cap. Makes NO Meta call. The returned
+    /// <see cref="GlimmerProbeResult"/> carries the endpoint host (never the key), the requested and
+    /// returned model strings, usage, and wall seconds.
+    /// </summary>
+    public async Task<GlimmerProbeResult> ProbeAsync(CancellationToken cancellationToken = default)
+    {
+        GlimmerAuth.GlimmerRoute route = GlimmerAuth.GetRoute();
+        string host = Uri.TryCreate(route.BaseUrl, UriKind.Absolute, out Uri? uri) ? uri.Host : route.BaseUrl;
+
+        var payload = new GlimmerChatRequest(
+            route.Model,
+            [
+                new GlimmerChatMessage("system", "You are a readiness probe. Reply with STRICT JSON only, exactly: {\"ok\": true}. No prose, no markdown fence."),
+                new GlimmerChatMessage("user", "Return {\"ok\": true} if you can produce schema-constrained JSON."),
+            ],
+            route.ReasoningEffort);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{route.BaseUrl}/chat/completions")
+        {
+            Content = new StringContent(JsonSerializer.Serialize(payload, JsonOptions), Encoding.UTF8, "application/json"),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", route.ApiKey);
+
+        long startTicks = System.Diagnostics.Stopwatch.GetTimestamp();
+        string body = await SendForBodyAsync(request, cancellationToken).ConfigureAwait(false);
+        double wallSeconds = System.Diagnostics.Stopwatch.GetElapsedTime(startTicks).TotalSeconds;
+
+        GlimmerChatResponse? parsed;
+        try
+        {
+            parsed = JsonSerializer.Deserialize<GlimmerChatResponse>(body, JsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            throw new MetaApiException($"Glimmer probe returned an unparseable response: {Truncate(body)}", ex);
+        }
+
+        string returnedModel = parsed?.Model ?? string.Empty;
+        string content = parsed?.Choices?.FirstOrDefault()?.Message?.Content?.Trim() ?? string.Empty;
+
+        if (!ProbeReplyIsOk(content))
+        {
+            throw new MetaApiException($"Glimmer probe reply was not the required {{\"ok\": true}}: {Truncate(content)}");
+        }
+
+        // The returned model must be a Glimmer model; a different served model means the deployment
+        // is not the one under test, so stop before the loop.
+        if (!IsGlimmerModel(returnedModel) && !IsGlimmerModel(route.Model))
+        {
+            throw new MetaApiException($"Glimmer probe returned a non-Glimmer model '{returnedModel}'; expected a Glimmer model.");
+        }
+
+        return new GlimmerProbeResult(host, route.Model, returnedModel, ToUsage(parsed?.Usage), wallSeconds);
+    }
+
+    /// <summary>True when the JSON object has a boolean "ok" that is true. Tolerates surrounding prose.</summary>
+    private static bool ProbeReplyIsOk(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return false;
+        }
+
+        int start = content.IndexOf('{');
+        int end = content.LastIndexOf('}');
+        if (start < 0 || end <= start)
+        {
+            return false;
+        }
+
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(content[start..(end + 1)]);
+            return doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("ok", out JsonElement ok)
+                && ok.ValueKind == JsonValueKind.True;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>A returned/requested model counts as Glimmer when its id contains "glimmer" (case-insensitive).</summary>
+    private static bool IsGlimmerModel(string? model)
+        => !string.IsNullOrWhiteSpace(model) && model.Contains("glimmer", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Parse the chat body into a single on-schema action. A reply that is not strict JSON,
     /// is not an object with a recognized action, or lacks the fields that action requires is
     /// flagged malformed — never repaired. The caller records a malformed reply as a failed

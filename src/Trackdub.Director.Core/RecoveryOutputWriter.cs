@@ -55,6 +55,17 @@ public static class RecoveryOutputWriter
             $"- Budget: Glimmer calls {report.Totals.GlimmerCalls}/{report.Totals.GlimmerCallCap}, " +
             $"Meta calls {report.Totals.MetaCalls}/{report.Totals.MetaCallCap}.");
         sb.AppendLine();
+        sb.AppendLine("## Route (read from env only; recorded here as observed values)");
+        sb.AppendLine();
+        sb.AppendLine("The client reads GLIMMER_BASE_URL / GLIMMER_API_KEY / GLIMMER_MODEL and the Meta key");
+        sb.AppendLine("from the environment only; nothing below is hardcoded into a code path. GLIMMER_BASE_URL");
+        sb.AppendLine("must be the OpenAI-compatible base ending in `/openai/v1` (the client appends");
+        sb.AppendLine("`/chat/completions` itself; passing the full `.../chat/completions` URL would double the path).");
+        sb.AppendLine($"The Glimmer model string recorded for this run was `{report.GlimmerModel}`");
+        sb.AppendLine($"(reasoning_effort {report.GlimmerReasoningEffort}). The pre-flight probe records the endpoint");
+        sb.AppendLine("host (never the key), the requested and returned model strings, usage, and wall seconds in the");
+        sb.AppendLine("run log; the run proceeds to the loop only after the probe returns {\"ok\": true} from a Glimmer model.");
+        sb.AppendLine();
         sb.AppendLine("## Leakage rule");
         sb.AppendLine();
         sb.AppendLine("Each item is built from exactly ONE refused attempt record. The agent's input is only");

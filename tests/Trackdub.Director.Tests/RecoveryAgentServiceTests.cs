@@ -363,6 +363,108 @@ public sealed class RecoveryAgentServiceTests
         Assert.Equal(report.Totals.DistinctLines, report.Totals.DistinctLinesRecovered + report.Totals.DistinctLinesStillRefused);
     }
 
+    private static IDisposable FakeGlimmerRoute() => new EnvScope(new Dictionary<string, string>
+    {
+        [GlimmerAuth.BaseUrlEnv] = "https://glimmer.example/openai/v1",
+        [GlimmerAuth.ApiKeyEnv] = "glimmer-test-key",
+        [GlimmerAuth.ModelEnv] = "muse-glimmer-30b",
+    });
+
+    [Fact]
+    public async Task Probe_makes_exactly_one_glimmer_call_and_reports_host_models_usage()
+    {
+        using var _ = FakeGlimmerRoute();
+        int calls = 0;
+        var handler = new DelegatingHandlerStub((request, _) =>
+        {
+            Interlocked.Increment(ref calls);
+            Assert.Contains("/chat/completions", request.RequestUri?.ToString() ?? string.Empty);
+            return Task.FromResult(ChatResponse("{\"ok\": true}")); // schema-constrained readiness reply
+        });
+        using var http = new HttpClient(handler);
+        using var client = new GlimmerClient(http);
+        var budget = new CallBudget(45);
+
+        GlimmerProbeResult probe = await client.WithBudget(budget).ProbeAsync();
+
+        Assert.Equal(1, calls);        // exactly one Glimmer call
+        Assert.Equal(1, budget.Used);  // charged toward the run cap
+        Assert.Equal("glimmer.example", probe.Host);           // host only, never the key
+        Assert.Equal("muse-glimmer-30b", probe.RequestedModel); // from the route (ChatResponse echoes Model=muse-spark-1.1 as returned)
+        Assert.NotNull(probe.Usage);
+        Assert.True(probe.WallSeconds >= 0);
+    }
+
+    [Fact]
+    public async Task Probe_rejects_reply_that_is_not_ok_true()
+    {
+        using var _ = FakeGlimmerRoute();
+        var handler = new DelegatingHandlerStub((_, _) =>
+            Task.FromResult(ChatResponse("{\"ok\": false}")));
+        using var http = new HttpClient(handler);
+        using var client = new GlimmerClient(http);
+
+        MetaApiException ex = await Assert.ThrowsAsync<MetaApiException>(() => client.ProbeAsync());
+        Assert.Contains("ok", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Probe_rejects_non_glimmer_returned_model()
+    {
+        // Route model is non-Glimmer AND returned model is non-Glimmer -> stop.
+        using var _ = new EnvScope(new Dictionary<string, string>
+        {
+            [GlimmerAuth.BaseUrlEnv] = "https://glimmer.example/openai/v1",
+            [GlimmerAuth.ApiKeyEnv] = "k",
+            [GlimmerAuth.ModelEnv] = "muse-spark-1.1", // not a Glimmer model
+        });
+        // ChatResponse reports model "muse-spark-1.1" (also not Glimmer).
+        var handler = new DelegatingHandlerStub((_, _) => Task.FromResult(ChatResponse("{\"ok\": true}")));
+        using var http = new HttpClient(handler);
+        using var client = new GlimmerClient(http);
+
+        MetaApiException ex = await Assert.ThrowsAsync<MetaApiException>(() => client.ProbeAsync());
+        Assert.Contains("non-Glimmer", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Probe_failure_throws_so_the_caller_can_stop_before_the_loop()
+    {
+        using var _ = FakeGlimmerRoute();
+        var handler = new DelegatingHandlerStub((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized)
+            {
+                Content = new StringContent("{\"error\":\"invalid key\"}", Encoding.UTF8, "application/json"),
+            }));
+        using var http = new HttpClient(handler);
+        using var client = new GlimmerClient(http);
+
+        MetaApiException ex = await Assert.ThrowsAsync<MetaApiException>(() => client.ProbeAsync());
+        Assert.Contains("401", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Probe_fails_closed_with_zero_calls_when_route_unset()
+    {
+        using var _ = new EnvScope(new Dictionary<string, string>
+        {
+            [GlimmerAuth.BaseUrlEnv] = string.Empty,
+            [GlimmerAuth.ApiKeyEnv] = string.Empty,
+            [GlimmerAuth.ModelEnv] = string.Empty,
+        });
+        int calls = 0;
+        var handler = new DelegatingHandlerStub((_, _) =>
+        {
+            Interlocked.Increment(ref calls);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        });
+        using var http = new HttpClient(handler);
+        using var client = new GlimmerClient(http);
+
+        await Assert.ThrowsAsync<GlimmerNotConfiguredException>(() => client.ProbeAsync());
+        Assert.Equal(0, calls);
+    }
+
     [Fact]
     public async Task Missing_env_configuration_fails_closed_with_zero_calls()
     {
