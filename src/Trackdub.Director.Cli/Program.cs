@@ -164,7 +164,7 @@ static ParseResult<TranslateArguments> TryParseTranslateArgs(CommandArgs args)
 
         if (!result.TryApply(option, new OptionValue(values[i + 1]), out ParseError? error))
         {
-            return ParseResult<TranslateArguments>.Failure(error!);
+            return ParseResult<TranslateArguments>.Failure(error ?? new ParseError($"Invalid value for '{TranslateOptionFlags.ToFlag(option)}'."));
         }
 
         i++;

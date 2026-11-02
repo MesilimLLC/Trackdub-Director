@@ -186,7 +186,7 @@ internal static class QaCli
 
             if (!parsed.TryApply(option, new OptionValue(values[i + 1]), out ParseError? error))
             {
-                return ParseResult<QaArguments>.Failure(error!);
+                return ParseResult<QaArguments>.Failure(error ?? new ParseError($"Invalid value for '{QaOptionFlags.ToFlag(option)}'."));
             }
 
             i++;
@@ -322,7 +322,7 @@ internal static class QaCli
     {
         if (HasMeaningIssues(attempt.MeaningIssues))
         {
-            Console.WriteLine($"    first meaning issues: {string.Join("; ", attempt.MeaningIssues)}");
+            Console.WriteLine($"    first meaning issues: {string.Join("; ", attempt.MeaningIssues ?? [])}");
             if (!string.IsNullOrWhiteSpace(attempt.MeaningExplanation))
             {
                 Console.WriteLine($"    first meaning explanation: {attempt.MeaningExplanation}");
@@ -343,7 +343,7 @@ internal static class QaCli
             Console.WriteLine($"    rev #{rev.AttemptNumber}: {rev.Verdict.ToString().ToLowerInvariant()} (timing {timing} meaning {meaning}) {rev.EstimatedSeconds:0.00}s \"{Trunc(rev.Translation, 64)}\" meanTok {rev.MeaningTotalTokens}");
             if (HasMeaningIssues(rev.MeaningIssues))
             {
-                Console.WriteLine($"      meaning issues: {string.Join("; ", rev.MeaningIssues)}");
+                Console.WriteLine($"      meaning issues: {string.Join("; ", rev.MeaningIssues ?? [])}");
             }
 
             if (!string.IsNullOrWhiteSpace(rev.MeaningExplanation))
