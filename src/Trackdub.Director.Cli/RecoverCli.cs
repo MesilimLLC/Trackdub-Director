@@ -86,7 +86,10 @@ internal static class RecoverCli
         var glimmerBudget = new CallBudget(GlimmerCallCap);
         var metaBudget = new CallBudget(MetaCallCap);
 
-        using var glimmerHttp = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
+        // Glimmer-30B on managed compute can take minutes per call under reasoning; a 120s HTTP
+        // timeout is too tight for the loop (the probe succeeded in ~6s, but a full recovery turn
+        // is much heavier). Give the loop calls generous headroom; the run cap still bounds spend.
+        using var glimmerHttp = new HttpClient { Timeout = TimeSpan.FromSeconds(600) };
         using var glimmer = new GlimmerClient(glimmerHttp);
         using var meta = new MetaClient();
 
