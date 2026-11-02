@@ -44,10 +44,31 @@ these numbers (`dotnet run` build-check only).
 
 ### End-to-end wall time
 
-**NotMeasured** for every dataset. No single captured run measured one full
-demo-asset run (translate + QA + scene) through the app. The localisation
-manifest carries per-frame lane walls (21.03 / 28.84 / 11.67 s); those are lane
-walls, not end-to-end, and are not summed into one.
+**18.37 s** (voa10, one full demo-asset run: translate + QA + scene through the
+app). Measured 2026-11-02 on `main` at `29a4b18b77f60357ad16d3e25b52e2fe543abedd`
+by one `trackdub-director pipeline` invocation over the committed voa10 inputs
+(`samples/voa10/segments.json` + `samples/voa10/scene-input.json`), timed end to
+end with a stopwatch around the single CLI call (the Debug build was already up
+to date, so no compile time is inside the number). Both lanes Ran (transcribe
+NotRun — no audio supplied; audition SkippedByFlag — off by design). The earlier
+localisation manifest's per-frame lane walls (21.03 / 28.84 / 11.67 s) are lane
+walls from a different stage, not this end-to-end figure, and are not summed
+into it. Model nondeterminism is real (the QA loop needed 1 revision this run);
+this number is this run, this config.
+
+```
+date: 2026-11-02
+commit: 29a4b18b77f60357ad16d3e25b52e2fe543abedd
+dataset: voa10
+config: max_attempts=3, tolerance=0.10, cps=15, reasoning_effort=low
+reports: samples/voa10/pipeline-run/e2e-wall-report.json
+first_pass: 5/6   final_pass: 6/6   revisions: 1
+meaning: catches=0, not_evaluated=1, errors=0
+tokens: translation+qa=5737 (prompt 2585 + completion 3152), scene=0 (images_processed=1)
+scene: parsed=1, target_verified=1, empty=5, failed=0
+wall_time_e2e: 18.37 s   cold_start (if measured): see Cold start above (median 3.04 s)
+notes: translate+QA+scene only (audition off by design, transcribe skipped — no audio). voa10-005 needed 1 revision (timing: "¡Vale, adiós Ashley! ¡Hasta pronto!" 2.33 s vs 2.20 s window after a 2.73 s first attempt). Scene lane: voa10-002 Parsed (concept "shop sign", 4 regions; verified box (449,145)-(751,534) is the frontal COFFEE SHOP sign per samples/voa10/NOTES.md §4), other 5 segments carry no concepts (Empty). sam-3.1 reported 0 tokens (billed per image), images_processed 1. Config is the committed uniform config (en→es). Nondeterministic — one run.
+```
 
 ## QA loop (translation + timing + meaning gate)
 
