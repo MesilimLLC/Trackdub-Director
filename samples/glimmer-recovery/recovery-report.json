@@ -1,0 +1,259 @@
+{
+  "source_language": "en",
+  "target_language": "es",
+  "glimmer_model": "meta-models--muse-glimmer-30b",
+  "glimmer_reasoning_effort": "low",
+  "meaning_model": "muse-spark-1.1",
+  "meaning_prompt_template_version": "meaning-v1",
+  "max_attempts_per_item": 3,
+  "probe": {
+    "host": "trackdub-6788-resource.services.ai.azure.com",
+    "requested_model": "meta-models--muse-glimmer-30b",
+    "returned_model": "meta-models--muse-glimmer-30b",
+    "prompt_tokens": 68,
+    "completion_tokens": 163,
+    "total_tokens": 231,
+    "wall_seconds": 7.0938166
+  },
+  "run_error": null,
+  "items": [
+    {
+      "source_file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-002",
+      "attempt_number": 2,
+      "source_line": "Hi Ashley!",
+      "window_seconds": 0.5,
+      "failure_type": "Meaning",
+      "outcome": "Recovered",
+      "recovered_text": "\u00A1Ashley!",
+      "attempts": [
+        {
+          "attempt_number": 1,
+          "glimmer_action": "Propose",
+          "malformed_reply": false,
+          "proposed_text": "\u00A1Ashley!",
+          "strategy": "Include named entity Ashley in a short greeting to fit timing window.",
+          "measured_seconds": 0.5333333333333333,
+          "window_seconds": 0.5,
+          "timing_verdict": "Pass",
+          "meaning_verdict": "Pass",
+          "meaning_issues": [],
+          "meaning_explanation": "Both are a greeting/vocative addressing Ashley; named entity preserved and omission of \u0027Hi\u0027 does not change material intent.",
+          "attempt_recovered": true,
+          "glimmer_usage": {
+            "prompt_tokens": 372,
+            "completion_tokens": 920,
+            "total_tokens": 1292
+          },
+          "meaning_usage": {
+            "prompt_tokens": 348,
+            "completion_tokens": 424,
+            "total_tokens": 772
+          }
+        }
+      ]
+    },
+    {
+      "source_file": "samples/meaning-eval/qa-report-pressure-70.json",
+      "segment_id": "seg-006",
+      "attempt_number": 2,
+      "source_line": "Where are we shooting tomorrow?",
+      "window_seconds": 1.12,
+      "failure_type": "Meaning",
+      "outcome": "Recovered",
+      "recovered_text": "\u00BFD\u00F3nde rodar ma\u00F1?",
+      "attempts": [
+        {
+          "attempt_number": 1,
+          "glimmer_action": "Propose",
+          "malformed_reply": false,
+          "proposed_text": "\u00BFD\u00F3nde rodamos ma\u00F1ana?",
+          "strategy": "Restore the location interrogative \u2018d\u00F3nde\u2019 that was dropped, using the concise verb rodamos to keep the letter count close to the target window while preserving the full meaning of where we are shooting tomorrow.",
+          "measured_seconds": 1.4666666666666666,
+          "window_seconds": 1.12,
+          "timing_verdict": "Fail",
+          "meaning_verdict": "NotEvaluated",
+          "meaning_issues": null,
+          "meaning_explanation": null,
+          "attempt_recovered": false,
+          "glimmer_usage": {
+            "prompt_tokens": 389,
+            "completion_tokens": 2892,
+            "total_tokens": 3281
+          },
+          "meaning_usage": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0
+          }
+        },
+        {
+          "attempt_number": 2,
+          "glimmer_action": "Propose",
+          "malformed_reply": false,
+          "proposed_text": "\u00BFD\u00F3nde rodar ma\u00F1?",
+          "strategy": "Shorten to infinitive and abbreviate ma\u00F1ana to ma\u00F1 to meet timing while retaining where, shooting and tomorrow.",
+          "measured_seconds": 1.1333333333333333,
+          "window_seconds": 1.12,
+          "timing_verdict": "Pass",
+          "meaning_verdict": "Pass",
+          "meaning_issues": [],
+          "meaning_explanation": "Core meaning \u0027where are we shooting tomorrow\u0027 is preserved as \u0027\u00BFD\u00F3nde rodar ma\u00F1?\u0027 despite truncation/abbreviation of \u0027ma\u00F1ana\u0027 and infinitive form; location, action (shooting), and temporal reference remain intact.",
+          "attempt_recovered": true,
+          "glimmer_usage": {
+            "prompt_tokens": 418,
+            "completion_tokens": 6315,
+            "total_tokens": 6733
+          },
+          "meaning_usage": {
+            "prompt_tokens": 353,
+            "completion_tokens": 633,
+            "total_tokens": 986
+          }
+        }
+      ]
+    },
+    {
+      "source_file": "samples/meaning-eval/qa-report-pressure-70.json",
+      "segment_id": "seg-006",
+      "attempt_number": 3,
+      "source_line": "Where are we shooting tomorrow?",
+      "window_seconds": 1.12,
+      "failure_type": "Meaning",
+      "outcome": "Recovered",
+      "recovered_text": "\u00BFD\u00F3nde rodamos m\u00F1?",
+      "attempts": [
+        {
+          "attempt_number": 1,
+          "glimmer_action": "Propose",
+          "malformed_reply": false,
+          "proposed_text": "\u00BFD\u00F3nde rodamos ma\u00F1ana?",
+          "strategy": "Add temporal reference ma\u00F1ana to restore meaning while keeping the phrase as short as possible for the 1.12 s window.",
+          "measured_seconds": 1.4666666666666666,
+          "window_seconds": 1.12,
+          "timing_verdict": "Fail",
+          "meaning_verdict": "NotEvaluated",
+          "meaning_issues": null,
+          "meaning_explanation": null,
+          "attempt_recovered": false,
+          "glimmer_usage": {
+            "prompt_tokens": 371,
+            "completion_tokens": 2312,
+            "total_tokens": 2683
+          },
+          "meaning_usage": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0
+          }
+        },
+        {
+          "attempt_number": 2,
+          "glimmer_action": "Propose",
+          "malformed_reply": false,
+          "proposed_text": "\u00BFD\u00F3nde rodamos m\u00F1?",
+          "strategy": "Keep conjugated verb rodamos to preserve we-shoot meaning and shorten ma\u00F1ana to m\u00F1 to fit the 1.12 s timing window while retaining the temporal reference.",
+          "measured_seconds": 1.2,
+          "window_seconds": 1.12,
+          "timing_verdict": "Pass",
+          "meaning_verdict": "Pass",
+          "meaning_issues": [],
+          "meaning_explanation": "Candidate translates \u0027Where are we shooting tomorrow?\u0027 as \u0027\u00BFD\u00F3nde rodamos ma\u00F1ana?\u0027 using common abbreviation \u0027m\u00F1\u0027 for ma\u00F1ana, preserving subject, action, location question, and time reference.",
+          "attempt_recovered": true,
+          "glimmer_usage": {
+            "prompt_tokens": 400,
+            "completion_tokens": 10885,
+            "total_tokens": 11285
+          },
+          "meaning_usage": {
+            "prompt_tokens": 353,
+            "completion_tokens": 220,
+            "total_tokens": 573
+          }
+        }
+      ]
+    },
+    {
+      "source_file": "samples/meaning-eval/qa-report-pressure-70.json",
+      "segment_id": "seg-007",
+      "attempt_number": 2,
+      "source_line": "Thank you for joining us today.",
+      "window_seconds": 0.84,
+      "failure_type": "Meaning",
+      "outcome": "Recovered",
+      "recovered_text": "Gracias venir",
+      "attempts": [
+        {
+          "attempt_number": 1,
+          "glimmer_action": "Propose",
+          "malformed_reply": false,
+          "proposed_text": "Gracias por venir",
+          "strategy": "Restore the material reason for thanks by keeping \u0027por venir\u0027 for joining/coming, dropping \u0027today/us\u0027 to fit the ~0.84s window; prioritises meaning over the temporal adjunct.",
+          "measured_seconds": 1.1333333333333333,
+          "window_seconds": 0.84,
+          "timing_verdict": "Fail",
+          "meaning_verdict": "NotEvaluated",
+          "meaning_issues": null,
+          "meaning_explanation": null,
+          "attempt_recovered": false,
+          "glimmer_usage": {
+            "prompt_tokens": 385,
+            "completion_tokens": 4530,
+            "total_tokens": 4915
+          },
+          "meaning_usage": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0
+          }
+        },
+        {
+          "attempt_number": 2,
+          "glimmer_action": "Propose",
+          "malformed_reply": false,
+          "proposed_text": "Gracias venir",
+          "strategy": "Shortened to fit the 0.84s window while retaining the thank-you-for-coming core; dropped \u0027por\u0027 and \u0027hoy\u0027 to meet timing and keep the material action of joining.",
+          "measured_seconds": 0.8666666666666667,
+          "window_seconds": 0.84,
+          "timing_verdict": "Pass",
+          "meaning_verdict": "Pass",
+          "meaning_issues": [],
+          "meaning_explanation": "Candidate conveys the core gratitude for joining/coming despite omission of \u0027us\u0027 and \u0027today\u0027 and missing \u0027por\u0027, which are minor shortenings and a grammatical slip that do not change material intent.",
+          "attempt_recovered": true,
+          "glimmer_usage": {
+            "prompt_tokens": 412,
+            "completion_tokens": 6054,
+            "total_tokens": 6466
+          },
+          "meaning_usage": {
+            "prompt_tokens": 351,
+            "completion_tokens": 797,
+            "total_tokens": 1148
+          }
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "total_items": 4,
+    "recovered": 4,
+    "still_refused": 0,
+    "distinct_lines": 3,
+    "distinct_lines_recovered": 3,
+    "distinct_lines_still_refused": 0,
+    "glimmer_calls": 8,
+    "meta_calls": 4,
+    "glimmer_call_cap": 45,
+    "meta_call_cap": 35,
+    "glimmer_tokens": {
+      "prompt_tokens": 2815,
+      "completion_tokens": 34071,
+      "total_tokens": 36886
+    },
+    "meta_tokens": {
+      "prompt_tokens": 1405,
+      "completion_tokens": 2074,
+      "total_tokens": 3479
+    }
+  }
+}
