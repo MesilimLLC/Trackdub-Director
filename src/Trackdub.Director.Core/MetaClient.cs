@@ -33,8 +33,9 @@ public sealed class MetaClient : IDisposable
     private readonly HttpClient _httpClient;
     private readonly bool _ownsClient;
     private readonly CallBudget? _budget;
+    private readonly string? _apiKeyOverride;
 
-    public MetaClient(HttpClient? httpClient = null)
+    public MetaClient(HttpClient? httpClient = null, string? apiKeyOverride = null)
     {
         if (httpClient is not null)
         {
@@ -46,6 +47,8 @@ public sealed class MetaClient : IDisposable
             _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
             _ownsClient = true;
         }
+
+        _apiKeyOverride = apiKeyOverride;
     }
 
     private MetaClient(MetaClient parent, CallBudget budget)
@@ -53,6 +56,7 @@ public sealed class MetaClient : IDisposable
         _httpClient = parent._httpClient;
         _ownsClient = false;
         _budget = budget;
+        _apiKeyOverride = parent._apiKeyOverride;
     }
 
     /// <summary>
@@ -109,7 +113,9 @@ public sealed class MetaClient : IDisposable
         string? content = parsed?.Choices?.FirstOrDefault()?.Message?.Content?.Trim();
         if (string.IsNullOrWhiteSpace(content))
         {
-            throw new MetaApiException($"Unexpected Meta Model API response shape: {Truncate(body)}");
+            // A 2xx body that billed tokens but carried no content still billed: pass the parsed usage
+            // through the failure so callers account for it instead of recording zero.
+            throw new MetaApiException($"Unexpected Meta Model API response shape: {Truncate(body)}", ToUsage(parsed?.Usage));
         }
 
         return content;
@@ -119,6 +125,63 @@ public sealed class MetaClient : IDisposable
     {
         return usage is null ? null : new TokenUsage(usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens);
     }
+
+    /// <summary>
+    /// Reads billed usage from a failed-call response body (e.g. the Spark Open handler's 502 body),
+    /// so tokens the API billed for are not lost on the error path.
+    /// </summary>
+    private static TokenUsage? ReadErrorUsage(string body)
+    {
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(body);
+            return TryReadUsage(doc.RootElement, out TokenUsage? usage) ? usage : null;
+        }
+        catch (JsonException)
+        {
+            // Not JSON or no usage object: null usage is fine.
+        }
+
+        return null;
+    }
+
+    private static bool TryReadUsage(JsonElement root, out TokenUsage? usage)
+    {
+        usage = null;
+        if (!TryGetObjectProperty(root, "usage", out JsonElement usageElement))
+        {
+            return false;
+        }
+
+        usage = new TokenUsage(
+            ReadUsageInt(usageElement, "prompt_tokens"),
+            ReadUsageInt(usageElement, "completion_tokens"),
+            ReadUsageInt(usageElement, "total_tokens"));
+        return true;
+    }
+
+    private static bool TryGetObjectProperty(JsonElement root, string name, out JsonElement value)
+    {
+        value = default;
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        if (!root.TryGetProperty(name, out value))
+        {
+            return false;
+        }
+
+        return value.ValueKind == JsonValueKind.Object;
+    }
+
+    private static int ReadUsageInt(JsonElement obj, string name)
+        => obj.TryGetProperty(name, out JsonElement value)
+            && value.ValueKind == JsonValueKind.Number
+            && value.TryGetInt32(out int number)
+            ? number
+            : 0;
 
     private static TokenUsageDetail? ToUsageDetail(UsageDto? usage)
     {
@@ -485,10 +548,12 @@ public sealed class MetaClient : IDisposable
         return imageUrl;
     }
 
-    private static HttpRequestMessage CreateAuthorizedRequest(HttpMethod method, string url, string? json)
+    private HttpRequestMessage CreateAuthorizedRequest(HttpMethod method, string url, string? json)
     {
         var request = new HttpRequestMessage(method, url);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", MetaAuth.GetApiKey());
+        // Instance-scoped override (e.g. the Spark Open adapter, whose handler re-signs the request
+        // with the deployment key) avoids a dependency on the hosted MetaAuth credentials entirely.
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKeyOverride ?? MetaAuth.GetApiKey());
         if (json is not null)
         {
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -524,7 +589,9 @@ public sealed class MetaClient : IDisposable
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new MetaApiException($"Meta Model API HTTP {(int)response.StatusCode}: {Truncate(new BodyText(body))}");
+                throw new MetaApiException(
+                    $"Meta Model API HTTP {(int)response.StatusCode}: {Truncate(new BodyText(body))}",
+                    ReadErrorUsage(body));
             }
 
             return body;
@@ -647,31 +714,10 @@ public sealed class MetaClient : IDisposable
 
         private static IEnumerable<string> TextParts(JsonElement root)
         {
-            if (!root.TryGetProperty("output", out JsonElement output) || output.ValueKind != JsonValueKind.Array)
-            {
-                throw new MetaApiException("Unexpected Meta Model API response shape: missing or non-array 'output'.");
-            }
-
             var parts = new List<string>();
-            foreach (JsonElement item in output.EnumerateArray())
+            foreach (JsonElement item in OutputItems(root).EnumerateArray())
             {
-                if (item.ValueKind != JsonValueKind.Object)
-                {
-                    throw new MetaApiException("Unexpected Meta Model API output item shape.");
-                }
-
-                foreach (JsonElement part in ContentParts(item))
-                {
-                    if (part.ValueKind != JsonValueKind.Object)
-                    {
-                        throw new MetaApiException("Unexpected Meta Model API output content shape.");
-                    }
-
-                    if (IsOutputText(part))
-                    {
-                        parts.Add(part.GetProperty("text").GetString() ?? string.Empty);
-                    }
-                }
+                CollectTextParts(item, parts);
             }
 
             // A concept miss is represented by an explicit empty output_text part.
@@ -682,6 +728,47 @@ public sealed class MetaClient : IDisposable
             }
 
             return parts;
+        }
+
+        private static JsonElement OutputItems(JsonElement root)
+        {
+            if (!root.TryGetProperty("output", out JsonElement output))
+            {
+                throw new MetaApiException("Unexpected Meta Model API response shape: missing or non-array 'output'.");
+            }
+
+            if (output.ValueKind != JsonValueKind.Array)
+            {
+                throw new MetaApiException("Unexpected Meta Model API response shape: missing or non-array 'output'.");
+            }
+
+            return output;
+        }
+
+        private static void CollectTextParts(JsonElement item, List<string> parts)
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                throw new MetaApiException("Unexpected Meta Model API output item shape.");
+            }
+
+            foreach (JsonElement part in ContentParts(item))
+            {
+                AddTextPart(part, parts);
+            }
+        }
+
+        private static void AddTextPart(JsonElement part, List<string> parts)
+        {
+            if (part.ValueKind != JsonValueKind.Object)
+            {
+                throw new MetaApiException("Unexpected Meta Model API output content shape.");
+            }
+
+            if (IsOutputText(part))
+            {
+                parts.Add(part.GetProperty("text").GetString() ?? string.Empty);
+            }
         }
 
         private static IEnumerable<JsonElement> ContentParts(JsonElement item)

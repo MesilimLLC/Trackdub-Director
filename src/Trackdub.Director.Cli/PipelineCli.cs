@@ -129,6 +129,10 @@ internal static class PipelineCli
 
         try
         {
+            // Pre-flight auth: a missing hosted key is a configuration error, not a QA stage that
+            // reports every segment as failed with a generic "translation generation failed upstream".
+            _ = MetaAuth.GetApiKey();
+
             PipelineRequest? request = await BuildRequestAsync(audio, input, sceneInput, scene, audition, from, to).ConfigureAwait(false);
             if (request is null)
             {

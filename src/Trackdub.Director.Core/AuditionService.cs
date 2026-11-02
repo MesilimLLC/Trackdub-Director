@@ -211,21 +211,37 @@ public sealed class AuditionService
     {
         // Account every Meta call QA made: one translate/revise call per
         // attempt plus one meaning call per evaluated attempt.
+        int attemptTokens = 0;
         foreach (QaAttemptReport attempt in AllAttempts(segment))
         {
             run.MetaCalls++;
             run.TranslationTokens += attempt.TotalTokens;
             run.MeaningTokens += attempt.MeaningTotalTokens;
+            attemptTokens += attempt.TotalTokens + attempt.MeaningTotalTokens;
             if (attempt.MeaningVerdict != MeaningVerdict.NotEvaluated)
             {
                 run.MetaCalls++;
             }
         }
+
+        // The segment total also holds the billed usage of a failed generation call (a revision that
+        // billed then failed records no attempt). The remainder after subtracting the recorded attempts'
+        // usage is that failed call's tokens; count it so the run's totals do not lose billed usage.
+        int failedCallTokens = segment.TokenUsage.TotalTokens - attemptTokens;
+        if (failedCallTokens > 0)
+        {
+            run.TranslationTokens += failedCallTokens;
+        }
     }
 
     private static IEnumerable<QaAttemptReport> AllAttempts(QaSegmentReport segment)
     {
-        yield return segment.FirstAttempt;
+        // A failed generation (generation_error, null first_attempt) contributes no attempts.
+        if (segment.FirstAttempt is not null)
+        {
+            yield return segment.FirstAttempt;
+        }
+
         foreach (QaAttemptReport revision in segment.Revisions)
         {
             yield return revision;

@@ -159,6 +159,10 @@ internal static class ApiHandlers
     {
         try
         {
+            // Pre-flight auth: a missing hosted key is a configuration error and gates the endpoint
+            // (401), not a per-segment generation failure to absorb into a report of failed segments.
+            _ = MetaAuth.GetApiKey();
+
             var qaService = new QaService(client, options);
 
             // Convert to QaService's input shape (already matches)

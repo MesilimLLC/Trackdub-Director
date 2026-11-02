@@ -41,41 +41,59 @@ public static class RecoverySetBuilder
     public static IReadOnlyList<RecoveryItem> FromReportJson(string reportJson, string sourceFile)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(reportJson);
-        QaReport? report;
-        try
-        {
-            report = JsonSerializer.Deserialize<QaReport>(reportJson, JsonOptions);
-        }
-        catch (JsonException ex)
-        {
-            throw new InvalidOperationException($"Invalid QA report JSON for '{sourceFile}': {ex.Message}", ex);
-        }
-
-        if (report?.Segments is null || report.QaOptions is null)
-        {
-            throw new InvalidOperationException($"QA report '{sourceFile}' has no segments or qa_options.");
-        }
-
-        foreach (QaSegmentReport segment in report.Segments)
-        {
-            if (segment.FirstAttempt is null || segment.Revisions is null)
-            {
-                throw new InvalidOperationException($"QA report '{sourceFile}' has a segment without first_attempt or revisions.");
-            }
-        }
+        var label = new SourceLabel(sourceFile);
+        QaReport report = ParseReport(new ReportJson(reportJson), label);
+        EnsureRevisions(report, label);
 
         var items = new List<RecoveryItem>();
         foreach (QaSegmentReport segment in report.Segments)
         {
-            items.AddRange(QualifyingItems(report, segment, sourceFile));
+            // A failed generation (generation_error, null first_attempt) carries no attempts to recover.
+            if (segment.FirstAttempt is null)
+            {
+                continue;
+            }
+
+            items.AddRange(QualifyingItems(report, segment, label));
         }
 
         return items;
     }
 
-    private static IEnumerable<RecoveryItem> QualifyingItems(QaReport report, QaSegmentReport segment, string sourceFile)
+    private static QaReport ParseReport(ReportJson reportJson, SourceLabel sourceFile)
     {
-        QaAttemptReport[] allAttempts = new[] { segment.FirstAttempt }.Concat(segment.Revisions).ToArray();
+        QaReport? report;
+        try
+        {
+            report = JsonSerializer.Deserialize<QaReport>(reportJson.Value, JsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException($"Invalid QA report JSON for '{sourceFile.Value}': {ex.Message}", ex);
+        }
+
+        if (report?.Segments is null || report.QaOptions is null)
+        {
+            throw new InvalidOperationException($"QA report '{sourceFile.Value}' has no segments or qa_options.");
+        }
+
+        return report;
+    }
+
+    private static void EnsureRevisions(QaReport report, SourceLabel sourceFile)
+    {
+        foreach (QaSegmentReport segment in report.Segments)
+        {
+            if (segment.Revisions is null)
+            {
+                throw new InvalidOperationException($"QA report '{sourceFile.Value}' has a segment without revisions.");
+            }
+        }
+    }
+
+    private static IEnumerable<RecoveryItem> QualifyingItems(QaReport report, QaSegmentReport segment, SourceLabel sourceFile)
+    {
+        QaAttemptReport[] allAttempts = new[] { segment.FirstAttempt! }.Concat(segment.Revisions).ToArray();
         bool segmentExhausted = segment.FinalVerdict != QaVerdict.Pass;
 
         foreach (QaAttemptReport attempt in allAttempts)
@@ -96,7 +114,7 @@ public static class RecoverySetBuilder
         }
     }
 
-    private static RecoveryItem BuildItem(QaReport report, QaSegmentReport segment, QaAttemptReport attempt, string sourceFile)
+    private static RecoveryItem BuildItem(QaReport report, QaSegmentReport segment, QaAttemptReport attempt, SourceLabel sourceFile)
     {
         RecoveryFailureType failureType = attempt.TimingVerdict == QaVerdict.Fail
             ? RecoveryFailureType.Timing
@@ -108,7 +126,7 @@ public static class RecoverySetBuilder
             : DurationEstimator.DefaultCharactersPerSecond;
 
         return new RecoveryItem(
-            SourceFile: sourceFile,
+            SourceFile: sourceFile.Value,
             SegmentId: segment.Id,
             AttemptNumber: attempt.AttemptNumber,
             SourceLine: segment.Text,
@@ -151,6 +169,10 @@ public static class RecoverySetBuilder
 
         return reasons.ToArray();
     }
+
+    private readonly record struct ReportJson(string Value);
+
+    private readonly record struct SourceLabel(string Value);
 
     private static string SourceFileLabel(string path)
     {

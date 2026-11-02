@@ -234,7 +234,13 @@ input file and writes a QA report JSON. Per segment: the timing window (explicit
 `duration_seconds` or source-estimated), the first-attempt estimate and verdict,
 each revision attempt, the final verdict, and token usage across all attempts.
 A line that still fails after max attempts is reported as `Fail`, never
-silently accepted.
+silently accepted. A translation or revision call that fails is recorded on its
+own segment (a failed initial translation leaves `first_attempt` null; a failed
+revision keeps the completed first attempt; either way the error goes in
+`generation_error` and any tokens the API billed in `token_usage`) and the run
+continues with the remaining segments, so a failed line never erases the
+completed segments or their billed usage. Totals carry `failed_segments` for
+every such generation failure, whether the first attempt completed or not.
 
 Configurable: `--max-attempts` (default 3), `--tolerance` (fraction, default
 `0.10` = 10%), `--cps` (characters per second for the target language, default
@@ -265,7 +271,7 @@ Report shape (`qa-report.json`):
       "token_usage": { "prompt_tokens": 52, "completion_tokens": 96, "total_tokens": 148 }
     }
   ],
-  "totals": { "total_segments": 8, "first_pass_count": 4, "final_pass_count": 8, "total_revisions": 4, "first_pass_rate": 0.5, "final_pass_rate": 1.0, "total_tokens": 4398 }
+  "totals": { "total_segments": 8, "first_pass_count": 4, "final_pass_count": 8, "total_revisions": 4, "first_pass_rate": 0.5, "final_pass_rate": 1.0, "total_tokens": 4398, "failed_segments": 0 }
 }
 ```
 
