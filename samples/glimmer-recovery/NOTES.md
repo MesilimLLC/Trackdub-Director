@@ -41,3 +41,5 @@ from the captured QA reports (gate outputs), never from the seeded meaning-eval 
 - `seg-006` att#2 (samples/meaning-eval/qa-report-pressure-70.json, Meaning, window 1.12s): Recovered -> "¿Dónde rodar mañ?" [2 attempt(s)]
 - `seg-006` att#3 (samples/meaning-eval/qa-report-pressure-70.json, Meaning, window 1.12s): Recovered -> "¿Dónde rodamos mñ?" [2 attempt(s)]
 - `seg-007` att#2 (samples/meaning-eval/qa-report-pressure-70.json, Meaning, window 0.84s): Recovered -> "Gracias venir" [2 attempt(s)]
+
+Disclosure: two of the three recovered lines are telegraphic. The seg-006 winners clip mañana to the non-word forms "mañ" and "mñ", and the seg-007 winner "Gracias venir" is telegram-speak. The meaning gate passed all of them as preserving intent. The 4 of 4 recovery figure should always be cited with this disclosure.

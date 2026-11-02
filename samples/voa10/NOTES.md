@@ -51,7 +51,7 @@ that line; `git ls-files samples/voa10/media/` is empty.
 
 - Hero: `samples/voa10/frames/hero-0242.jpg`, extracted at clip-relative 6.52s
   (source 02:42.00 = clip start 155.48 + 6.52), 1920x1080 JPEG, 211,450 bytes,
-  SHA-256 `2f3e4cbba9adcb4d2afdd15eca1cfeb102ff8bd0b19e849e97ae05b764d64dd`.
+  SHA-256 `2f3e4cbba9adcb4d2afdd15eca1cfeb102ff8bd0b19e849e97ae05b764d64dd7`.
   This dataset hero supersedes the spec's source-frame hash (the spec's 116,769-byte
   source frame predates the cleaned clip; different bytes, same instant).
 - Frontal COFFEE SHOP door-sign box, human ground truth for Oct 31 accuracy scoring

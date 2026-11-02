@@ -5,7 +5,7 @@ quietly: a translated line runs long, drops the subject, or a sign in the shot
 stays in English, and nothing downstream checks. Trackdub Director puts
 verification gates between every stage and records a verdict, with provenance
 and token cost, for every line and frame. Built on the Meta Model API for the
-Meta AI Developer Hackathon (Oct 26 - Nov 4, 2026).
+Meta AI Developer Hackathon's **Build for Your World** track (Oct 26 - Nov 4, 2026).
 
 ## What was built during the event
 
@@ -68,8 +68,15 @@ Every figure comes from a report file in this repo; method in
   frame (`samples/voa10/sign-shot-report.json`). Starting the window one
   frame early takes in the previous shot (box SSIM 0.28), and the gate
   refuses and writes no video (`samples/voa10/sign-shot-refused-report.json`).
-- **Tests:** 259 .NET test cases discovered (261 executed; one theory over
-  record-typed data is discovered as a single case) and 11 web tests.
+- **Open-weight lanes (opt-in, measured, never the default):** Muse Spark
+  Open served as an independent meaning judge (73 of 75 agreement with the
+  hosted judge), produced a gate-verified translation track for the 6 demo
+  lines, and translated the 40-line eval set with meaning 40 of 40 and
+  timing 22 of 40; Muse Glimmer ran as a recovery agent and recovered all
+  4 refused attempts across 3 lines, with two winning lines telegraphic
+  (`samples/spark-open/`, `samples/glimmer-recovery/`).
+- **Tests:** 486 .NET tests executed and passed (484 listed cases) and
+  12 web tests at `9ababf0`.
 
 ## Adoption
 
@@ -373,7 +380,8 @@ pressure dataset.
 ## Verify-only receipt
 
 `verify-only` is a CI-style gate over a captured run, with zero network
-calls. It reads `audition-manifest.json` and recomputes every verdict from
+calls. It is the one-click verification path: one command re-derives every
+verdict from the recorded numbers and says Verified or HumanReviewRequired. It reads `audition-manifest.json` and recomputes every verdict from
 the recorded numbers; no summary field (cast flag, winner flag, timing
 verdict) is trusted as a pass. A line is **Verified** only if it has a
 winning take, that take re-passes the QA lane duration check against the
