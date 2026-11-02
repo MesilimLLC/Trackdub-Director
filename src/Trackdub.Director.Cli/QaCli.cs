@@ -311,6 +311,10 @@ internal static class QaCli
             Console.WriteLine($"  {seg.Id}: window {seg.WindowSeconds:0.00}s | first {firstFlag} (timing {firstTiming} meaning {firstMeaning} {seg.FirstAttempt.EstimatedSeconds:0.00}s, {seg.FirstAttempt.Translation.Length}c) | final {flag} ({seg.FinalTranslation!.Length}c, {seg.TokenUsage.TotalTokens} tok) | revisions {seg.Revisions.Length}");
             PrintFirstMeaning(seg.FirstAttempt);
             PrintRevisions(seg.Revisions);
+            if (seg.GenerationError is not null)
+            {
+                Console.WriteLine($"    generation error: {seg.GenerationError}");
+            }
         }
     }
 

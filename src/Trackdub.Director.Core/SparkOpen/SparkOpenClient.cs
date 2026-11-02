@@ -48,6 +48,11 @@ public sealed class SparkOpenClient : ISparkOpenClient
         ArgumentNullException.ThrowIfNull(rewritingInner);
         ArgumentNullException.ThrowIfNull(rawInner);
 
+        // The Bearer key is sent to this route on both paths; the same https-or-loopback rule the env
+        // path enforces applies to an injected config too, so a plaintext non-loopback deployment URL
+        // fails here before any request is built.
+        SparkOpenAuth.RequireValidBaseUrl(_config.BaseUrl);
+
         _rewritingHttpClient = new HttpClient(new SparkOpenChatHandler(config, rewritingInner)) { Timeout = TimeSpan.FromSeconds(120) };
         _rawHttpClient = new HttpClient(rawInner) { Timeout = TimeSpan.FromSeconds(120) };
         _ownsHttpClients = ownsHttpClients;
@@ -142,6 +147,11 @@ public sealed class SparkOpenClient : ISparkOpenClient
 
     private static string ReadAssistantContent(JsonElement root)
     {
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return string.Empty;
+        }
+
         if (!root.TryGetProperty("choices", out JsonElement choices))
         {
             return string.Empty;
@@ -152,12 +162,14 @@ public sealed class SparkOpenClient : ISparkOpenClient
             return string.Empty;
         }
 
-        if (!choices[0].TryGetProperty("message", out JsonElement message))
+        if (choices[0].ValueKind != JsonValueKind.Object
+            || !choices[0].TryGetProperty("message", out JsonElement message))
         {
             return string.Empty;
         }
 
-        if (!message.TryGetProperty("content", out JsonElement content))
+        if (message.ValueKind != JsonValueKind.Object
+            || !message.TryGetProperty("content", out JsonElement content))
         {
             return string.Empty;
         }

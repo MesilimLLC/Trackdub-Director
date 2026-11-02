@@ -154,4 +154,43 @@ public sealed class SparkOpenReasoningParserTests
         Assert.True(SparkOpenReasoningParser.TryExtractFinalJsonObject(reply, out string obj));
         Assert.Contains("\"verdict\":\"pass\"", obj, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void A_quoted_example_object_does_not_displace_a_trailing_plain_answer()
+    {
+        // A translation reply that quotes an example object and then gives the real plain-text answer
+        // must not return the example's translation: the object is mid-reply, not the final answer.
+        string reply = "Example: {\"translation\":\"Si\"}\nNo, gracias.";
+
+        Assert.True(SparkOpenReasoningParser.TryExtractFinalAnswer(reply, out string answer));
+        Assert.Contains("No, gracias.", answer, StringComparison.Ordinal);
+        Assert.DoesNotContain("{\"translation\"", answer, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Ordinary_sentences_starting_with_thinking_or_response_are_not_markers()
+    {
+        // A translated line that merely begins with the word "thinking"/"response" is never rewritten
+        // into a reasoning marker, so it survives as the answer instead of becoming a truncated block.
+        Assert.True(SparkOpenReasoningParser.TryExtractFinalAnswer("Thinking of you.\nNos vemos.", out string thinking));
+        Assert.Equal("Thinking of you.\nNos vemos.", thinking);
+
+        Assert.True(SparkOpenReasoningParser.TryExtractFinalAnswer("Response to your request: No.\nAdios.", out string response));
+        Assert.Equal("Response to your request: No.\nAdios.", response);
+
+        // A standalone bare marker line is still a marker and is stripped.
+        string marked = " thinking\nreasoning text\n response\nHola.";
+        Assert.True(SparkOpenReasoningParser.TryExtractFinalAnswer(marked, out string stripped));
+        Assert.Equal("Hola.", stripped);
+    }
+
+    [Fact]
+    public void A_verdict_nested_in_a_truncated_wrapper_is_not_the_final_verdict()
+    {
+        // The reply is truncated inside the outer object; the nested verdict must not be scored as
+        // the final top-level verdict (the completed wrapper has no verdict property and is an Error).
+        string reply = "{\"draft\":{\"verdict\":\"pass\",\"issues\":[]}";
+
+        Assert.False(SparkOpenReasoningParser.TryExtractFinalJsonObject(reply, out _, requireEndOfReply: true));
+    }
 }

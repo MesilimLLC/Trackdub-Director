@@ -184,10 +184,50 @@ public sealed class SparkOpenClientTests
     }
 
     [Fact]
+    public async Task QA_path_keeps_a_meaning_verdict_that_also_carries_a_translation_string()
+    {
+        using var _ = new HostedEnvScope();
+        // A meaning reply that carries a translation string next to the verdict must not be unwrapped
+        // to that string (which would make MeaningGate parse it as a Fail); the verdict object stays.
+        var rewriting = new HandlerStub((_, body) => body.Contains(MeaningGate.MeaningMarker, StringComparison.Ordinal)
+            ? ChatResponse("{\"verdict\":\"pass\",\"issues\":[],\"explanation\":\"ok\",\"translation\":\"Hola\"}")
+            : ChatResponse("Hola."));
+        using var client = new SparkOpenClient(Config(), rewritingInner: rewriting, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
+
+        MeaningCheckResult meaning = await client.AsMetaClient().CheckMeaningAsync(
+            new MetaClient.MeaningCheckRequest("Hi.", "Hola.", "en", "es"));
+
+        Assert.Equal(MeaningVerdict.Pass, meaning.Verdict);
+    }
+
+    [Fact]
+    public async Task QA_path_fails_a_translation_reply_that_is_a_json_object_without_the_translation_key()
+    {
+        using var _ = new HostedEnvScope();
+        // The final-answer instruction names no key; a {"answer":"..."} reply must not reach timing
+        // estimates, meaning checks, or the saved report as raw JSON — it fails the call instead.
+        var rewriting = new HandlerStub((_, _) => ChatResponse("{\"answer\":\"Hola\"}"));
+        using var client = new SparkOpenClient(Config(), rewritingInner: rewriting, rawInner: new HandlerStub((_, _) => ChatResponse("{}")));
+
+        await Assert.ThrowsAsync<MetaApiException>(() =>
+            client.AsMetaClient().TranslateWithUsageAsync(new MetaClient.TranslationRequest("Hi.", "en", "es")));
+    }
+
+    [Fact]
     public void A_plaintext_http_endpoint_fails_closed()
     {
         using var _ = new SparkOpenEnvScope(new SparkOpenEnv { BaseUrl = "http://deployment.example/v1", ApiKey = "k", Model = "m" });
         Assert.Throws<SparkOpenConfigException>(() => SparkOpenAuth.Resolve());
+    }
+
+    [Fact]
+    public void An_injected_config_with_a_plaintext_non_loopback_route_fails_closed()
+    {
+        // The injected-transport constructor must enforce the same https-or-loopback rule the env path
+        // does, so a caller-supplied config cannot send the Bearer key over plaintext.
+        var config = new SparkOpenConfig("http://deployment.example/v1", "k", FakeModel, "deployment.example");
+        Assert.Throws<SparkOpenConfigException>(() =>
+            new SparkOpenClient(config, new HandlerStub((_, _) => ChatResponse("{}")), new HandlerStub((_, _) => ChatResponse("{}"))));
     }
 
     [Fact]
@@ -228,6 +268,20 @@ public sealed class SparkOpenClientTests
         MeaningCheckResult result = await client.JudgeMeaningAsync(new JudgeMeaningRequest("Hi.", "Hola.", "en", "es"));
 
         Assert.Equal(MeaningVerdict.Error, result.Verdict);
+    }
+
+    [Fact]
+    public async Task Judge_fails_closed_to_Error_when_the_verdict_is_nested_in_a_truncated_wrapper()
+    {
+        // The reply is truncated inside an outer object; the inner verdict must not be scored as the
+        // final top-level verdict (the completed wrapper has no verdict property and is an Error).
+        var raw = new HandlerStub((_, _) => ChatResponse("{\"draft\":{\"verdict\":\"pass\",\"issues\":[]}", usage: new ChatUsage(Total: 650)));
+        using var client = new SparkOpenClient(Config(), rewritingInner: new HandlerStub((_, _) => ChatResponse("{}")), rawInner: raw);
+
+        MeaningCheckResult result = await client.JudgeMeaningAsync(new JudgeMeaningRequest("Hi.", "Hola.", "en", "es"));
+
+        Assert.Equal(MeaningVerdict.Error, result.Verdict);
+        Assert.Equal(650, result.Usage?.TotalTokens);
     }
 
     [Fact]

@@ -119,6 +119,35 @@ public sealed class JudgeItemLoaderTests
     }
 
     [Fact]
+    public async Task A_pressure_report_repeated_as_a_uniform_report_is_rejected_before_judging()
+    {
+        (string cases, string pressure, _) = Paths();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            JudgeItemLoader.LoadAsync(cases, pressure, [pressure]));
+    }
+
+    [Fact]
+    public async Task A_report_for_another_language_pair_is_rejected_before_judging()
+    {
+        // Every captured judge input is en->es; a report recorded for another pair must not be judged
+        // under a mismatched target language and diffed against hosted en->es verdicts.
+        (string cases, _, _) = Paths();
+        string temp = Path.Combine(Path.GetTempPath(), $"spark-judge-{Guid.NewGuid():N}.json");
+        await File.WriteAllTextAsync(temp, "{\"source_language\":\"en\",\"target_language\":\"fr\",\"segments\":[]}");
+        try
+        {
+            InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                JudgeItemLoader.LoadAsync(cases, temp, []));
+            Assert.Contains("en->es", ex.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(temp);
+        }
+    }
+
+    [Fact]
     public async Task A_report_missing_segments_fails_with_a_clear_error()
     {
         (string cases, _, _) = Paths();

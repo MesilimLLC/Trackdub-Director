@@ -235,10 +235,12 @@ input file and writes a QA report JSON. Per segment: the timing window (explicit
 each revision attempt, the final verdict, and token usage across all attempts.
 A line that still fails after max attempts is reported as `Fail`, never
 silently accepted. A translation or revision call that fails is recorded on its
-own segment (null `first_attempt`, the error in `generation_error`, and any
-tokens the API billed in `token_usage`) and the run continues with the remaining
-segments, so a failed line never erases the completed segments or their billed
-usage. Totals carry `failed_segments` for those generation failures.
+own segment (a failed initial translation leaves `first_attempt` null; a failed
+revision keeps the completed first attempt; either way the error goes in
+`generation_error` and any tokens the API billed in `token_usage`) and the run
+continues with the remaining segments, so a failed line never erases the
+completed segments or their billed usage. Totals carry `failed_segments` for
+every such generation failure, whether the first attempt completed or not.
 
 Configurable: `--max-attempts` (default 3), `--tolerance` (fraction, default
 `0.10` = 10%), `--cps` (characters per second for the target language, default

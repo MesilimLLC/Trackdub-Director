@@ -83,7 +83,10 @@ public sealed class QaService
             totalTokens += report.TokenUsage.TotalTokens;
         }
 
-        int failedSegments = segmentReports.Count(s => s.FirstAttempt is null);
+        // A generation failure is any segment that recorded one — a failed initial translation (null
+        // first_attempt) or a failed revision (a completed first attempt plus a generation_error). Both
+        // are "failed segments"; the README documents failed_segments as counting those generation failures.
+        int failedSegments = segmentReports.Count(s => s.GenerationError is not null);
         int firstPass = segmentReports.Count(s => s.FirstAttempt?.Verdict == QaVerdict.Pass);
         int finalPass = segmentReports.Count(s => s.FinalVerdict == QaVerdict.Pass);
         int totalRevisions = segmentReports.Sum(s => s.Revisions.Length);

@@ -840,8 +840,36 @@ public sealed class QaServiceTests
         Assert.Equal(QaVerdict.Fail, seg.FinalVerdict);
         Assert.NotNull(seg.FinalTranslation);
         Assert.Contains("revision generation failed", seg.GenerationError, StringComparison.Ordinal);
-        Assert.Equal(0, report.Totals.FailedSegments); // first attempt completed, so the segment is not "failed"
+        Assert.Equal(1, report.Totals.FailedSegments); // a failed revision is a failed segment, even with a completed first attempt
         Assert.Equal(15 + 30, seg.TokenUsage.TotalTokens); // first attempt usage + failed revision's billed usage
+    }
+
+    [Fact]
+    public async Task Caller_cancellation_during_revision_propagates_instead_of_being_recorded_as_a_failure()
+    {
+        using var _ = FakeAuth();
+        using var cts = new CancellationTokenSource();
+
+        // The overrunning initial translation sends a revision request; the revision request cancels the
+        // caller token and fails as a cancelled request. A swallowed cancellation would return a normal
+        // report; the run must throw OperationCanceledException instead.
+        var meaning = new ScriptedMeta
+        {
+            Translations = new Queue<string>([
+                "Traduccion larguisima que no cabe en la ventana asignada definitivamente",
+            ]),
+            InspectRevisionBody = _ =>
+            {
+                cts.Cancel();
+                throw new TaskCanceledException();
+            },
+        };
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            RunSegments(
+                meaning.ToHandler(),
+                new QaOptions { MaxAttempts = 3, ToleranceFraction = 0.10 },
+                [new QaSegmentInput("seg-rev-ct", "Hello.", 4.2)],
+                cts.Token));
     }
 
     [Fact]

@@ -34,6 +34,18 @@ public static class SparkOpenAuth
         string apiKey = Require(ApiKeyEnv);
         string model = Require(ModelEnv);
 
+        Uri uri = RequireValidBaseUrl(baseUrl);
+        return new SparkOpenConfig(baseUrl, apiKey, model, uri.Host);
+    }
+
+    /// <summary>
+    /// Validates a Spark Open base URL: absolute, no query or fragment (the client appends
+    /// <c>/chat/completions</c>), and either HTTPS or plaintext HTTP on a loopback host only.
+    /// Shared by <see cref="Resolve"/> and <see cref="SparkOpenClient"/> so a caller-supplied
+    /// <see cref="SparkOpenConfig"/> cannot bypass the same route rules the env path enforces.
+    /// </summary>
+    public static Uri RequireValidBaseUrl(string baseUrl)
+    {
         if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out Uri? uri))
         {
             throw new SparkOpenConfigException($"{BaseUrlEnv} must be an absolute URL (the deployment's OpenAI-compatible chat completions endpoint).");
@@ -45,14 +57,17 @@ public static class SparkOpenAuth
             throw new SparkOpenConfigException($"{BaseUrlEnv} must be an absolute URL without a query or fragment (the deployment's OpenAI-compatible chat completions endpoint).");
         }
 
-        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) && !IsLoopback(uri))
+        bool isHttps = string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+        bool isLoopbackHttp = string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) && IsLoopback(uri);
+        if (!isHttps && !isLoopbackHttp)
         {
             // Plaintext HTTP would carry the deployment's Bearer key and source text unencrypted; only
-            // loopback endpoints may use it (local testing against a forwarded deployment).
+            // loopback endpoints may use it (local testing against a forwarded deployment). No other
+            // scheme (e.g. ftp) is accepted, even on a loopback host.
             throw new SparkOpenConfigException($"{BaseUrlEnv} must be an https:// URL; only loopback (localhost/127.0.0.1) endpoints may use plaintext http.");
         }
 
-        return new SparkOpenConfig(baseUrl, apiKey, model, uri.Host);
+        return uri;
     }
 
     private static bool IsLoopback(Uri uri)

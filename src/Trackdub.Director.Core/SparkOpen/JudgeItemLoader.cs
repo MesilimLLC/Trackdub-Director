@@ -37,9 +37,12 @@ public static class JudgeItemLoader
         ArgumentException.ThrowIfNullOrWhiteSpace(pressureReportPath);
         ArgumentNullException.ThrowIfNull(uniformReportPaths);
 
-        if (uniformReportPaths.Count != uniformReportPaths.Distinct(StringComparer.Ordinal).Count())
+        // The same report must never be loaded twice: a repeated path (pressure or uniform) would judge
+        // the same candidates twice and skew the agreement rate with metered calls.
+        string[] reportPaths = [pressureReportPath, .. uniformReportPaths];
+        if (reportPaths.Select(Path.GetFullPath).Distinct(StringComparer.Ordinal).Count() != reportPaths.Length)
         {
-            throw new InvalidOperationException("Uniform report paths must be unique; a repeated path judges the same candidates twice.");
+            throw new InvalidOperationException("Report paths must be unique; a repeated path judges the same candidates twice.");
         }
 
         var items = new List<JudgeItem>();
@@ -70,7 +73,22 @@ public static class JudgeItemLoader
         ArgumentException.ThrowIfNullOrWhiteSpace(reportPath.Value);
         string json = await File.ReadAllTextAsync(reportPath.Value, cancellationToken).ConfigureAwait(false);
         QaReport report = ParseReport(new ReportJson(json), reportPath);
+        ValidateLanguagePair(report, reportPath);
         return EnumerateItems(report, reportPath, source);
+    }
+
+    /// <summary>
+    /// The judge lane only ever diffs en->es candidates (every captured judge input is en to es), so a
+    /// report recorded for another pair must be rejected rather than judged under a mismatched target.
+    /// </summary>
+    private static void ValidateLanguagePair(QaReport report, ReportPath reportPath)
+    {
+        if (!string.Equals(report.SourceLanguage, "en", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(report.TargetLanguage, "es", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"QA report '{reportPath.Value}' is for {report.SourceLanguage}->{report.TargetLanguage}; the judge lane only diffs en->es candidates.");
+        }
     }
 
     private static QaReport ParseReport(ReportJson json, ReportPath reportPath)

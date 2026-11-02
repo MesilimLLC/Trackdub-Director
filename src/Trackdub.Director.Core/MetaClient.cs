@@ -113,7 +113,9 @@ public sealed class MetaClient : IDisposable
         string? content = parsed?.Choices?.FirstOrDefault()?.Message?.Content?.Trim();
         if (string.IsNullOrWhiteSpace(content))
         {
-            throw new MetaApiException($"Unexpected Meta Model API response shape: {Truncate(body)}");
+            // A 2xx body that billed tokens but carried no content still billed: pass the parsed usage
+            // through the failure so callers account for it instead of recording zero.
+            throw new MetaApiException($"Unexpected Meta Model API response shape: {Truncate(body)}", ToUsage(parsed?.Usage));
         }
 
         return content;

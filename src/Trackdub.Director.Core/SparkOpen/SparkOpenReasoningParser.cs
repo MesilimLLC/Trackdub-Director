@@ -66,7 +66,7 @@ public static class SparkOpenReasoningParser
             return lineObject;
         }
 
-        return LastBalancedObject(content, mode);
+        return LastBalancedObject(content, mode)?.Object;
     }
 
     private static ReplyText? ExtractFinalAnswer(ReplyText rawContent)
@@ -83,10 +83,30 @@ public static class SparkOpenReasoningParser
         }
 
         ReplyText content = prepared.Value;
-        ReplyText? jsonObject = ExtractFinalJsonObject(content, ExtractionMode.Permissive);
-        if (jsonObject is not null)
+        ReplyText? lastLine = LastNonBlankLine(content);
+        if (lastLine is not null && TryWholeObject(lastLine.Value, out ReplyText? lineObject))
         {
-            return jsonObject;
+            // A whole-object final line is the structured answer (a translation JSON or a meaning verdict).
+            return lineObject;
+        }
+
+        FoundObject? finalObject = LastBalancedObject(content, ExtractionMode.RequireEndOfReply);
+        if (finalObject is not null)
+        {
+            // A balanced object that ends the reply is the answer.
+            return finalObject.Value.Object;
+        }
+
+        // A JSON object embedded in prose (an example the model quoted before giving the real answer)
+        // must not displace that answer: the trailing plain text after the last embedded object wins.
+        FoundObject? embedded = LastBalancedObject(content, ExtractionMode.Permissive);
+        if (embedded is not null && embedded.Value.End < content.Value.TrimEnd().Length)
+        {
+            string tail = content.Value[embedded.Value.End..].Trim();
+            if (tail.Length > 0)
+            {
+                return new ReplyText(tail);
+            }
         }
 
         return string.IsNullOrWhiteSpace(content.Value) ? null : content.Trimmed();
@@ -182,13 +202,11 @@ public static class SparkOpenReasoningParser
 
     private static bool StartsWithToken(ReplyText trimmed, Marker marker)
     {
+        // Only a line that is exactly the marker word is rewritten, so an ordinary sentence that
+        // merely begins with "thinking" or "response" is never mistaken for a reasoning marker.
         string token = MarkerText(marker);
-        if (!trimmed.Value.StartsWith(token, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return trimmed.Value.Length == token.Length || char.IsWhiteSpace(trimmed.Value[token.Length]);
+        return trimmed.Value.Length == token.Length
+            && trimmed.Value.Equals(token, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string MarkerText(Marker marker) => marker == Marker.Thinking ? "thinking" : "response";
@@ -265,16 +283,19 @@ public static class SparkOpenReasoningParser
     /// snippet cannot unbalance the scan. An opening brace with no matching close is skipped and
     /// the scan continues, so a stray <c>{</c> in the reasoning cannot shadow a later valid object.
     /// In <see cref="ExtractionMode.RequireEndOfReply"/> mode, only an object whose closing brace
-    /// reaches the end of the trimmed content is accepted (the judge's strict contract).
+    /// reaches the end of the trimmed content is accepted (the judge's strict contract), and an
+    /// object nested as the value of an unclosed wrapper (a reply truncated inside an outer object)
+    /// is not taken as the final top-level verdict.
     /// </summary>
-    private static ReplyText? LastBalancedObject(ReplyText content, ExtractionMode mode)
+    private static FoundObject? LastBalancedObject(ReplyText content, ExtractionMode mode)
     {
-        ReplyText? last = null;
+        FoundObject? last = null;
         var bounds = new ScanBounds(mode, EndOfReply(content, mode));
         int i = 0;
+        int lastUnclosedBrace = -1;
         while (i < content.Value.Length)
         {
-            i = ScanAt(content, new ScanPosition(i), bounds, ref last);
+            i = ScanAt(content, new ScanPosition(i), bounds, ref last, ref lastUnclosedBrace);
         }
 
         return last;
@@ -283,7 +304,7 @@ public static class SparkOpenReasoningParser
     private static int EndOfReply(ReplyText content, ExtractionMode mode)
         => mode == ExtractionMode.RequireEndOfReply ? content.Value.TrimEnd().Length : -1;
 
-    private static int ScanAt(ReplyText content, ScanPosition position, ScanBounds bounds, ref ReplyText? last)
+    private static int ScanAt(ReplyText content, ScanPosition position, ScanBounds bounds, ref FoundObject? last, ref int lastUnclosedBrace)
     {
         if (content.Value[position.Value] != '{')
         {
@@ -293,6 +314,7 @@ public static class SparkOpenReasoningParser
         int end = FindObjectEnd(content, position);
         if (end < 0)
         {
+            lastUnclosedBrace = position.Value;
             return position.Value + 1;
         }
 
@@ -301,12 +323,40 @@ public static class SparkOpenReasoningParser
             return end;
         }
 
+        if (bounds.Mode == ExtractionMode.RequireEndOfReply && IsValueOfUnclosedWrapper(content, position.Value, lastUnclosedBrace))
+        {
+            // A verdict nested inside an unclosed outer object is a truncated wrapper, not the final
+            // top-level verdict: e.g. {"draft":{"verdict":"pass",...} must not parse to the inner object.
+            return end;
+        }
+
         if (TryWholeObject(new ReplyText(content.Value[position.Value..end]), out ReplyText? parsed))
         {
-            last = parsed;
+            last = new FoundObject(parsed!.Value, end);
         }
 
         return end;
+    }
+
+    /// <summary>
+    /// True when the object starting at <paramref name="objectStart"/> is the value of a property of
+    /// an enclosing object whose opening brace was never closed — i.e. the reply is truncated inside
+    /// a wrapper. The object is then nested, not the final top-level object.
+    /// </summary>
+    private static bool IsValueOfUnclosedWrapper(ReplyText content, int objectStart, int lastUnclosedBrace)
+    {
+        if (lastUnclosedBrace < 0 || objectStart <= lastUnclosedBrace)
+        {
+            return false;
+        }
+
+        int prev = objectStart - 1;
+        while (prev >= 0 && char.IsWhiteSpace(content.Value[prev]))
+        {
+            prev--;
+        }
+
+        return prev >= 0 && content.Value[prev] == ':';
     }
 
     private static bool IsReasoningObject(ScanBounds bounds, int end)
@@ -400,6 +450,8 @@ public static class SparkOpenReasoningParser
     {
         public ReplyText Trimmed() => new(Value.Trim());
     }
+
+    private readonly record struct FoundObject(ReplyText Object, int End);
 
     private readonly record struct ThinkStripResult(ReplyText Content, ThinkStatus Status);
 

@@ -110,7 +110,7 @@ internal static class SparkOpenCli
 
     private static async Task<int> RunProductionAsync(CommandArgs args)
     {
-        if (!TryResolveInputOutput(args, out FilePath input, out FilePath output))
+        if (!TryResolveInputOutput(args, "production", out FilePath input, out FilePath output))
         {
             return 1;
         }
@@ -132,7 +132,7 @@ internal static class SparkOpenCli
 
     private static async Task<int> RunTranslationAsync(CommandArgs args)
     {
-        if (!TryResolveInputOutput(args, out FilePath input, out FilePath output))
+        if (!TryResolveInputOutput(args, "translation", out FilePath input, out FilePath output))
         {
             return 1;
         }
@@ -144,12 +144,16 @@ internal static class SparkOpenCli
 
         return await RunReportLaneAsync(input, output, async (segments, reportPath) =>
         {
+            // Pre-flight the hosted credential: meaning grading uses the hosted gate, so a missing key
+            // is a configuration error that fails before any Spark Open token is spent — never a report
+            // full of per-line meaning errors that exits 0.
+            _ = MetaAuth.GetApiKey();
+
             using var sparkOpen = new SparkOpenClient();
             using var hosted = new MetaClient();
             var runner = new SparkOpenTranslationRunner(sparkOpen, hosted, QaOptions.FromEnvironment());
-            IReadOnlyDictionary<string, string> hostedTranslations = await LoadHostedTranslationsAsync().ConfigureAwait(false);
             SparkOpenTranslationReport report = await runner.RunAsync(
-                new TranslationRunRequest(segments, "en", "es", hostedTranslations)).ConfigureAwait(false);
+                new TranslationRunRequest(segments, "en", "es", new Dictionary<string, string>())).ConfigureAwait(false);
             await runner.WriteReportAsync(reportPath.FullPath, report).ConfigureAwait(false);
 
             SparkOpenTranslationSummary s = report.Summary;
@@ -204,10 +208,18 @@ internal static class SparkOpenCli
         }
     }
 
-    private static bool TryResolveInputOutput(CommandArgs args, out FilePath input, out FilePath output)
+    private static bool TryResolveInputOutput(CommandArgs args, string commandLabel, out FilePath input, out FilePath output)
     {
         input = new FilePath(args.ValueOf(Option.Input) ?? string.Empty);
         output = new FilePath(args.ValueOf(Option.Output) ?? string.Empty);
+
+        string? unknown = args.FirstUnknownOption();
+        if (unknown is not null)
+        {
+            Console.Error.WriteLine($"Unknown option '{unknown}' for 'spark-open {commandLabel}'.");
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(input.Value) || string.IsNullOrWhiteSpace(output.Value))
         {
             Console.Error.WriteLine("error: --input <segments.json> and --output <report.json> are required.");
@@ -298,25 +310,16 @@ internal static class SparkOpenCli
     }
 
     private static bool SameFile(FilePath input, FilePath output)
-        => string.Equals(input.FullPath, output.FullPath, StringComparison.OrdinalIgnoreCase);
+        => string.Equals(ResolveFinalPath(input.FullPath), ResolveFinalPath(output.FullPath), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Loads the recorded hosted translations (the meaning-eval candidates) keyed by segment id, so
-    /// the translation report carries each line's hosted side-by-side translation. Returns an empty
-    /// map when the eval file is absent, leaving the hosted column null.
+    /// Resolves a path to its final link target, so a symlinked --output that points at the --input
+    /// file (or vice versa) is caught by the same-path guard before a report overwrites its own input.
     /// </summary>
-    private static async Task<IReadOnlyDictionary<string, string>> LoadHostedTranslationsAsync(CancellationToken cancellationToken = default)
+    private static string ResolveFinalPath(string path)
     {
-        string casesPath = Path.Combine("samples", "meaning-eval", "cases.json");
-        if (!File.Exists(casesPath))
-        {
-            return new Dictionary<string, string>();
-        }
-
-        IReadOnlyList<MeaningEvalCase> cases = await MeaningEvalService.LoadCasesAsync(casesPath, cancellationToken).ConfigureAwait(false);
-        return cases
-            .Where(c => !string.IsNullOrWhiteSpace(c.Candidate))
-            .ToDictionary(c => c.Id, c => c.Candidate!, StringComparer.Ordinal);
+        string full = Path.GetFullPath(path);
+        return new FileInfo(full).ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? full;
     }
 
     private static string Percent(double? value) => value is null ? "-" : value.Value.ToString("P1", CultureInfo.InvariantCulture);
@@ -338,7 +341,7 @@ internal static class SparkOpenCli
         Console.WriteLine("  smoke        One minimal Spark Open chat completion. [--text <line>]");
         Console.WriteLine();
         Console.WriteLine("Environment:");
-        Console.WriteLine($"  {SparkOpenAuth.BaseUrlEnv}   OpenAI-compatible chat/completions endpoint of the Azure deployment.");
+        Console.WriteLine($"  {SparkOpenAuth.BaseUrlEnv}   OpenAI-compatible base URL of the Azure deployment, without /chat/completions (it is appended).");
         Console.WriteLine($"  {SparkOpenAuth.ApiKeyEnv}    Deployment key. Never logged, printed, committed, or stored.");
         Console.WriteLine($"  {SparkOpenAuth.ModelEnv}      Deployment name Michael set.");
         Console.WriteLine("  translation also needs META_API_KEY: meaning grading uses the hosted gate (muse-spark-1.1).");
@@ -404,7 +407,7 @@ internal static class SparkOpenCli
         }
 
         private bool SameAs(FilePath other)
-            => string.Equals(FullPath, other.FullPath, StringComparison.OrdinalIgnoreCase);
+            => string.Equals(ResolveFinalPath(FullPath), ResolveFinalPath(other.FullPath), StringComparison.OrdinalIgnoreCase);
     }
 
     private readonly record struct JudgeInputs(FilePath CasesPath, FilePath PressurePath, IReadOnlyList<FilePath> UniformPaths);

@@ -171,8 +171,15 @@ public sealed class SparkOpenChatHandler : DelegatingHandler
 
         // The injected instruction asks for a JSON final object, so a translation reply arrives as
         // {"translation":"..."} — unwrap it so timing estimates, meaning checks, and saved translations
-        // see the plain line, never the wrapper. Meaning verdicts stay as JSON for the gate.
-        message["content"] = TryUnwrapTranslation(finalAnswer, out string unwrapped) ? unwrapped : finalAnswer;
+        // see the plain line, never the wrapper. Meaning verdicts stay as JSON for the gate; a JSON
+        // object with neither shape is a malformed translation reply and fails the call rather than
+        // leaking raw JSON into the QA loop.
+        if (!TryResolveAssistantContent(finalAnswer, out string content, out FailureReason? reason))
+        {
+            return FailedCall(response, body, reason!.Value);
+        }
+
+        message["content"] = content;
         rootObject["model"] ??= _config.Model;
 
         var rewritten = new HttpResponseMessage(HttpStatusCode.OK)
@@ -213,27 +220,52 @@ public sealed class SparkOpenChatHandler : DelegatingHandler
     }
 
     /// <summary>
-    /// Unwraps a translation-shaped <c>{"translation": "..."}</c> final object into its plain string,
-    /// and returns false (leaving the reply untouched) for any other shape — e.g. meaning verdicts.
+    /// Resolves the extracted final answer to the content the caller should see. A plain-text answer
+    /// (a translated line) passes through unchanged; a meaning verdict object stays as JSON for the
+    /// gate; a translation-shaped <c>{"translation": "..."}</c> object is unwrapped to the plain
+    /// string. A JSON object that is neither is a malformed translation reply and fails the call.
     /// </summary>
-    private static bool TryUnwrapTranslation(string finalAnswer, out string unwrapped)
+    private static bool TryResolveAssistantContent(string finalAnswer, out string content, out FailureReason? reason)
     {
-        unwrapped = finalAnswer;
+        content = finalAnswer;
+        reason = null;
+        using JsonDocument? doc = TryParseJsonObject(finalAnswer);
+        if (doc is null)
+        {
+            return true;
+        }
+
+        JsonElement root = doc.RootElement;
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return true;
+        }
+
+        if (root.TryGetProperty("verdict", out _))
+        {
+            // A meaning verdict must never be unwrapped to a translation string: the gate needs the object.
+            return true;
+        }
+
+        if (IsTranslationObject(root, out JsonElement translation))
+        {
+            content = translation.GetString()!.Trim();
+            return true;
+        }
+
+        reason = new FailureReason("Spark Open final JSON object was neither a meaning verdict nor a {\"translation\":\"...\"} reply.");
+        return false;
+    }
+
+    private static JsonDocument? TryParseJsonObject(string text)
+    {
         try
         {
-            using JsonDocument doc = JsonDocument.Parse(finalAnswer);
-            if (!IsTranslationObject(doc.RootElement, out JsonElement translation))
-            {
-                return false;
-            }
-
-            unwrapped = translation.GetString()!.Trim();
-            return true;
+            return JsonDocument.Parse(text);
         }
         catch (JsonException)
         {
-            // Not JSON: leave the answer as-is.
-            return false;
+            return null;
         }
     }
 
