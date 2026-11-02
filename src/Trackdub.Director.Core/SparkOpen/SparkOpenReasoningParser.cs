@@ -48,12 +48,7 @@ public static class SparkOpenReasoningParser
 
     private static ReplyText? ExtractFinalJsonObject(ReplyText rawContent, ExtractionMode mode)
     {
-        if (string.IsNullOrWhiteSpace(rawContent.Value))
-        {
-            return null;
-        }
-
-        ReplyText? prepared = Prepare(rawContent);
+        ReplyText? prepared = PrepareIfPresent(rawContent);
         if (prepared is null)
         {
             return null;
@@ -71,12 +66,7 @@ public static class SparkOpenReasoningParser
 
     private static ReplyText? ExtractFinalAnswer(ReplyText rawContent)
     {
-        if (string.IsNullOrWhiteSpace(rawContent.Value))
-        {
-            return null;
-        }
-
-        ReplyText? prepared = Prepare(rawContent);
+        ReplyText? prepared = PrepareIfPresent(rawContent);
         if (prepared is null)
         {
             return null;
@@ -97,20 +87,33 @@ public static class SparkOpenReasoningParser
             return finalObject.Value.Object;
         }
 
-        // A JSON object embedded in prose (an example the model quoted before giving the real answer)
-        // must not displace that answer: the trailing plain text after the last embedded object wins.
-        FoundObject? embedded = LastBalancedObject(content, ExtractionMode.Permissive);
-        if (embedded is not null && embedded.Value.End < content.Value.TrimEnd().Length)
+        ReplyText? tail = TailAfterEmbeddedObject(content);
+        if (tail is not null)
         {
-            string tail = content.Value[embedded.Value.End..].Trim();
-            if (tail.Length > 0)
-            {
-                return new ReplyText(tail);
-            }
+            return tail;
         }
 
         return string.IsNullOrWhiteSpace(content.Value) ? null : content.Trimmed();
     }
+
+    /// <summary>
+    /// Returns the plain text after a JSON object embedded in prose, when one exists. A quoted example
+    /// must not displace the real answer that follows it.
+    /// </summary>
+    private static ReplyText? TailAfterEmbeddedObject(ReplyText content)
+    {
+        FoundObject? embedded = LastBalancedObject(content, ExtractionMode.Permissive);
+        if (embedded is null || embedded.Value.End >= content.Value.TrimEnd().Length)
+        {
+            return null;
+        }
+
+        string tail = content.Value[embedded.Value.End..].Trim();
+        return tail.Length > 0 ? new ReplyText(tail) : null;
+    }
+
+    private static ReplyText? PrepareIfPresent(ReplyText rawContent)
+        => string.IsNullOrWhiteSpace(rawContent.Value) ? null : Prepare(rawContent);
 
     /// <summary>
     /// Strips a trailing code fence and every completed think/reasoning block. Returns null when the
@@ -290,12 +293,12 @@ public static class SparkOpenReasoningParser
     private static FoundObject? LastBalancedObject(ReplyText content, ExtractionMode mode)
     {
         FoundObject? last = null;
-        var bounds = new ScanBounds(mode, EndOfReply(content, mode));
+        var context = new ScanContext(content, new ScanBounds(mode, EndOfReply(content, mode)));
         int i = 0;
         int lastUnclosedBrace = -1;
         while (i < content.Value.Length)
         {
-            i = ScanAt(content, new ScanPosition(i), bounds, ref last, ref lastUnclosedBrace);
+            i = ScanAt(context, new ScanPosition(i), ref last, ref lastUnclosedBrace);
         }
 
         return last;
@@ -304,8 +307,10 @@ public static class SparkOpenReasoningParser
     private static int EndOfReply(ReplyText content, ExtractionMode mode)
         => mode == ExtractionMode.RequireEndOfReply ? content.Value.TrimEnd().Length : -1;
 
-    private static int ScanAt(ReplyText content, ScanPosition position, ScanBounds bounds, ref FoundObject? last, ref int lastUnclosedBrace)
+    private static int ScanAt(ScanContext context, ScanPosition position, ref FoundObject? last, ref int lastUnclosedBrace)
     {
+        ReplyText content = context.Content;
+        ScanBounds bounds = context.Bounds;
         if (content.Value[position.Value] != '{')
         {
             return position.Value + 1;
@@ -458,6 +463,8 @@ public static class SparkOpenReasoningParser
     private readonly record struct ScanPosition(int Value);
 
     private readonly record struct ScanBounds(ExtractionMode Mode, int EndOfReply);
+
+    private readonly record struct ScanContext(ReplyText Content, ScanBounds Bounds);
 
     private readonly record struct ScanState(int Depth, bool InString, bool Escaped);
 }

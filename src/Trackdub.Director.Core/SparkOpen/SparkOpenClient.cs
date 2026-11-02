@@ -162,8 +162,13 @@ public sealed class SparkOpenClient : ISparkOpenClient
             return string.Empty;
         }
 
-        if (choices[0].ValueKind != JsonValueKind.Object
-            || !choices[0].TryGetProperty("message", out JsonElement message))
+        return ReadMessageContent(choices[0]);
+    }
+
+    private static string ReadMessageContent(JsonElement choice)
+    {
+        if (choice.ValueKind != JsonValueKind.Object
+            || !choice.TryGetProperty("message", out JsonElement message))
         {
             return string.Empty;
         }
