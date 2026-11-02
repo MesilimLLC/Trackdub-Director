@@ -319,6 +319,11 @@ internal static class SparkOpenCli
     private static string ResolveFinalPath(string path)
     {
         string full = Path.GetFullPath(path);
+        if (!File.Exists(full))
+        {
+            return full;
+        }
+
         return new FileInfo(full).ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? full;
     }
 

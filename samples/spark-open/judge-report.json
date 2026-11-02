@@ -1,0 +1,1221 @@
+{
+  "stage": "spark-open-judge",
+  "provider": "SparkOpen",
+  "spark_open_model": "meta-models--muse-spark-open-816b-a42b-nvfp4",
+  "spark_open_endpoint_host": "trackdub-6788-resource.services.ai.azure.com",
+  "criteria_version": "meaning-v1",
+  "source_language": "en",
+  "target_language": "es",
+  "timestamp_utc": "2026-11-02T17:22:04.2904893Z",
+  "summary": {
+    "total_items": 75,
+    "compared": 75,
+    "agree": 73,
+    "disagree": 2,
+    "excluded": 0,
+    "agreement_rate": 0.9733,
+    "total_tokens": 98627
+  },
+  "results": [
+    {
+      "id": "clean-01-voa10-002",
+      "source": "cases",
+      "source_text": "Anna, Which coffee shop? There are three coffee shops.",
+      "candidate": "Anna, \u00BFqu\u00E9 cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": null,
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Translation preserves the addressee (Anna), the question about which coffee shop, and the statement that there are three coffee shops.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 547,
+        "completionTokens": 576,
+        "totalTokens": 1123
+      }
+    },
+    {
+      "id": "clean-02-voa10-003",
+      "source": "cases",
+      "source_text": "Okay, my apartment is across from a big department store.",
+      "candidate": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": null,
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves who/what/where: \u0027enfrente de unos grandes almacenes\u0027 is the natural idiomatic equivalent of \u0027across from a big department store\u0027 and retains singular meaning despite plural form.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 546,
+        "completionTokens": 536,
+        "totalTokens": 1082
+      }
+    },
+    {
+      "id": "clean-03-voa10-004",
+      "source": "cases",
+      "source_text": "A big department store? Ah, I see it!",
+      "candidate": "\u00BFUnos grandes almacenes? \u00A1Ah, ya lo veo!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "idiomatic \u0027ya lo veo\u0027",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves material meaning of both sentences; \u0027unos grandes almacenes\u0027 is the natural Spanish idiom for \u0027a department store\u0027 and \u0027ya lo veo\u0027 accurately renders \u0027I see it\u0027 without changing facts or intent.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 546,
+        "completionTokens": 734,
+        "totalTokens": 1280
+      }
+    },
+    {
+      "id": "clean-04-voa10-005",
+      "source": "cases",
+      "source_text": "Okay! Bye, Ashley. See you soon!",
+      "candidate": "\u00A1Vale! Adi\u00F3s, Ashley. \u00A1Hasta pronto!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "idiomatic \u0027hasta pronto\u0027 for \u0027see you soon\u0027",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves all material meaning: acknowledgment, farewell to Ashley, and expectation to meet again, with \u0027\u00A1Hasta pronto!\u0027 as a natural idiom for \u0027See you soon!\u0027.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 544,
+        "completionTokens": 360,
+        "totalTokens": 904
+      }
+    },
+    {
+      "id": "clean-05-voa10-006",
+      "source": "cases",
+      "source_text": "Okay. See you soon.",
+      "candidate": "Vale. Nos vemos pronto.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": null,
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate accurately preserves the acknowledgement and imminent farewell meaning with natural Spanish equivalents.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 533,
+        "completionTokens": 223,
+        "totalTokens": 756
+      }
+    },
+    {
+      "id": "clean-06-fpc-002",
+      "source": "cases",
+      "source_text": "Hi Anna! I\u0027m coming to your apartment. Where is your apartment?",
+      "candidate": "\u00A1Hola, Anna! Voy a tu apartamento. \u00BFD\u00F3nde est\u00E1 tu apartamento?",
+      "hosted_verdict": "Pass",
+      "hosted_reason": null,
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate accurately preserves the greeting, subject, action (coming/going to apartment), and request for location with no material meaning change.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 551,
+        "completionTokens": 375,
+        "totalTokens": 926
+      }
+    },
+    {
+      "id": "clean-07-fpc-003",
+      "source": "cases",
+      "source_text": "My apartment is near the Columbia Heights Metro.",
+      "candidate": "Mi apartamento est\u00E1 cerca del metro de Columbia Heights.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": null,
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "The Spanish translation preserves the subject (my apartment), location relation (near), and named entity (Columbia Heights Metro) with no material change in meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 540,
+        "completionTokens": 328,
+        "totalTokens": 868
+      }
+    },
+    {
+      "id": "clean-08-meet-002",
+      "source": "cases",
+      "source_text": "I love having my friends over. Come on!",
+      "candidate": "Me encanta recibir a mis amigos en casa. \u00A1Vamos!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "idiomatic \u0027recibir en casa\u0027 for \u0027having over\u0027",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Both sentences preserve material meaning: \u0027Me encanta recibir a mis amigos en casa\u0027 accurately renders \u0027I love having my friends over\u0027 and \u0027\u00A1Vamos!\u0027 is an idiomatic equivalent for encouraging \u0027Come on!\u0027 with no change in facts or intent.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 544,
+        "completionTokens": 945,
+        "totalTokens": 1489
+      }
+    },
+    {
+      "id": "clean-09-seg-001",
+      "source": "cases",
+      "source_text": "The director checks every line before it reaches the audience.",
+      "candidate": "El director revisa cada frase antes de que llegue al p\u00FAblico.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": null,
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "The Spanish preserves the subject (director), action (checks/revisa), object (every line/cada frase) and temporal condition, with \u0027frase\u0027 as a natural idiomatic equivalent for \u0027line\u0027 in this context.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 545,
+        "completionTokens": 790,
+        "totalTokens": 1335
+      }
+    },
+    {
+      "id": "clean-10-seg-002",
+      "source": "cases",
+      "source_text": "We need one more take.",
+      "candidate": "Necesitamos una toma m\u00E1s.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": null,
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate accurately preserves the subject (we), modality (need), and quantity/object (one more take) with no material change.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 535,
+        "completionTokens": 395,
+        "totalTokens": 930
+      }
+    },
+    {
+      "id": "clean-11-seg-003",
+      "source": "cases",
+      "source_text": "Action!",
+      "candidate": "\u00A1Acci\u00F3n!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": null,
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate \u0027\u00A1Acci\u00F3n!\u0027 is a direct and accurate translation of source \u0027Action!\u0027 with identical material meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 527,
+        "completionTokens": 467,
+        "totalTokens": 994
+      }
+    },
+    {
+      "id": "clean-12-seg-004",
+      "source": "cases",
+      "source_text": "That was perfect. Let us move on.",
+      "candidate": "Eso estuvo perfecto. Sigamos.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "\u0027Sigamos\u0027 for \u0027let us move on\u0027",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves material meaning: accurate translation of \u0027That was perfect\u0027 and hortative \u0027Let us move on\u0027 as \u0027Sigamos\u0027.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 537,
+        "completionTokens": 165,
+        "totalTokens": 702
+      }
+    },
+    {
+      "id": "clean-13-seg-005",
+      "source": "cases",
+      "source_text": "Quiet on set, please.",
+      "candidate": "Silencio en el set, por favor.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": null,
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate accurately preserves the polite request for silence on a film set; \u0027Silencio en el set, por favor\u0027 is a direct, semantically equivalent translation.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 536,
+        "completionTokens": 736,
+        "totalTokens": 1272
+      }
+    },
+    {
+      "id": "clean-14-seg-006",
+      "source": "cases",
+      "source_text": "Where are we shooting tomorrow?",
+      "candidate": "\u00BFD\u00F3nde rodamos ma\u00F1ana?",
+      "hosted_verdict": "Pass",
+      "hosted_reason": null,
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves the subject (we), action (shooting/filming), interrogative (where) and temporal reference (tomorrow) with natural Spanish equivalent \u0027rodamos\u0027 for a film shoot.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 532,
+        "completionTokens": 865,
+        "totalTokens": 1397
+      }
+    },
+    {
+      "id": "clean-15-seg-007",
+      "source": "cases",
+      "source_text": "Thank you for joining us today.",
+      "candidate": "Gracias por acompa\u00F1arnos hoy.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": null,
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "The Spanish translation accurately preserves the meaning of thanking the audience for joining/being present today with no material change.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 534,
+        "completionTokens": 470,
+        "totalTokens": 1004
+      }
+    },
+    {
+      "id": "clean-16-seg-008",
+      "source": "cases",
+      "source_text": "We will see you on the next stage.",
+      "candidate": "Le veremos en la pr\u00F3xima etapa.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "formal register (usted); validated register change in Stage B2",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Translation preserves subject (we), action (will see), object (you) and location/time (on the next stage = en la pr\u00F3xima etapa); formal \u0027Le\u0027 is an acceptable register shift.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 537,
+        "completionTokens": 560,
+        "totalTokens": 1097
+      }
+    },
+    {
+      "id": "seeded-01-seg-004",
+      "source": "cases",
+      "source_text": "That was perfect. Let us move on.",
+      "candidate": "Eso no estuvo perfecto. Sigamos.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027perfect\u0027 negated",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Source affirms performance was perfect; candidate negates it as \u0027not perfect,\u0027 reversing the material meaning and evaluation.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 538,
+        "completionTokens": 607,
+        "totalTokens": 1145
+      }
+    },
+    {
+      "id": "seeded-02-meet-002",
+      "source": "cases",
+      "source_text": "I love having my friends over. Come on!",
+      "candidate": "No me gusta recibir a mis amigos en casa. \u00A1Vamos!",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027love\u0027 became \u0027don\u0027t like\u0027",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Candidate reverses the polarity from love/like to dislike, materially changing the speaker\u0027s attitude and intent.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 544,
+        "completionTokens": 384,
+        "totalTokens": 928
+      }
+    },
+    {
+      "id": "seeded-03-voa10-004",
+      "source": "cases",
+      "source_text": "A big department store? Ah, I see it!",
+      "candidate": "\u00BFUnos grandes almacenes? \u00A1Ah, no lo veo!",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027I see it\u0027 negated",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Candidate reverses polarity from affirmative \u0027I see it\u0027 to negative \u0027no lo veo\u0027, which changes the material meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 546,
+        "completionTokens": 695,
+        "totalTokens": 1241
+      }
+    },
+    {
+      "id": "seeded-04-seg-001",
+      "source": "cases",
+      "source_text": "The director checks every line before it reaches the audience.",
+      "candidate": "El director no revisa ninguna frase antes de que llegue al p\u00FAblico.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027checks every line\u0027 became \u0027checks no line\u0027",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Candidate inverts negation/polarity, changing the meaning from checking every line to checking none.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 546,
+        "completionTokens": 442,
+        "totalTokens": 988
+      }
+    },
+    {
+      "id": "seeded-05-voa10-002",
+      "source": "cases",
+      "source_text": "Anna, Which coffee shop? There are three coffee shops.",
+      "candidate": "Anna, \u00BFqu\u00E9 cafeter\u00EDa? Hay dos cafeter\u00EDas.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "three became two",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Candidate alters material quantity from three to two, changing the factual information about the number of coffee shops.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 547,
+        "completionTokens": 663,
+        "totalTokens": 1210
+      }
+    },
+    {
+      "id": "seeded-06-seg-002",
+      "source": "cases",
+      "source_text": "We need one more take.",
+      "candidate": "Necesitamos dos tomas m\u00E1s.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "one more take became two",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Source requests one additional take, while candidate requests two, altering a material quantity/number.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 536,
+        "completionTokens": 808,
+        "totalTokens": 1344
+      }
+    },
+    {
+      "id": "seeded-07-seg-001",
+      "source": "cases",
+      "source_text": "The director checks every line before it reaches the audience.",
+      "candidate": "El director revisa algunas frases antes de que lleguen al p\u00FAblico.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027every\u0027 became \u0027some\u0027",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Candidate weakens universal \u0027every\u0027 to partial \u0027some\u0027, materially changing the scope of what the director checks.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 546,
+        "completionTokens": 681,
+        "totalTokens": 1227
+      }
+    },
+    {
+      "id": "seeded-08-fpc-003",
+      "source": "cases",
+      "source_text": "My apartment is near the Columbia Heights Metro.",
+      "candidate": "Mi apartamento est\u00E1 cerca del metro de Dupont Circle.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "Columbia Heights became Dupont Circle",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "The candidate substitutes a different Metro station (Dupont Circle for Columbia Heights), materially altering the location information while subject and predicate are otherwise preserved.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 541,
+        "completionTokens": 395,
+        "totalTokens": 936
+      }
+    },
+    {
+      "id": "seeded-09-voa10-005",
+      "source": "cases",
+      "source_text": "Okay! Bye, Ashley. See you soon!",
+      "candidate": "\u00A1Vale! Adi\u00F3s, Anna. \u00A1Hasta pronto!",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "Ashley became Anna",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "The candidate alters the addressee named entity from Ashley to Anna, which changes who is being addressed despite correctly translating \u0027Okay! Bye. See you soon!\u0027.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 544,
+        "completionTokens": 641,
+        "totalTokens": 1185
+      }
+    },
+    {
+      "id": "seeded-10-fpc-002",
+      "source": "cases",
+      "source_text": "Hi Anna! I\u0027m coming to your apartment. Where is your apartment?",
+      "candidate": "\u00A1Hola, Ashley! Voy a tu apartamento. \u00BFD\u00F3nde est\u00E1 tu apartamento?",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "Anna became Ashley",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "The candidate substitutes the addressee\u0027s name from Anna to Ashley, altering a material named entity while the rest of the meaning is preserved.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 551,
+        "completionTokens": 736,
+        "totalTokens": 1287
+      }
+    },
+    {
+      "id": "seeded-11-voa10-003",
+      "source": "cases",
+      "source_text": "Okay, my apartment is across from a big department store.",
+      "candidate": "Vale, tu apartamento est\u00E1 enfrente de unos grandes almacenes.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027my apartment\u0027 became \u0027your apartment\u0027",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Source says \u0027my apartment\u0027 but candidate translates as \u0027tu apartamento\u0027 (\u0027your apartment\u0027), changing the possessor/subject and altering material meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 546,
+        "completionTokens": 643,
+        "totalTokens": 1189
+      }
+    },
+    {
+      "id": "seeded-12-seg-001",
+      "source": "cases",
+      "source_text": "The director checks every line before it reaches the audience.",
+      "candidate": "El p\u00FAblico revisa cada frase antes de que llegue al director.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "director and audience swapped",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Candidate inverts who checks and who receives, reversing the material meaning of the source sentence.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 545,
+        "completionTokens": 604,
+        "totalTokens": 1149
+      }
+    },
+    {
+      "id": "seeded-13-seg-008",
+      "source": "cases",
+      "source_text": "We will see you on the next stage.",
+      "candidate": "Nos ver\u00E1s en la pr\u00F3xima etapa.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027we will see you\u0027 became \u0027you will see us\u0027",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Candidate inverts the agent and patient of \u0027see\u0027: source states \u0027we\u0027 will see \u0027you\u0027, while translation states \u0027you\u0027 will see \u0027us\u0027, changing who performs the action.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 538,
+        "completionTokens": 2166,
+        "totalTokens": 2704
+      }
+    },
+    {
+      "id": "seeded-14-seg-006",
+      "source": "cases",
+      "source_text": "Where are we shooting tomorrow?",
+      "candidate": "\u00BFRodamos ma\u00F1ana?",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027where\u0027 dropped; real compression from the 70% pressure run",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Source asks for the location of tomorrow\u0027s shoot (\u0027where\u0027), but candidate asks only whether shooting will happen tomorrow, losing material locative meaning and changing intent.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 532,
+        "completionTokens": 526,
+        "totalTokens": 1058
+      }
+    },
+    {
+      "id": "seeded-15-seg-007",
+      "source": "cases",
+      "source_text": "Thank you for joining us today.",
+      "candidate": "Gracias a todos.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "reason for thanks dropped; real compression from the 70% pressure run (as \u0027Gracias todos\u0027)",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Candidate retains general gratitude but drops the specific reason \u0027for joining us today,\u0027 losing key factual content; \u0027a todos\u0027 also generalizes the addressee without preserving the original occasion.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 532,
+        "completionTokens": 1277,
+        "totalTokens": 1809
+      }
+    },
+    {
+      "id": "seeded-16-voa10-003",
+      "source": "cases",
+      "source_text": "Okay, my apartment is across from a big department store.",
+      "candidate": "Vale, mi apartamento est\u00E1 enfrente.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027a big department store\u0027 dropped",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Candidate translates only \u0027my apartment is in front/across\u0027 and drops the material location detail specifying it is across from a big department store.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 541,
+        "completionTokens": 621,
+        "totalTokens": 1162
+      }
+    },
+    {
+      "id": "seeded-17-fpc-002",
+      "source": "cases",
+      "source_text": "Hi Anna! I\u0027m coming to your apartment. Where is your apartment?",
+      "candidate": "\u00A1Hola, Anna! Voy a tu apartamento.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "the question \u0027where is your apartment?\u0027 dropped",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "The candidate translates only the first two sentences and omits the material question asking for the apartment\u0027s location.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 545,
+        "completionTokens": 539,
+        "totalTokens": 1084
+      }
+    },
+    {
+      "id": "seeded-18-seg-002",
+      "source": "cases",
+      "source_text": "We need one more take.",
+      "candidate": "Necesitamos una toma m\u00E1s antes de comer.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027before lunch\u0027 added",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Candidate adds \u0027antes de comer\u0027 which introduces a new time constraint absent from the source, changing material meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 538,
+        "completionTokens": 399,
+        "totalTokens": 937
+      }
+    },
+    {
+      "id": "seeded-19-voa10-006",
+      "source": "cases",
+      "source_text": "Okay. See you soon.",
+      "candidate": "Vale. Nos vemos pronto en el caf\u00E9.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027at the coffee shop\u0027 added",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Candidate adds the location \u0027en el caf\u00E9\u0027 which is absent from the source \u0027See you soon,\u0027 introducing new material information.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 536,
+        "completionTokens": 724,
+        "totalTokens": 1260
+      }
+    },
+    {
+      "id": "seeded-20-seg-002",
+      "source": "cases",
+      "source_text": "We need one more take.",
+      "candidate": "Quiz\u00E1 podr\u00EDamos hacer una toma m\u00E1s.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027need\u0027 became \u0027maybe could\u0027",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Source asserts necessity/obligation (\u0027need\u0027), while candidate softens to hedged possibility/suggestion (\u0027maybe we could\u0027), altering modality and strength of intent despite preserving the core request for one more take.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 536,
+        "completionTokens": 1928,
+        "totalTokens": 2464
+      }
+    },
+    {
+      "id": "seeded-21-meet-002",
+      "source": "cases",
+      "source_text": "I love having my friends over. Come on!",
+      "candidate": "Tengo que recibir a mis amigos en casa. \u00A1Vamos!",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027love\u0027 became \u0027have to\u0027",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Source expresses enjoyment of hosting friends, while candidate expresses obligation to do so, changing modality and intent.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 544,
+        "completionTokens": 916,
+        "totalTokens": 1460
+      }
+    },
+    {
+      "id": "seeded-22-seg-008",
+      "source": "cases",
+      "source_text": "We will see you on the next stage.",
+      "candidate": "Quiz\u00E1 le veamos en la pr\u00F3xima etapa.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "\u0027will\u0027 became \u0027maybe\u0027",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Source states a definite future \u0027We will see you\u0027; candidate adds \u0027Quiz\u00E1\u0027 (maybe), changing certainty to possibility and altering modality.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 540,
+        "completionTokens": 935,
+        "totalTokens": 1475
+      }
+    },
+    {
+      "id": "seeded-23-seg-006",
+      "source": "cases",
+      "source_text": "Where are we shooting tomorrow?",
+      "candidate": "\u00BFD\u00F3nde rodamos hoy?",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "tomorrow became today",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Source refers to \u0027tomorrow\u0027 but candidate says \u0027hoy\u0027 (today), changing the time of the action.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 532,
+        "completionTokens": 318,
+        "totalTokens": 850
+      }
+    },
+    {
+      "id": "seeded-24-seg-007",
+      "source": "cases",
+      "source_text": "Thank you for joining us today.",
+      "candidate": "Gracias por acompa\u00F1arnos ayer.",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "today became yesterday",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Source says \u0027today\u0027 but candidate says \u0027ayer\u0027 (yesterday), altering the temporal meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 534,
+        "completionTokens": 629,
+        "totalTokens": 1163
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:voa10-001:a1",
+      "source": "pressure",
+      "source_text": "Hi, Ashley.",
+      "candidate": "Hola, Ashley.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Direct greeting preserved with same name and intent.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves the greeting and proper name exactly; \u0027Hola\u0027 is the natural equivalent of \u0027Hi\u0027 with no change in meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 529,
+        "completionTokens": 217,
+        "totalTokens": 746
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:voa10-002:a1",
+      "source": "pressure",
+      "source_text": "Anna, Which coffee shop? There are three coffee shops.",
+      "candidate": "Anna, \u00BFqu\u00E9 cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Translation preserves the address to Anna, the question about which coffee shop, and the statement that three exist.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate accurately preserves the address to Anna, the question about which coffee shop, and the statement that there are three coffee shops.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 547,
+        "completionTokens": 498,
+        "totalTokens": 1045
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:voa10-003:a2",
+      "source": "pressure",
+      "source_text": "Okay, my apartment is across from a big department store.",
+      "candidate": "Vivo frente a unos grandes almacenes",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate conveys same location meaning (living/apartment across from a big department store); \u0027Vivo frente a unos grandes almacenes\u0027 is natural Spanish for the source, with filler \u0027Okay\u0027 omitted and idiomatic plural form.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves material meaning (residence located across from a big department store) despite paraphrasing \u0022my apartment is\u0022 as \u0022Vivo\u0022 and omitting filler \u0022Okay\u0022; \u0022unos grandes almacenes\u0022 is idiomatic singular for department store in Spanish.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 542,
+        "completionTokens": 870,
+        "totalTokens": 1412
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:voa10-004:a2",
+      "source": "pressure",
+      "source_text": "A big department store? Ah, I see it!",
+      "candidate": "\u00BFGran tienda departamental? \u00A1La veo!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate preserves the question about a big department store and the exclamation of seeing it; \u0027La veo\u0027 correctly renders \u0027I see it\u0027 referring to the store.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves the query about a big department store and the exclamation of seeing it, with correct gender agreement (La veo = it).",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 542,
+        "completionTokens": 680,
+        "totalTokens": 1222
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:voa10-005:a2",
+      "source": "pressure",
+      "source_text": "Okay! Bye, Ashley. See you soon!",
+      "candidate": "\u00A1Adi\u00F3s, Ashley! \u00A1Pronto!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate conveys the farewell to Ashley and the \u0027soon\u0027 timeframe; \u0027Okay\u0027 is a discourse filler and \u0027\u00A1Pronto!\u0027 is an idiomatic short form for \u0027See you soon\u0027 preserving intent.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves the farewell to Ashley and the temporal \u0027soon\u0027 meaning; omission of discourse marker \u0027Okay\u0027 and condensation of \u0027See you soon\u0027 to \u0027\u00A1Pronto!\u0027 retains the farewell intent without altering material facts.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 542,
+        "completionTokens": 2433,
+        "totalTokens": 2975
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:voa10-006:a2",
+      "source": "pressure",
+      "source_text": "Okay. See you soon.",
+      "candidate": "Ok. Nos vemos pronto.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate accurately preserves the acknowledgement and imminent farewell intent of the source.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "The Spanish translation directly preserves the casual acknowledgment and intent to meet again soon.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 533,
+        "completionTokens": 292,
+        "totalTokens": 825
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:fpc-001:a1",
+      "source": "pressure",
+      "source_text": "Hi Ashley!",
+      "candidate": "\u00A1Hola Ashley!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Greeting and proper name are preserved with equivalent meaning in Spanish.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate accurately preserves the greeting and the addressee name \u0027Ashley\u0027 with no change in meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 528,
+        "completionTokens": 492,
+        "totalTokens": 1020
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:fpc-002:a2",
+      "source": "pressure",
+      "source_text": "Hi Anna! I\u0027m coming to your apartment. Where is your apartment?",
+      "candidate": "\u00A1Anna! Voy para all\u00E1. \u00BFD\u00F3nde vives?",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate preserves intent: \u0027Voy para alla\u0027 conveys coming to her apartment and \u0027Donde vives\u0027 is idiomatic for asking apartment location, despite paraphrasing \u0027apartment\u0027 to \u0027alla/vives\u0027.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "The candidate paraphrases \u0027your apartment\u0027 as \u0027all\u00E1\u0027 and \u0027d\u00F3nde vives\u0027 but preserves the material intent: the speaker is coming to Anna\u0027s residence and asking for its location, with no change in subject, action, polarity or key facts.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 547,
+        "completionTokens": 2071,
+        "totalTokens": 2618
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:fpc-003:a1",
+      "source": "pressure",
+      "source_text": "My apartment is near the Columbia Heights Metro.",
+      "candidate": "Mi apartamento est\u00E1 cerca del Metro de Columbia Heights.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate preserves subject, location, and spatial relation: \u0027my apartment is near\u0027 -\u003E \u0027mi apartamento est\u00E1 cerca del\u0027 and \u0027Columbia Heights Metro\u0027.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate accurately preserves the subject, location, and proximity relation with correct named entity transfer.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 540,
+        "completionTokens": 407,
+        "totalTokens": 947
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:meet-001:a1",
+      "source": "pressure",
+      "source_text": "Ashley! Ashley! Ashley! Over here! It\u0027s Anna! It\u0027s Anna! Hi!",
+      "candidate": "\u00A1Ashley! \u00A1Ashley! \u00A1Ashley! \u00A1Por aqu\u00ED! \u00A1Soy Anna! \u00A1Soy Anna! \u00A1Hola!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate preserves all material meaning: repeated calls to Ashley, location \u0027Over here\u0027 -\u003E \u0027Por aqu\u00ED\u0027, identification \u0027It\u0027s Anna\u0027 -\u003E \u0027Soy Anna\u0027, and greeting \u0027Hi\u0027 -\u003E \u0027Hola\u0027.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Translation preserves all repeated calls to Ashley, the directional call, self-identification as Anna, and greeting; \u0027Soy Anna\u0027 is the natural idiomatic equivalent of \u0027It\u0027s Anna!\u0027 with no material meaning loss.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 566,
+        "completionTokens": 808,
+        "totalTokens": 1374
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:meet-002:a1",
+      "source": "pressure",
+      "source_text": "I love having my friends over. Come on!",
+      "candidate": "Me encanta recibir a mis amigos en casa. \u00A1Vamos!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Both sentences preserve material meaning: \u0027I love having my friends over\u0027 = \u0027Me encanta recibir a mis amigos en casa\u0027, and \u0027Come on!\u0027 = \u0027\u00A1Vamos!\u0027 as a natural idiomatic invitation.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves material meaning: love of hosting friends and encouraging invitation; \u0027Me encanta recibir a mis amigos en casa\u0027 correctly renders \u0027I love having my friends over\u0027 and \u0027\u00A1Vamos!\u0027 is a natural idiomatic equivalent for \u0027Come on!\u0027.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 544,
+        "completionTokens": 685,
+        "totalTokens": 1229
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:meet-003:a1",
+      "source": "pressure",
+      "source_text": "Great!",
+      "candidate": "\u00A1Genial!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate \u0027\u00A1Genial!\u0027 is a direct, idiomatic equivalent of \u0027Great!\u0027 with identical expressive meaning and no material change.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate \u0027\u00A1Genial!\u0027 is a natural idiomatic equivalent that fully preserves the positive exclamatory meaning of \u0027Great!\u0027.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 527,
+        "completionTokens": 516,
+        "totalTokens": 1043
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:seg-001:a2",
+      "source": "pressure",
+      "source_text": "The director checks every line before it reaches the audience.",
+      "candidate": "El director revisa cada l\u00EDnea antes de emitirla.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate preserves subject (director), action (checks/revisa), object (every line/cada l\u00EDnea), and temporal condition (before it reaches audience / antes de emitirla) with same intent.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves subject (director), action (checks/revisa), object (every line/cada l\u00EDnea) and temporal condition; \u0027antes de emitirla\u0027 is an idiomatic paraphrase of \u0027before it reaches the audience\u0027 with no material change in meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 543,
+        "completionTokens": 952,
+        "totalTokens": 1495
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:seg-002:a2",
+      "source": "pressure",
+      "source_text": "We need one more take.",
+      "candidate": "Otra toma m\u00E1s",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate preserves the core meaning \u0027one more take\u0027; omission of \u0027we need\u0027 is a minor condensation that leaves the intent and key object intact for dubbing.",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Source means \u0027we need\u0027 one more take; candidate preserves only the object \u0027one more take\u0027 (\u0027Otra toma m\u00E1s\u0027), dropping the subject and necessity modality.",
+      "comparison": "Disagree",
+      "spark_open_usage": {
+        "promptTokens": 531,
+        "completionTokens": 1144,
+        "totalTokens": 1675
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:seg-003:a2",
+      "source": "pressure",
+      "source_text": "Action!",
+      "candidate": "Acci\u00F3n",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate \u0027Acci\u00F3n\u0027 is the standard, direct translation of \u0027Action!\u0027 preserving subject, intent and material meaning.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate \u0027Acci\u00F3n\u0027 is the direct, accurate translation of \u0027Action!\u0027 with identical material meaning; punctuation difference is immaterial.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 526,
+        "completionTokens": 585,
+        "totalTokens": 1111
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:seg-004:a2",
+      "source": "pressure",
+      "source_text": "That was perfect. Let us move on.",
+      "candidate": "Perfecto. Sigamos.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate preserves core meaning: affirmation of perfection and proposal to continue/move on (\u0027Perfecto. Sigamos\u0027). Dropping \u0027That was\u0027 is a natural condensation without material loss.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves material meaning: affirmation that the previous was perfect and proposal to move on; \u0027Perfecto. Sigamos.\u0027 is a natural, semantically equivalent rendering of \u0027That was perfect. Let us move on.\u0027",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 536,
+        "completionTokens": 462,
+        "totalTokens": 998
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:seg-005:a2",
+      "source": "pressure",
+      "source_text": "Quiet on set, please.",
+      "candidate": "\u00A1Silencio!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate conveys the same core imperative to be quiet; dropping \u0027on set, please\u0027 is idiomatic compression that preserves intent and material meaning for dubbing.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves the material request for silence; omission of \u0027on set\u0027 and \u0027please\u0027 is a concise idiomatic rendering that does not change the core intent or add contradictory information.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 531,
+        "completionTokens": 1158,
+        "totalTokens": 1689
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:seg-006:a2",
+      "source": "pressure",
+      "source_text": "Where are we shooting tomorrow?",
+      "candidate": "\u00BFRodamos ma\u00F1ana?",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "Source asks for the location of tomorrow\u0027s shoot; candidate asks only if shooting happens tomorrow, dropping material \u0027where\u0027 information.",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Source asks for the location of tomorrow\u0027s shoot; candidate omits \u0027where\u0027 and reduces the question to whether shooting will occur, changing the intent.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 532,
+        "completionTokens": 768,
+        "totalTokens": 1300
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:seg-006:a3",
+      "source": "pressure",
+      "source_text": "Where are we shooting tomorrow?",
+      "candidate": "\u00BFD\u00F3nde rodamos?",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "Candidate asks where shooting occurs but drops \u0027tomorrow\u0027, losing the time reference for the event.",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "The source asks specifically about \u0027tomorrow\u0027, but the candidate asks \u0027\u00BFD\u00F3nde rodamos?\u0027 without any time reference, losing material temporal meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 531,
+        "completionTokens": 641,
+        "totalTokens": 1172
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:seg-006:a4",
+      "source": "pressure",
+      "source_text": "Where are we shooting tomorrow?",
+      "candidate": "D\u00F3nde film ma\u00F1ana?",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Both ask where the group will shoot/film tomorrow; candidate preserves where, shooting action (as loanword \u0027film\u0027), and tomorrow despite ungrammatical phrasing.",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Candidate keeps \u0027where\u0027 (D\u00F3nde) and \u0027tomorrow\u0027 (ma\u00F1ana) and an attempt at \u0027shooting\u0027 (film), but the bare form \u0027film\u0027 is not valid Spanish and carries no person marking, so the \u0027we\u0027 subject of \u0027we are shooting\u0027 is lost.",
+      "comparison": "Disagree",
+      "spark_open_usage": {
+        "promptTokens": 531,
+        "completionTokens": 4206,
+        "totalTokens": 4737
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:seg-007:a2",
+      "source": "pressure",
+      "source_text": "Thank you for joining us today.",
+      "candidate": "Gracias todos",
+      "hosted_verdict": "Fail",
+      "hosted_reason": "Source thanks for the specific action of joining today; candidate reduces to generic \u0027thanks everyone\u0027 and loses that material meaning.",
+      "spark_open_verdict": "Fail",
+      "spark_open_reason": "Source thanks viewers specifically for joining today, while candidate reduces to generic \u0027thanks everyone\u0027 and drops the purpose clause, omitting material meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 531,
+        "completionTokens": 717,
+        "totalTokens": 1248
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:seg-007:a3",
+      "source": "pressure",
+      "source_text": "Thank you for joining us today.",
+      "candidate": "Gracias x hoy",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Core meaning of thanking the audience for being present today is preserved; \u0027Gracias x hoy\u0027 is informal shorthand for \u0027gracias por hoy\u0027 and paraphrases \u0027joining us today\u0027 without changing material intent.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate conveys \u0027thanks for today\u0027 which preserves the core intent of thanking for joining us today; \u0027x\u0027 is an informal abbreviation for \u0027por\u0027 and does not alter material meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 532,
+        "completionTokens": 1453,
+        "totalTokens": 1985
+      }
+    },
+    {
+      "id": "qa-report-pressure-70:seg-008:a2",
+      "source": "pressure",
+      "source_text": "We will see you on the next stage.",
+      "candidate": "Hasta la pr\u00F3xima etapa",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate conveys future meeting at the next stage; \u0027Hasta la pr\u00F3xima etapa\u0027 is idiomatic for \u0027We will see you on the next stage\u0027 with subject/action implied.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves intent of future meeting \u0027on the next stage\u0027 via idiomatic \u0027Hasta la pr\u00F3xima etapa\u0027, with \u0027etapa\u0027 acceptable for \u0027stage\u0027 and elided subject/verb not changing material meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 535,
+        "completionTokens": 847,
+        "totalTokens": 1382
+      }
+    },
+    {
+      "id": "qa-report-scale:fpc-001:a1",
+      "source": "uniform",
+      "source_text": "Hi Ashley!",
+      "candidate": "\u00A1Hola Ashley!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Greeting and name preserved exactly; \u0027Hi\u0027 -\u003E \u0027\u00A1Hola\u0027 and \u0027Ashley\u0027 retained with same intent.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves the greeting and proper name with correct Spanish equivalent and natural punctuation.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 528,
+        "completionTokens": 209,
+        "totalTokens": 737
+      }
+    },
+    {
+      "id": "qa-report-scale:fpc-002:a1",
+      "source": "uniform",
+      "source_text": "Hi Anna! I\u0027m coming to your apartment. Where is your apartment?",
+      "candidate": "\u00A1Hola Anna! Voy a tu apartamento. \u00BFD\u00F3nde est\u00E1 tu apartamento?",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate accurately preserves subject, action, object and question intent with equivalent Spanish translation.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Translation accurately preserves greeting, subject, action (coming/going to your apartment), and location question with natural Spanish phrasing.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 550,
+        "completionTokens": 601,
+        "totalTokens": 1151
+      }
+    },
+    {
+      "id": "qa-report-scale:fpc-003:a1",
+      "source": "uniform",
+      "source_text": "My apartment is near the Columbia Heights Metro.",
+      "candidate": "Mi apartamento est\u00E1 cerca del Metro de Columbia Heights.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate accurately preserves subject, location relation, and named entity \u0027Columbia Heights Metro\u0027 with direct equivalent translation.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate translation accurately preserves the subject (my apartment), location relation (near), and named entity (Columbia Heights Metro) with no material change.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 540,
+        "completionTokens": 631,
+        "totalTokens": 1171
+      }
+    },
+    {
+      "id": "qa-report-scale:meet-001:a1",
+      "source": "uniform",
+      "source_text": "Ashley! Ashley! Ashley! Over here! It\u0027s Anna! It\u0027s Anna! Hi!",
+      "candidate": "\u00A1Ashley! \u00A1Ashley! \u00A1Ashley! \u00A1Por aqu\u00ED! \u00A1Soy Anna! \u00A1Soy Anna! \u00A1Hola!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate accurately preserves all repeated calls, location cue, identity declaration, and greeting with natural Spanish equivalents.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "All material meaning is preserved: repeated calling of Ashley, directional phrase \u0027Over here\u0027, self-identification as Anna, and greeting \u0027Hi\u0027 are accurately rendered with natural Spanish idiom (\u0027Soy Anna\u0027 for \u0027It\u0027s Anna\u0027).",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 566,
+        "completionTokens": 1152,
+        "totalTokens": 1718
+      }
+    },
+    {
+      "id": "qa-report-scale:meet-002:a1",
+      "source": "uniform",
+      "source_text": "I love having my friends over. Come on!",
+      "candidate": "\u00A1Me encanta recibir a mis amigos en casa! \u00A1Vamos!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate accurately conveys loving to host friends at home and the exhortation \u0027Come on!\u0027 as \u0027\u00A1Vamos!\u0027, preserving subject, action, and intent with natural idiomatic paraphrase.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves material meaning of both sentences - enjoyment of hosting friends and an encouraging \u0027Come on!\u0027 - with \u0027en casa\u0027 and \u0027\u00A1Vamos!\u0027 as natural idiomatic equivalents that do not change intent.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 545,
+        "completionTokens": 1087,
+        "totalTokens": 1632
+      }
+    },
+    {
+      "id": "qa-report-scale:meet-003:a1",
+      "source": "uniform",
+      "source_text": "Great!",
+      "candidate": "\u00A1Genial!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate \u0027\u00A1Genial!\u0027 is a direct, accurate equivalent of \u0027Great!\u0027 preserving the positive exclamation intent.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate \u0027\u00A1Genial!\u0027 is a natural idiomatic equivalent preserving the enthusiastic affirmation of \u0027Great!\u0027 with no material change in meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 527,
+        "completionTokens": 190,
+        "totalTokens": 717
+      }
+    },
+    {
+      "id": "qa-report-voa10:voa10-001:a1",
+      "source": "uniform",
+      "source_text": "Hi, Ashley.",
+      "candidate": "Hola, Ashley.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate is a direct translation preserving the greeting and the named entity Ashley.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves the greeting and proper name exactly with no change in material meaning.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 529,
+        "completionTokens": 428,
+        "totalTokens": 957
+      }
+    },
+    {
+      "id": "qa-report-voa10:voa10-002:a1",
+      "source": "uniform",
+      "source_text": "Anna, Which coffee shop? There are three coffee shops.",
+      "candidate": "Anna, \u00BFqu\u00E9 cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate preserves name Anna, the question \u0027which coffee shop\u0027, and the factual statement that there are three coffee shops.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves meaning: asks which coffee shop and states there are three coffee shops, with no material additions or omissions.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 547,
+        "completionTokens": 615,
+        "totalTokens": 1162
+      }
+    },
+    {
+      "id": "qa-report-voa10:voa10-003:a1",
+      "source": "uniform",
+      "source_text": "Okay, my apartment is across from a big department store.",
+      "candidate": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate preserves subject (my apartment), location (across from), and object (\u0027unos grandes almacenes\u0027 is the idiomatic Spanish for a singular department store, matching \u0027a big department store\u0027); \u0027Okay\u0027 -\u003E \u0027Vale\u0027 is equivalent.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves subject, location, and object; \u0027enfrente de unos grandes almacenes\u0027 is the natural idiomatic equivalent of \u0027across from a big department store\u0027 in Spanish despite the plural form of the fixed expression.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 546,
+        "completionTokens": 928,
+        "totalTokens": 1474
+      }
+    },
+    {
+      "id": "qa-report-voa10:voa10-004:a1",
+      "source": "uniform",
+      "source_text": "A big department store? Ah, I see it!",
+      "candidate": "\u00BFUna gran tienda por departamentos? \u00A1Ah, ya la veo!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate accurately translates subject (department store), size (big/gran), and action (I see it/ya la veo) with no material additions or omissions.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves all material meaning: \u0027big department store\u0027 \u2192 \u0027gran tienda por departamentos\u0027 and \u0027I see it\u0027 \u2192 \u0027ya la veo\u0027 with no change in subject, objects, or intent.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 546,
+        "completionTokens": 774,
+        "totalTokens": 1320
+      }
+    },
+    {
+      "id": "qa-report-voa10:voa10-005:a3",
+      "source": "uniform",
+      "source_text": "Okay! Bye, Ashley. See you soon!",
+      "candidate": "\u00A1Vale! \u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos!",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Translation preserves greeting, addressee (Ashley), and farewell intent; \u0027\u00A1Nos vemos!\u0027 is a natural idiomatic equivalent of \u0027See you soon!\u0027 with no material loss.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate preserves all material elements: acknowledgement, farewell to Ashley, and expectation to meet again. \u0027\u00A1Nos vemos!\u0027 is a natural idiomatic equivalent of \u0027See you soon!\u0027 with no change in fact or intent.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 545,
+        "completionTokens": 972,
+        "totalTokens": 1517
+      }
+    },
+    {
+      "id": "qa-report-voa10:voa10-006:a1",
+      "source": "uniform",
+      "source_text": "Okay. See you soon.",
+      "candidate": "Vale. Nos vemos pronto.",
+      "hosted_verdict": "Pass",
+      "hosted_reason": "Candidate accurately preserves both sentences: \u0027Okay\u0027 -\u003E \u0027Vale\u0027 and \u0027See you soon\u0027 -\u003E \u0027Nos vemos pronto\u0027 with no material meaning change.",
+      "spark_open_verdict": "Pass",
+      "spark_open_reason": "Candidate is a direct idiomatic equivalent; \u0027Vale\u0027 = \u0027Okay\u0027 and \u0027Nos vemos pronto\u0027 = \u0027See you soon\u0027 with no change in meaning, modality, or intent.",
+      "comparison": "Agree",
+      "spark_open_usage": {
+        "promptTokens": 533,
+        "completionTokens": 876,
+        "totalTokens": 1409
+      }
+    }
+  ]
+}
