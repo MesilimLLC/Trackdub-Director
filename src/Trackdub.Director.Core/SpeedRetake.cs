@@ -39,10 +39,7 @@ public static class SpeedRetakeMath
     /// <summary>The measured overshoot factor f = measured / window.</summary>
     public static double Factor(double measuredSeconds, double windowSeconds)
     {
-        if (windowSeconds <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(windowSeconds));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(windowSeconds);
 
         return measuredSeconds / windowSeconds;
     }
