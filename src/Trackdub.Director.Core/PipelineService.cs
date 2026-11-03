@@ -42,151 +42,229 @@ public sealed class PipelineService
             throw new ArgumentException("Pipeline needs audio or a non-empty segments array.", nameof(request));
         }
 
-        var stages = new List<PipelineStageReport>(4);
-        TranscribeResult? transcribe = null;
-        QaReport? qa = null;
-        SceneContextBatch? scene = null;
-        AuditionReport? audition = null;
-
-        // Stage 1: transcribe (only when audio is supplied).
-        TranscribeSegment[] segments;
-        if (request.AudioWav is not null)
+        var state = new PipelineRunState();
+        if (!await RunTranscribeAsync(request, state, cancellationToken).ConfigureAwait(false))
         {
-            try
-            {
-                using var stream = new MemoryStream(request.AudioWav, writable: false);
-                transcribe = await _transcribe.TranscribeAsync(stream, request.AudioFileName, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is MetaApiException or InvalidOperationException)
-            {
-                stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.Failed, Error: ex.Message));
-                AppendNotRun(stages, StageQa, StageScene, StageAudition);
-                return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), [], null, null, null, null);
-            }
-
-            segments = transcribe.Segments;
-            if (segments.Length == 0)
-            {
-                stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.Failed, Error: "No speech turns detected in audio."));
-                AppendNotRun(stages, StageQa, StageScene, StageAudition);
-                return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), [], transcribe, null, null, null);
-            }
-
-            stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.Ran));
+            return state.ToReport(request);
         }
-        else
+
+        if (!await RunQaAsync(request, state, cancellationToken).ConfigureAwait(false))
         {
-            stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.NotRun, Note: "no audio supplied"));
-            segments = request.Segments!.Select(s => new TranscribeSegment(s.Id, s.Text, s.DurationSeconds, s.Speaker)).ToArray();
-            if (segments.Length == 0)
+            return state.ToReport(request);
+        }
+
+        if (!await RunSceneAsync(request, state, cancellationToken).ConfigureAwait(false))
+        {
+            return state.ToReport(request);
+        }
+
+        await RunAuditionAsync(request, state, cancellationToken).ConfigureAwait(false);
+        return state.ToReport(request);
+    }
+
+    // Stage 1: transcribe (only when audio is supplied).
+    private async Task<bool> RunTranscribeAsync(
+        PipelineRequest request,
+        PipelineRunState state,
+        CancellationToken cancellationToken)
+    {
+        if (request.AudioWav is null)
+        {
+            state.Stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.NotRun, Note: "no audio supplied"));
+            state.Segments = request.Segments!.Select(s => new TranscribeSegment(s.Id, s.Text, s.DurationSeconds, s.Speaker)).ToArray();
+            if (state.Segments.Length == 0)
             {
                 throw new ArgumentException("Pipeline produced no segments to process.", nameof(request));
             }
+
+            return true;
         }
 
-        // Stage 2: translation + QA (QaService performs the translation calls).
+        TranscribeResult transcribe;
+        try
+        {
+            using var stream = new MemoryStream(request.AudioWav, writable: false);
+            transcribe = await _transcribe.TranscribeAsync(stream, request.AudioFileName, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is MetaApiException or InvalidOperationException)
+        {
+            state.Stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.Failed, Error: ex.Message));
+            AppendNotRun(state.Stages, StageQa, StageScene, StageAudition);
+            return false;
+        }
+
+        state.Transcribe = transcribe;
+        state.Segments = transcribe.Segments;
+        if (state.Segments.Length == 0)
+        {
+            state.Stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.Failed, Error: "No speech turns detected in audio."));
+            AppendNotRun(state.Stages, StageQa, StageScene, StageAudition);
+            return false;
+        }
+
+        state.Stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.Ran));
+        return true;
+    }
+
+    // Stage 2: translation + QA (QaService performs the translation calls).
+    private async Task<bool> RunQaAsync(
+        PipelineRequest request,
+        PipelineRunState state,
+        CancellationToken cancellationToken)
+    {
         var qaService = new QaService(_client, _options);
+        QaReport qa;
         try
         {
             qa = await qaService.RunAsync(
-                segments.Select(s => new QaSegmentInput(s.Id, s.Text, s.DurationSeconds)).ToArray(),
+                state.Segments.Select(s => new QaSegmentInput(s.Id, s.Text, s.DurationSeconds)).ToArray(),
                 request.SourceLanguage,
                 request.TargetLanguage,
                 cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is MetaApiException or ArgumentException)
         {
-            stages.Add(new PipelineStageReport(StageQa, PipelineStageStatus.Failed, Error: ex.Message));
-            AppendNotRun(stages, StageScene, StageAudition);
-            return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), segments, transcribe, null, null, null);
+            state.Stages.Add(new PipelineStageReport(StageQa, PipelineStageStatus.Failed, Error: ex.Message));
+            AppendNotRun(state.Stages, StageScene, StageAudition);
+            return false;
         }
 
+        state.Qa = qa;
         if (TerminalQaError(qa) is { } terminalError)
         {
-            stages.Add(new PipelineStageReport(StageQa, PipelineStageStatus.Failed, Error: terminalError));
-            AppendNotRun(stages, StageScene, StageAudition);
-            return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), segments, transcribe, qa, null, null);
+            state.Stages.Add(new PipelineStageReport(StageQa, PipelineStageStatus.Failed, Error: terminalError));
+            AppendNotRun(state.Stages, StageScene, StageAudition);
+            return false;
         }
 
-        stages.Add(new PipelineStageReport(StageQa, PipelineStageStatus.Ran));
+        state.Stages.Add(new PipelineStageReport(StageQa, PipelineStageStatus.Ran));
+        return true;
+    }
 
-        // Stage 3: scene context for segments that have frames.
+    // Stage 3: scene context for segments that have frames.
+    private async Task<bool> RunSceneAsync(
+        PipelineRequest request,
+        PipelineRunState state,
+        CancellationToken cancellationToken)
+    {
         if (!request.Scene)
         {
-            stages.Add(new PipelineStageReport(StageScene, PipelineStageStatus.SkippedByFlag));
+            state.Stages.Add(new PipelineStageReport(StageScene, PipelineStageStatus.SkippedByFlag));
+            return true;
         }
-        else
+
+        SceneSegmentInput[] framed = FramedSceneSegments(request, state.Segments);
+
+        if (framed.Length == 0)
         {
-            var ids = new HashSet<string>(segments.Select(s => s.Id), StringComparer.Ordinal);
-            SceneSegmentInput[] framed = (request.SceneSegments ?? [])
-                .Where(s => s is not null && ids.Contains(s.Id) && !string.IsNullOrWhiteSpace(s.FrameImageDataUrl))
-                .ToArray();
-
-            if (framed.Length == 0)
-            {
-                stages.Add(new PipelineStageReport(StageScene, PipelineStageStatus.Ran, Note: "no segments with frames"));
-            }
-            else
-            {
-                var sceneService = new SceneContextService(_client);
-                try
-                {
-                    scene = await sceneService.RunAsync(framed, cancellationToken).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (ex is MetaApiException or ArgumentException)
-                {
-                    stages.Add(new PipelineStageReport(StageScene, PipelineStageStatus.Failed, Error: ex.Message));
-                    AppendNotRun(stages, StageAudition);
-                    return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), segments, transcribe, qa, null, null);
-                }
-
-                SceneSegmentResult? failed = scene.Segments.FirstOrDefault(s => s.Status == SceneContextStatus.Failed);
-                if (failed is not null)
-                {
-                    stages.Add(new PipelineStageReport(
-                        StageScene,
-                        PipelineStageStatus.Failed,
-                        Error: failed.Error ?? $"Scene context failed for segment '{failed.Id}'."));
-                    AppendNotRun(stages, StageAudition);
-                    return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), segments, transcribe, qa, scene, null);
-                }
-
-                stages.Add(new PipelineStageReport(StageScene, PipelineStageStatus.Ran));
-            }
+            state.Stages.Add(new PipelineStageReport(StageScene, PipelineStageStatus.Ran, Note: "no segments with frames"));
+            return true;
         }
 
-        // Stage 4: audition, only when explicitly flagged on. A missing TTS key
-        // keeps the stage skipped (recorded as skipped, never as pass or failure).
+        SceneContextBatch scene;
+        try
+        {
+            scene = await new SceneContextService(_client).RunAsync(framed, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is MetaApiException or ArgumentException)
+        {
+            state.Stages.Add(new PipelineStageReport(StageScene, PipelineStageStatus.Failed, Error: ex.Message));
+            AppendNotRun(state.Stages, StageAudition);
+            return false;
+        }
+
+        state.Scene = scene;
+        SceneSegmentResult? failed = FailedSceneSegment(scene);
+        if (failed is not null)
+        {
+            state.Stages.Add(new PipelineStageReport(
+                StageScene,
+                PipelineStageStatus.Failed,
+                Error: failed.Error ?? $"Scene context failed for segment '{failed.Id}'."));
+            AppendNotRun(state.Stages, StageAudition);
+            return false;
+        }
+
+        state.Stages.Add(new PipelineStageReport(StageScene, PipelineStageStatus.Ran));
+        return true;
+    }
+
+    // Stage 4: audition, only when explicitly flagged on. A missing TTS key
+    // keeps the stage skipped (recorded as skipped, never as pass or failure).
+    private async Task RunAuditionAsync(
+        PipelineRequest request,
+        PipelineRunState state,
+        CancellationToken cancellationToken)
+    {
         if (!request.Audition)
         {
-            stages.Add(new PipelineStageReport(StageAudition, PipelineStageStatus.SkippedByFlag));
-        }
-        else if (_tts is null || !ElevenLabsAuth.HasApiKey())
-        {
-            stages.Add(new PipelineStageReport(StageAudition, PipelineStageStatus.SkippedByFlag, Note: "ELEVENLABS_API_KEY not set"));
-        }
-        else
-        {
-            var auditionService = new AuditionService(_client, _tts, _options, emotionTags: EmotionTagOptions.EnabledDefault);
-            try
-            {
-                audition = await auditionService.RunAsync(
-                    segments.Select(s => new AuditionSegmentInput(
-                        s.Id, s.Text, s.DurationSeconds, s.Speaker,
-                        scene?.Segments.FirstOrDefault(sc => sc.Id == s.Id)?.Context?.EmotionToneLabel,
-                        scene?.Segments.FirstOrDefault(sc => sc.Id == s.Id)?.Context?.PacingLabel)).ToArray(),
-                    request.SourceLanguage,
-                    request.TargetLanguage,
-                    cancellationToken).ConfigureAwait(false);
-                stages.Add(new PipelineStageReport(StageAudition, PipelineStageStatus.Ran));
-            }
-            catch (Exception ex) when (ex is TtsApiException or MetaApiException or ArgumentException)
-            {
-                stages.Add(new PipelineStageReport(StageAudition, PipelineStageStatus.Failed, Error: ex.Message));
-            }
+            state.Stages.Add(new PipelineStageReport(StageAudition, PipelineStageStatus.SkippedByFlag));
+            return;
         }
 
-        return new PipelineReport(request.SourceLanguage, request.TargetLanguage, stages.ToArray(), segments, transcribe, qa, scene, audition);
+        if (_tts is null || !ElevenLabsAuth.HasApiKey())
+        {
+            state.Stages.Add(new PipelineStageReport(StageAudition, PipelineStageStatus.SkippedByFlag, Note: "ELEVENLABS_API_KEY not set"));
+            return;
+        }
+
+        var auditionService = new AuditionService(
+            _client,
+            _tts,
+            _options,
+            new AuditionRuntimeOptions(EmotionTags: EmotionTagOptions.EnabledDefault));
+        try
+        {
+            state.Audition = await auditionService.RunAsync(
+                BuildAuditionInputs(state),
+                request.SourceLanguage,
+                request.TargetLanguage,
+                cancellationToken).ConfigureAwait(false);
+            state.Stages.Add(new PipelineStageReport(StageAudition, PipelineStageStatus.Ran));
+        }
+        catch (Exception ex) when (ex is TtsApiException or MetaApiException or ArgumentException)
+        {
+            state.Stages.Add(new PipelineStageReport(StageAudition, PipelineStageStatus.Failed, Error: ex.Message));
+        }
+    }
+
+    private static SceneSegmentInput[] FramedSceneSegments(PipelineRequest request, TranscribeSegment[] segments)
+    {
+        var ids = new HashSet<string>(segments.Select(s => s.Id), StringComparer.Ordinal);
+        return (request.SceneSegments ?? [])
+            .Where(s => HasFrame(s, ids))
+            .ToArray();
+    }
+
+    private static bool HasFrame(SceneSegmentInput? segment, HashSet<string> ids)
+    {
+        if (segment is null)
+        {
+            return false;
+        }
+
+        if (!ids.Contains(segment.Id))
+        {
+            return false;
+        }
+
+        return !string.IsNullOrWhiteSpace(segment.FrameImageDataUrl);
+    }
+
+    private static SceneSegmentResult? FailedSceneSegment(SceneContextBatch scene)
+    {
+        return scene.Segments.FirstOrDefault(s => s.Status == SceneContextStatus.Failed);
+    }
+
+    private static AuditionSegmentInput[] BuildAuditionInputs(PipelineRunState state)
+    {
+        return state.Segments.Select(s => new AuditionSegmentInput(
+            s.Id,
+            s.Text,
+            s.DurationSeconds,
+            s.Speaker,
+            state.Scene?.Segments.FirstOrDefault(sc => sc.Id == s.Id)?.Context?.EmotionToneLabel,
+            state.Scene?.Segments.FirstOrDefault(sc => sc.Id == s.Id)?.Context?.PacingLabel)).ToArray();
     }
 
     /// <summary>
@@ -224,6 +302,35 @@ public sealed class PipelineService
         foreach (string name in stageNames)
         {
             stages.Add(new PipelineStageReport(name, PipelineStageStatus.NotRun, Note: "upstream stage failed"));
+        }
+    }
+
+    // Mutable per-run state shared by the stage helpers.
+    private sealed class PipelineRunState
+    {
+        public List<PipelineStageReport> Stages { get; } = new(4);
+
+        public TranscribeSegment[] Segments { get; set; } = [];
+
+        public TranscribeResult? Transcribe { get; set; }
+
+        public QaReport? Qa { get; set; }
+
+        public SceneContextBatch? Scene { get; set; }
+
+        public AuditionReport? Audition { get; set; }
+
+        public PipelineReport ToReport(PipelineRequest request)
+        {
+            return new PipelineReport(
+                request.SourceLanguage,
+                request.TargetLanguage,
+                Stages.ToArray(),
+                Segments,
+                Transcribe,
+                Qa,
+                Scene,
+                Audition);
         }
     }
 }

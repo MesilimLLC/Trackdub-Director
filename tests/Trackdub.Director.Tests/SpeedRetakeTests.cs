@@ -68,13 +68,13 @@ public sealed class SpeedRetakeTests
             ]);
         }
 
-        public Task<TtsSynthesisResult> SynthesizeAsync(string voiceId, string text, string languageCode, double? speed = null, CancellationToken cancellationToken = default)
+        public Task<TtsSynthesisResult> SynthesizeAsync(TtsSynthesisRequest request, CancellationToken cancellationToken = default)
         {
-            Speeds.Add(speed);
-            double seconds = speed is null ? baseSeconds : (baseSeconds / speed.Value) * jitter;
+            Speeds.Add(request.Speed);
+            double seconds = request.Speed is null ? baseSeconds : (baseSeconds / request.Speed.Value) * jitter;
             int frames = (int)Math.Round(seconds * PcmSampleRate);
             byte[] wav = AudioDuration.ToWav(new byte[frames * 2], new PcmFormat { SampleRate = PcmSampleRate, Channels = 1, BitsPerSample = 16 });
-            return Task.FromResult(new TtsSynthesisResult(wav, text.Length));
+            return Task.FromResult(new TtsSynthesisResult(wav, request.Text.Length));
         }
     }
 
@@ -85,7 +85,7 @@ public sealed class SpeedRetakeTests
         try
         {
             var qaOptions = new QaOptions { ToleranceFraction = tolerance };
-            var service = new AuditionService(BuildMeta(), tts, qaOptions, options);
+            var service = new AuditionService(BuildMeta(), tts, qaOptions, new AuditionRuntimeOptions(SpeedRetake: options));
             return await service.RunAsync([new AuditionSegmentInput("seg-1", "Hi Ashley!", window, "anna")], "en", "es");
         }
         finally
@@ -169,7 +169,7 @@ public sealed class SpeedRetakeTests
 
         // Median response 0.98/1.0 pattern: correction divides the factor.
         var samples = new[] { Sample(1.10, 1.078), Sample(1.10, 1.078), Sample(1.20, 1.176) };
-        double requested = SpeedRetakeMath.RequestedSpeed(2.30, 2.0, 1.20, samples, "v1", "m1", out double factor, out bool corrected);
+        double requested = SpeedRetakeMath.RequestedSpeed(new SpeedRetakeRequest(2.30, 2.0, 1.20, samples, "v1", "m1"), out double factor, out bool corrected);
         Assert.Equal(1.15, factor, 3);
         Assert.True(corrected);
         Assert.Equal(Math.Round(1.15 / 0.98, 3), requested, 3);
@@ -177,7 +177,7 @@ public sealed class SpeedRetakeTests
         // Wild median clamps to the 1.05 correction bound; speed clamps to cap and never below 1.0.
         var wild = new[] { Sample(1.1, 1.40), Sample(1.1, 1.40), Sample(1.1, 1.40) };
         Assert.Equal(1.05, SpeedRetakeMath.CorrectionFactor(wild, "v1", "m1"), 3);
-        double clamped = SpeedRetakeMath.RequestedSpeed(2.60, 2.0, 1.10, [], "v1", "m1", out _, out _);
+        double clamped = SpeedRetakeMath.RequestedSpeed(new SpeedRetakeRequest(2.60, 2.0, 1.10, [], "v1", "m1"), out _, out _);
         Assert.Equal(1.10, clamped, 3);
     }
 

@@ -16,6 +16,10 @@ public sealed record TtsVoice(
 /// <param name="CharactersBilled">Characters counted against the provider quota (the synthesized text length).</param>
 public sealed record TtsSynthesisResult(byte[] AudioBytes, int CharactersBilled);
 
+/// <summary>One synthesis request: the voice, the exact text, the spoken language, and an optional provider speed setting.</summary>
+/// <param name="Speed">Provider speed setting (1.0 is normal), or null for the provider default.</param>
+public sealed record TtsSynthesisRequest(string VoiceId, string Text, string LanguageCode, double? Speed = null);
+
 /// <summary>
 /// Text-to-speech for the audition lane. Implementations must fail closed:
 /// <see cref="EnsureConfigured"/> throws before any network call when no API key
@@ -29,8 +33,8 @@ public interface ITtsProvider
     /// <summary>List the account's voices (stock library selection happens in the audition service).</summary>
     Task<IReadOnlyList<TtsVoice>> ListVoicesAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Synthesize one text in one voice, pronounced as <paramref name="languageCode"/>. Text-only input: never any reference audio. <paramref name="speed"/>, when set, is the provider's speed setting (1.0 is normal); the returned audio is still measured, never estimated.</summary>
-    Task<TtsSynthesisResult> SynthesizeAsync(string voiceId, string text, string languageCode, double? speed = null, CancellationToken cancellationToken = default);
+    /// <summary>Synthesize one request in one voice. Text-only input: never any reference audio. The returned audio is still measured, never estimated.</summary>
+    Task<TtsSynthesisResult> SynthesizeAsync(TtsSynthesisRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Whether the provider's model accepts a speed setting. Feature-detected per

@@ -26,6 +26,15 @@ public sealed record SpeedCalibrationSample(
     [property: JsonPropertyName("realized_duration")] double RealizedDuration,
     [property: JsonPropertyName("realized_ratio")] double RealizedRatio);
 
+/// <summary>Inputs for a computed-speed request: the measured take, its window, the cap, and calibration context.</summary>
+public sealed record SpeedRetakeRequest(
+    double MeasuredSeconds,
+    double WindowSeconds,
+    double Cap,
+    IReadOnlyList<SpeedCalibrationSample> Samples,
+    string VoiceId,
+    string ModelId);
+
 /// <summary>
 /// Pure math for the computed-speed retake: factor from a measured take, the
 /// calibration correction, and the requested-speed clamp. No provider calls.
@@ -76,18 +85,13 @@ public static class SpeedRetakeMath
     /// the provider's documented hard ceiling. This path never requests below 1.0.
     /// </summary>
     public static double RequestedSpeed(
-        double measuredSeconds,
-        double windowSeconds,
-        double cap,
-        IReadOnlyList<SpeedCalibrationSample> samples,
-        string voiceId,
-        string modelId,
+        SpeedRetakeRequest request,
         out double computedFactor,
         out bool calibrationCorrected)
     {
-        computedFactor = Factor(measuredSeconds, windowSeconds);
-        double effectiveCap = Math.Clamp(cap, 1.0, HardCeiling);
-        double correction = CorrectionFactor(samples, voiceId, modelId);
+        computedFactor = Factor(request.MeasuredSeconds, request.WindowSeconds);
+        double effectiveCap = Math.Clamp(request.Cap, 1.0, HardCeiling);
+        double correction = CorrectionFactor(request.Samples, request.VoiceId, request.ModelId);
         calibrationCorrected = correction != 1.0;
         double requested = Math.Round(computedFactor / correction, 3);
         return Math.Clamp(requested, 1.0, effectiveCap);

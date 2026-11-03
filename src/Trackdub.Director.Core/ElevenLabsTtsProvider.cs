@@ -81,25 +81,30 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider, IDisposable
         return ParseVoices(body);
     }
 
-    public async Task<TtsSynthesisResult> SynthesizeAsync(string voiceId, string text, string languageCode, double? speed = null, CancellationToken cancellationToken = default)
+    public async Task<TtsSynthesisResult> SynthesizeAsync(TtsSynthesisRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(voiceId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(text);
-        ArgumentException.ThrowIfNullOrWhiteSpace(languageCode);
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.VoiceId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Text);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.LanguageCode);
 
-        string url = $"{ElevenLabsAuth.GetBaseUrl()}/text-to-speech/{Uri.EscapeDataString(voiceId.Trim())}?output_format=pcm_16000";
-        var payload = new SynthRequest(text, _modelId, languageCode.Trim(), speed is null ? null : new VoiceSettings(speed.Value));
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        AddAuth(request);
-        request.Content = new StringContent(JsonSerializer.Serialize(payload, JsonOptions), Encoding.UTF8, "application/json");
+        string url = $"{ElevenLabsAuth.GetBaseUrl()}/text-to-speech/{Uri.EscapeDataString(request.VoiceId.Trim())}?output_format=pcm_16000";
+        var payload = new SynthRequest(
+            request.Text,
+            _modelId,
+            request.LanguageCode.Trim(),
+            request.Speed is null ? null : new VoiceSettings(request.Speed.Value));
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url);
+        AddAuth(httpRequest);
+        httpRequest.Content = new StringContent(JsonSerializer.Serialize(payload, JsonOptions), Encoding.UTF8, "application/json");
 
-        byte[] audio = await SendForBytesAsync(request, cancellationToken).ConfigureAwait(false);
+        byte[] audio = await SendForBytesAsync(httpRequest, cancellationToken).ConfigureAwait(false);
         if (audio.Length == 0)
         {
             throw new TtsApiException("ElevenLabs synthesis returned no audio bytes.");
         }
 
-        return new TtsSynthesisResult(audio, text.Length);
+        return new TtsSynthesisResult(audio, request.Text.Length);
     }
 
     public void Dispose()

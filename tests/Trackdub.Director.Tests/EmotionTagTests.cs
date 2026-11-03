@@ -15,29 +15,25 @@ public sealed class EmotionTagTests
             => handler(request, cancellationToken);
     }
 
-    private static HttpResponseMessage Chat(string content)
-    {
-        var payload = new
-        {
-            id = "chatcmpl-test",
-            @object = "chat.completion",
-            created = 1234567890L,
-            model = "muse-spark-1.1",
-            choices = new[] { new { index = 0, finish_reason = "stop", message = new { role = "assistant", content } } },
-            usage = new { prompt_tokens = 10, completion_tokens = 5, total_tokens = 15 },
-        };
-        return new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
-        };
-    }
-
     private static MetaClient BuildMeta()
     {
         var handler = new HandlerStub(async (request, cancellationToken) =>
         {
             string body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            return Chat(body.Contains(MeaningGate.MeaningMarker, StringComparison.Ordinal) ? PassJson : "Hola, Ashley.");
+            string content = body.Contains(MeaningGate.MeaningMarker, StringComparison.Ordinal) ? PassJson : "Hola, Ashley.";
+            var payload = new
+            {
+                id = "chatcmpl-test",
+                @object = "chat.completion",
+                created = 1234567890L,
+                model = "muse-spark-1.1",
+                choices = new[] { new { index = 0, finish_reason = "stop", message = new { role = "assistant", content } } },
+                usage = new { prompt_tokens = 10, completion_tokens = 5, total_tokens = 15 },
+            };
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
+            };
         });
         return new MetaClient(new HttpClient(handler));
     }
@@ -67,24 +63,26 @@ public sealed class EmotionTagTests
             ]);
         }
 
-        public Task<TtsSynthesisResult> SynthesizeAsync(string voiceId, string text, string languageCode, double? speed = null, CancellationToken cancellationToken = default)
+        public Task<TtsSynthesisResult> SynthesizeAsync(TtsSynthesisRequest request, CancellationToken cancellationToken = default)
         {
-            Texts.Add(text);
+            Texts.Add(request.Text);
             // 1.0 s of audio at any text, so timing passes the 2.0 s window.
             byte[] wav = AudioDuration.ToWav(new byte[16000 * 2], new PcmFormat { SampleRate = 16000, Channels = 1, BitsPerSample = 16 });
-            return Task.FromResult(new TtsSynthesisResult(wav, text.Length));
+            return Task.FromResult(new TtsSynthesisResult(wav, request.Text.Length));
         }
     }
 
-    private static async Task<AuditionReport> RunAsync(FakeTagTts tts, EmotionTagOptions options, string? label)
+    private sealed record TagScenario(EmotionTagOptions Options, string? Label);
+
+    private static async Task<AuditionReport> RunAsync(FakeTagTts tts, TagScenario scenario)
     {
         string? previous = Environment.GetEnvironmentVariable(MetaAuth.PrimaryApiKeyEnv);
         Environment.SetEnvironmentVariable(MetaAuth.PrimaryApiKeyEnv, "test-fake-key");
         try
         {
-            var service = new AuditionService(BuildMeta(), tts, QaOptions.Default, emotionTags: options);
+            var service = new AuditionService(BuildMeta(), tts, QaOptions.Default, new AuditionRuntimeOptions(EmotionTags: scenario.Options));
             return await service.RunAsync(
-                [new AuditionSegmentInput("seg-1", "Hi Ashley!", 2.0, "anna", label)], "en", "es");
+                [new AuditionSegmentInput("seg-1", "Hi Ashley!", 2.0, "anna", scenario.Label)], "en", "es");
         }
         finally
         {
@@ -96,7 +94,7 @@ public sealed class EmotionTagTests
     public async Task Tag_is_prepended_at_synthesis_only_on_tag_honoring_models()
     {
         var tts = new FakeTagTts(supportsTags: true);
-        AuditionReport report = await RunAsync(tts, new EmotionTagOptions(Enabled: true), "cheerful");
+        AuditionReport report = await RunAsync(tts, new TagScenario(new EmotionTagOptions(Enabled: true), "cheerful"));
 
         AuditionTakeReport take = Assert.Single(report.Segments[0].Takes, t => t.Synthesized);
         Assert.Equal("[cheerfully]", take.EmotionTag);
@@ -110,7 +108,7 @@ public sealed class EmotionTagTests
     public async Task Tag_is_never_sent_to_a_model_that_would_speak_it()
     {
         var tts = new FakeTagTts(supportsTags: false);
-        AuditionReport report = await RunAsync(tts, new EmotionTagOptions(Enabled: true), "cheerful");
+        AuditionReport report = await RunAsync(tts, new TagScenario(new EmotionTagOptions(Enabled: true), "cheerful"));
 
         AuditionTakeReport take = Assert.Single(report.Segments[0].Takes, t => t.Synthesized);
         Assert.Null(take.EmotionTag);
@@ -125,7 +123,7 @@ public sealed class EmotionTagTests
     public async Task No_tag_without_a_mappable_label(string? label)
     {
         var tts = new FakeTagTts(supportsTags: true);
-        AuditionReport report = await RunAsync(tts, new EmotionTagOptions(Enabled: true), label);
+        AuditionReport report = await RunAsync(tts, new TagScenario(new EmotionTagOptions(Enabled: true), label));
 
         AuditionTakeReport take = Assert.Single(report.Segments[0].Takes, t => t.Synthesized);
         Assert.Null(take.EmotionTag);
@@ -136,7 +134,7 @@ public sealed class EmotionTagTests
     public async Task Default_applies_tags_since_adoption_and_disabled_does_not()
     {
         var first = new FakeTagTts(supportsTags: true);
-        AuditionReport disabled = await RunAsync(first, EmotionTagOptions.Disabled, "cheerful");
+        AuditionReport disabled = await RunAsync(first, new TagScenario(EmotionTagOptions.Disabled, "cheerful"));
         Assert.All(disabled.Segments[0].Takes, t => Assert.Null(t.EmotionTag));
 
         var second = new FakeTagTts(supportsTags: true);

@@ -3,6 +3,15 @@ using System.Text;
 
 namespace Trackdub.Director.Core;
 
+/// <summary>Optional per-run audition wiring: speed retakes, prior calibration, and emotion tags.</summary>
+public sealed record AuditionRuntimeOptions(
+    SpeedRetakeOptions? SpeedRetake = null,
+    IReadOnlyList<SpeedCalibrationSample>? PriorCalibration = null,
+    EmotionTagOptions? EmotionTags = null)
+{
+    public static readonly AuditionRuntimeOptions Default = new();
+}
+
 /// <summary>
 /// Audition casting: cast each character's stock voice once, take up to three
 /// candidate texts per segment from the existing translation/QA machinery,
@@ -52,16 +61,15 @@ public sealed class AuditionService
         MetaClient client,
         ITtsProvider tts,
         QaOptions? options = null,
-        SpeedRetakeOptions? speedRetake = null,
-        IReadOnlyList<SpeedCalibrationSample>? priorCalibration = null,
-        EmotionTagOptions? emotionTags = null)
+        AuditionRuntimeOptions? runtime = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _tts = tts ?? throw new ArgumentNullException(nameof(tts));
         _options = options ?? QaOptions.Default;
-        _speedRetake = speedRetake ?? SpeedRetakeOptions.Disabled;
-        _priorCalibration = priorCalibration ?? [];
-        _emotionTags = emotionTags ?? EmotionTagOptions.EnabledDefault;
+        AuditionRuntimeOptions resolved = runtime ?? AuditionRuntimeOptions.Default;
+        _speedRetake = resolved.SpeedRetake ?? SpeedRetakeOptions.Disabled;
+        _priorCalibration = resolved.PriorCalibration ?? [];
+        _emotionTags = resolved.EmotionTags ?? EmotionTagOptions.EnabledDefault;
     }
 
     public async Task<AuditionReport> RunAsync(
@@ -332,30 +340,8 @@ public sealed class AuditionService
             await SynthesizeAsync(take, run, cancellationToken).ConfigureAwait(false);
         }
 
-        TakeWork? winner = PickWinner(takes, work.Qa.WindowSeconds);
-        string? note = null;
-        if (winner is null && _speedRetake.Enabled)
-        {
-            // Computed-speed correction first: it changes no words, so it runs
-            // before the paths that do (alternates, then refusal on exhaustion).
-            note = await AddComputedSpeedRetakesAsync(work, takes, run, cancellationToken).ConfigureAwait(false);
-            winner = PickWinner(takes, work.Qa.WindowSeconds);
-        }
-
-        if (winner is null)
-        {
-            note ??= await AddAlternatesAsync(work, takes, run, cancellationToken).ConfigureAwait(false);
-            winner = PickWinner(takes, work.Qa.WindowSeconds);
-        }
-
-        if (winner is null && !_speedRetake.Enabled)
-        {
-            // The blind fixed-factor variant is legacy behavior, kept only while
-            // the computed path is disabled (config-off behavior is unchanged).
-            string? speedNote = await AddSpeedVariantAsync(work, takes, run, cancellationToken).ConfigureAwait(false);
-            note ??= speedNote;
-            winner = PickWinner(takes, work.Qa.WindowSeconds);
-        }
+        var context = new SegmentRunContext(work, takes, run);
+        (TakeWork? winner, string? note) = await ResolveWinnerAsync(context, cancellationToken).ConfigureAwait(false);
 
         AuditionTakeReport[] reports = takes.Select(t => t.ToReport(winner, work.Segment.Id)).ToArray();
         return new AuditionSegmentReport(
@@ -369,6 +355,43 @@ public sealed class AuditionService
             WinnerTakeNumber: winner?.TakeNumber,
             WinnerFileName: winner?.FileName(work.Segment.Id),
             Note: note);
+    }
+
+    private async Task<(TakeWork? Winner, string? Note)> ResolveWinnerAsync(
+        SegmentRunContext context,
+        CancellationToken cancellationToken)
+    {
+        TakeWork? winner = PickWinner(context.Takes, context.Work.Qa.WindowSeconds);
+        if (winner is not null)
+        {
+            return (winner, null);
+        }
+
+        string? note = null;
+        if (_speedRetake.Enabled)
+        {
+            // Computed-speed correction first: it changes no words, so it runs
+            // before the paths that do (alternates, then refusal on exhaustion).
+            note = await AddComputedSpeedRetakesAsync(context, cancellationToken).ConfigureAwait(false);
+            winner = PickWinner(context.Takes, context.Work.Qa.WindowSeconds);
+        }
+
+        if (winner is null)
+        {
+            note ??= await AddAlternatesAsync(context, cancellationToken).ConfigureAwait(false);
+            winner = PickWinner(context.Takes, context.Work.Qa.WindowSeconds);
+        }
+
+        if (winner is null && !_speedRetake.Enabled)
+        {
+            // The blind fixed-factor variant is legacy behavior, kept only while
+            // the computed path is disabled (config-off behavior is unchanged).
+            string? speedNote = await AddSpeedVariantAsync(context, cancellationToken).ConfigureAwait(false);
+            note ??= speedNote;
+            winner = PickWinner(context.Takes, context.Work.Qa.WindowSeconds);
+        }
+
+        return (winner, note);
     }
 
     // The best meaning-passing take: measured timing closest to the window wins;
@@ -393,163 +416,259 @@ public sealed class AuditionService
     // MaxRetakesPerSegment per segment and one per candidate text. The retake
     // is measured like any take; the gates decide. No second speed attempt.
     private async Task<string?> AddComputedSpeedRetakesAsync(
-        SegmentCandidates work,
-        List<TakeWork> takes,
-        RunState run,
+        SegmentRunContext context,
         CancellationToken cancellationToken)
     {
-        if (work.Cast is null)
+        if (context.Work.Cast is null)
         {
             return null;
         }
 
-        string modelId = (_tts as ElevenLabsTtsProvider)?.ModelId ?? _tts.GetType().Name;
-        bool supported = _tts.SupportsSpeedSetting(modelId);
+        string modelId = ResolveModelId();
+        var retakeContext = new RetakeContext(context, modelId, _tts.SupportsSpeedSetting(modelId));
         double effectiveCap = Math.Clamp(_speedRetake.Cap, 1.0, SpeedRetakeMath.HardCeiling);
         int retakesUsed = 0;
 
-        foreach (TakeWork source in takes.ToArray())
+        foreach (TakeWork source in context.Takes.ToArray())
         {
             if (retakesUsed >= _speedRetake.MaxRetakesPerSegment)
             {
                 break;
             }
 
-            if (!source.Synthesized || source.MeasuredSeconds is null
-                || source.MeaningVerdict != MeaningVerdict.Pass
-                || source.TimingVerdict != AuditionTimingVerdict.Fail)
-            {
-                continue;
-            }
-
-            double factor = SpeedRetakeMath.Factor(source.MeasuredSeconds.Value, work.Qa.WindowSeconds);
-            if (factor > effectiveCap || factor <= 1.0)
-            {
-                continue;
-            }
-
-            if (SegmentSynthFull(takes))
+            RetakeOutcome outcome = await TryAddComputedSpeedRetakeAsync(retakeContext, source, effectiveCap, cancellationToken).ConfigureAwait(false);
+            if (outcome == RetakeOutcome.CapReached)
             {
                 return $"Per-segment take cap ({MaxSynthesizedTakesPerSegment}) reached; speed retake not synthesized.";
             }
 
-            double requested = SpeedRetakeMath.RequestedSpeed(
-                source.MeasuredSeconds.Value, work.Qa.WindowSeconds, _speedRetake.Cap,
-                run.Calibration, work.Cast.VoiceId, modelId, out _, out bool corrected);
-
-            int nextNumber = takes.Max(t => t.TakeNumber) + 1;
-            QaAttemptReport attempt = SyntheticAttempt(work, run, nextNumber, QaAttemptKind.SpeedRetake, source.Attempt.Translation, 0);
-            var retake = new TakeWork(attempt) { Cast = work.Cast, EmotionTag = ResolveEmotionTag(work) };
-            retake.ApplyMeaning(MeaningVerdict.Pass, source.MeaningIssues, source.MeaningExplanation, 0);
-            retake.ComputedFactor = factor;
-            retake.CalibrationCorrected = corrected;
-            retake.SpeedRequested = supported ? requested : 1.0;
-            if (!supported)
+            if (outcome == RetakeOutcome.Added)
             {
-                retake.Note = $"Speed setting unsupported for model {modelId}; retake synthesized without it.";
-            }
-
-            await SynthesizeAsync(retake, run, cancellationToken, supported ? requested : null).ConfigureAwait(false);
-            takes.Add(retake);
-            retakesUsed++;
-
-            if (supported && retake.Synthesized && retake.MeasuredSeconds is not null)
-            {
-                run.Calibration.Add(new SpeedCalibrationSample(
-                    work.Cast.VoiceId,
-                    modelId,
-                    requested,
-                    source.MeasuredSeconds.Value / requested,
-                    retake.MeasuredSeconds.Value,
-                    retake.MeasuredSeconds.Value / source.MeasuredSeconds.Value));
+                retakesUsed++;
             }
         }
 
         return null;
     }
 
+    private async Task<RetakeOutcome> TryAddComputedSpeedRetakeAsync(
+        RetakeContext retakeContext,
+        TakeWork source,
+        double effectiveCap,
+        CancellationToken cancellationToken)
+    {
+        if (!IsSpeedRetakeCandidate(source))
+        {
+            return RetakeOutcome.Skipped;
+        }
+
+        double factor = SpeedRetakeMath.Factor(source.MeasuredSeconds!.Value, retakeContext.Segment.Work.Qa.WindowSeconds);
+        if (!WithinSpeedCap(factor, effectiveCap))
+        {
+            return RetakeOutcome.Skipped;
+        }
+
+        if (SegmentSynthFull(retakeContext.Segment.Takes))
+        {
+            return RetakeOutcome.CapReached;
+        }
+
+        await AddComputedSpeedRetakeAsync(retakeContext, source, factor, cancellationToken).ConfigureAwait(false);
+        return RetakeOutcome.Added;
+    }
+
+    private static bool IsSpeedRetakeCandidate(TakeWork source)
+    {
+        if (!source.Synthesized)
+        {
+            return false;
+        }
+
+        if (source.MeasuredSeconds is null)
+        {
+            return false;
+        }
+
+        if (source.MeaningVerdict != MeaningVerdict.Pass)
+        {
+            return false;
+        }
+
+        return source.TimingVerdict == AuditionTimingVerdict.Fail;
+    }
+
+    private static bool WithinSpeedCap(double factor, double cap)
+    {
+        return factor <= cap && factor > 1.0;
+    }
+
+    private static bool ShouldRecordCalibration(RetakeContext retakeContext, TakeWork retake)
+    {
+        if (!retakeContext.Supported)
+        {
+            return false;
+        }
+
+        if (!retake.Synthesized)
+        {
+            return false;
+        }
+
+        return retake.MeasuredSeconds is not null;
+    }
+
+    private async Task AddComputedSpeedRetakeAsync(
+        RetakeContext retakeContext,
+        TakeWork source,
+        double factor,
+        CancellationToken cancellationToken)
+    {
+        SegmentRunContext context = retakeContext.Segment;
+        double requested = SpeedRetakeMath.RequestedSpeed(
+            new SpeedRetakeRequest(
+                source.MeasuredSeconds!.Value,
+                context.Work.Qa.WindowSeconds,
+                _speedRetake.Cap,
+                context.Run.Calibration,
+                context.Work.Cast!.VoiceId,
+                retakeContext.ModelId),
+            out _,
+            out bool corrected);
+
+        int nextNumber = context.Takes.Max(t => t.TakeNumber) + 1;
+        QaAttemptReport attempt = SyntheticAttempt(
+            context.Work,
+            context.Run,
+            new SyntheticTakeSpec(nextNumber, QaAttemptKind.SpeedRetake, source.Attempt.Translation, 0));
+        var retake = new TakeWork(attempt)
+        {
+            Cast = context.Work.Cast,
+            EmotionTag = ResolveEmotionTag(context.Work),
+        };
+        retake.ApplyMeaning(MeaningVerdict.Pass, source.MeaningIssues, source.MeaningExplanation, 0);
+        retake.ComputedFactor = factor;
+        retake.CalibrationCorrected = corrected;
+        retake.SpeedRequested = retakeContext.Supported ? requested : 1.0;
+        if (!retakeContext.Supported)
+        {
+            retake.Note = $"Speed setting unsupported for model {retakeContext.ModelId}; retake synthesized without it.";
+        }
+
+        await SynthesizeAsync(retake, context.Run, cancellationToken, retakeContext.Supported ? requested : null).ConfigureAwait(false);
+        context.Takes.Add(retake);
+
+        if (ShouldRecordCalibration(retakeContext, retake))
+        {
+            context.Run.Calibration.Add(new SpeedCalibrationSample(
+                context.Work.Cast!.VoiceId,
+                retakeContext.ModelId,
+                requested,
+                source.MeasuredSeconds.Value / requested,
+                retake.MeasuredSeconds.Value,
+                retake.MeasuredSeconds.Value / source.MeasuredSeconds.Value));
+        }
+    }
+
     // Requests up to MaxAlternateVariants phrasings of the segment's best text when no
     // candidate won. Every alternate is meaning-gated through the same path as QA
     // candidates before any synthesis. Returns a segment note when alternates could
     // not be produced; null when they were (or were not needed).
-    private async Task<string?> AddAlternatesAsync(
-        SegmentCandidates work,
-        List<TakeWork> takes,
-        RunState run,
-        CancellationToken cancellationToken)
+    private async Task<string?> AddAlternatesAsync(SegmentRunContext context, CancellationToken cancellationToken)
     {
-        if (work.Cast is null)
+        if (context.Work.Cast is null)
         {
             return "No cast voice for this speaker; alternates not requested.";
         }
 
-        TakeWork? best = BestMeaningPassingTake(takes, work.Qa.WindowSeconds);
+        TakeWork? best = BestMeaningPassingTake(context.Takes, context.Work.Qa.WindowSeconds);
         if (best is null)
         {
             return "No meaning-passing text to base alternates on.";
         }
 
-        if (SegmentSynthFull(takes))
+        if (SegmentSynthFull(context.Takes))
         {
             return $"Per-segment take cap ({MaxSynthesizedTakesPerSegment}) reached; no alternates requested.";
         }
 
-        MetaClient.VariantsCompletionResult variants;
+        (MetaClient.VariantsCompletionResult? variants, string? error) = await RequestAlternatesAsync(context, best, cancellationToken).ConfigureAwait(false);
+        if (variants is null)
+        {
+            return error;
+        }
+
+        // Counted only once the call was sent.
+        context.Run.MetaCalls++;
+        int variantsTokens = variants.Usage?.TotalTokens ?? 0;
+        context.Run.TranslationTokens += variantsTokens;
+        return await AppendAlternatesAsync(context, new AlternatesBatch(variants, variantsTokens), cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<(MetaClient.VariantsCompletionResult? Variants, string? Error)> RequestAlternatesAsync(
+        SegmentRunContext context,
+        TakeWork best,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            variants = await run.Client.TranslateVariantsAsync(
-                new MetaClient.VariantsRequest(work.Segment.Text, best.Attempt.Translation, run.SourceLanguage, run.TargetLanguage, MaxAlternateVariants),
+            MetaClient.VariantsCompletionResult variants = await context.Run.Client.TranslateVariantsAsync(
+                new MetaClient.VariantsRequest(context.Work.Segment.Text, best.Attempt.Translation, context.Run.SourceLanguage, context.Run.TargetLanguage, MaxAlternateVariants),
                 cancellationToken).ConfigureAwait(false);
+            return (variants, null);
         }
         catch (MetaBudgetExhaustedException)
         {
             // Refused before sending: not counted, reported as a cap hit.
-            run.MetaCapHit = true;
-            return "Meta call budget ran out before the alternates request.";
+            context.Run.MetaCapHit = true;
+            return (null, "Meta call budget ran out before the alternates request.");
         }
         catch (Exception ex) when (
             ex is MetaApiException or HttpRequestException or InvalidOperationException
             || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
             // The request was reserved and sent before it failed, so it counts.
-            run.MetaCalls++;
-            return $"Alternates request failed: {Truncate(ex.Message)}";
+            context.Run.MetaCalls++;
+            return (null, $"Alternates request failed: {Truncate(ex.Message)}");
         }
+    }
 
-        // Counted only once the call was sent.
-        run.MetaCalls++;
-        int variantsTokens = variants.Usage?.TotalTokens ?? 0;
-        run.TranslationTokens += variantsTokens;
-
-        HashSet<string> existingTexts = takes.Select(t => t.Attempt.Translation.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        int nextNumber = takes.Max(t => t.TakeNumber) + 1;
+    private async Task<string?> AppendAlternatesAsync(
+        SegmentRunContext context,
+        AlternatesBatch batch,
+        CancellationToken cancellationToken)
+    {
+        HashSet<string> existingTexts = context.Takes.Select(t => t.Attempt.Translation.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        int nextNumber = context.Takes.Max(t => t.TakeNumber) + 1;
         bool tokensAttributed = false;
-        foreach (string text in variants.Variants)
+        foreach (string text in batch.Variants.Variants)
         {
             if (!existingTexts.Add(text.Trim()))
             {
                 continue;
             }
 
-            if (SegmentSynthFull(takes))
+            if (SegmentSynthFull(context.Takes))
             {
                 break;
             }
 
             // The single variants call's tokens ride on the first alternate take created.
-            int tokenAllocation = tokensAttributed ? 0 : variantsTokens;
-            QaAttemptReport attempt = SyntheticAttempt(work, run, nextNumber++, QaAttemptKind.Alternate, text, tokenAllocation);
+            int tokenAllocation = tokensAttributed ? 0 : batch.Tokens;
+            QaAttemptReport attempt = SyntheticAttempt(
+                context.Work,
+                context.Run,
+                new SyntheticTakeSpec(nextNumber++, QaAttemptKind.Alternate, text, tokenAllocation));
             tokensAttributed = true;
-            TakeWork take = await ResolveMeaningAsync(work.Segment, attempt, run, cancellationToken).ConfigureAwait(false);
-            take.Cast = work.Cast;
-            take.EmotionTag = ResolveEmotionTag(work);
-            await SynthesizeAsync(take, run, cancellationToken).ConfigureAwait(false);
-            takes.Add(take);
+            TakeWork take = await ResolveMeaningAsync(context.Work.Segment, attempt, context.Run, cancellationToken).ConfigureAwait(false);
+            take.Cast = context.Work.Cast;
+            take.EmotionTag = ResolveEmotionTag(context.Work);
+            await SynthesizeAsync(take, context.Run, cancellationToken).ConfigureAwait(false);
+            context.Takes.Add(take);
         }
 
-        if (!tokensAttributed && variantsTokens > 0)
+        if (!tokensAttributed && batch.Tokens > 0)
         {
-            return $"Alternates request returned only duplicate texts; its {variantsTokens} tokens are counted at run level only.";
+            return $"Alternates request returned only duplicate texts; its {batch.Tokens} tokens are counted at run level only.";
         }
 
         return null;
@@ -558,39 +677,38 @@ public sealed class AuditionService
     // Final option per segment: the best meaning-passing text re-synthesized once at
     // SpeedVariantFactor. No new Meta call (the text already passed the gate); the
     // duration is measured from the returned audio like any other take.
-    private async Task<string?> AddSpeedVariantAsync(
-        SegmentCandidates work,
-        List<TakeWork> takes,
-        RunState run,
-        CancellationToken cancellationToken)
+    private async Task<string?> AddSpeedVariantAsync(SegmentRunContext context, CancellationToken cancellationToken)
     {
-        TakeWork? best = BestMeaningPassingTake(takes, work.Qa.WindowSeconds);
+        TakeWork? best = BestMeaningPassingTake(context.Takes, context.Work.Qa.WindowSeconds);
         if (best is null || !best.Synthesized)
         {
             return null;
         }
 
-        int nextNumber = takes.Max(t => t.TakeNumber) + 1;
-        QaAttemptReport attempt = SyntheticAttempt(work, run, nextNumber, QaAttemptKind.SpeedVariant, best.Attempt.Translation, 0);
+        int nextNumber = context.Takes.Max(t => t.TakeNumber) + 1;
+        QaAttemptReport attempt = SyntheticAttempt(
+            context.Work,
+            context.Run,
+            new SyntheticTakeSpec(nextNumber, QaAttemptKind.SpeedVariant, best.Attempt.Translation, 0));
         var take = new TakeWork(attempt)
         {
-            Cast = work.Cast,
-            EmotionTag = ResolveEmotionTag(work),
+            Cast = context.Work.Cast,
+            EmotionTag = ResolveEmotionTag(context.Work),
         };
         // The text passed the gate already; carry the verdict with zero new tokens.
         take.ApplyMeaning(MeaningVerdict.Pass, best.MeaningIssues, best.MeaningExplanation, 0);
-        if (SegmentSynthFull(takes))
+        if (SegmentSynthFull(context.Takes))
         {
             take.Note = $"Per-segment take cap ({MaxSynthesizedTakesPerSegment}) reached; speed variant not synthesized.";
-            takes.Add(take);
+            context.Takes.Add(take);
             return take.Note;
         }
 
         // Labeled only once the take will actually be synthesized at the factor.
         take.SpeedFactor = SpeedVariantFactor;
         take.SpeedRequested = SpeedVariantFactor;
-        await SynthesizeAsync(take, run, cancellationToken, SpeedVariantFactor).ConfigureAwait(false);
-        takes.Add(take);
+        await SynthesizeAsync(take, context.Run, cancellationToken, SpeedVariantFactor).ConfigureAwait(false);
+        context.Takes.Add(take);
         return null;
     }
 
@@ -598,27 +716,21 @@ public sealed class AuditionService
     // (alternate phrasing or speed variant). Estimated seconds and max chars are
     // computed with the same deterministic estimator QA uses; verdicts start
     // unevaluated so the meaning gate runs before any synthesis decision.
-    private QaAttemptReport SyntheticAttempt(
-        SegmentCandidates work,
-        RunState run,
-        int attemptNumber,
-        QaAttemptKind kind,
-        string text,
-        int translationTokens)
+    private QaAttemptReport SyntheticAttempt(SegmentCandidates work, RunState run, SyntheticTakeSpec spec)
     {
         double cps = _options.GetCharactersPerSecond(run.TargetLanguage);
         double window = work.Qa.WindowSeconds;
         return new QaAttemptReport(
-            attemptNumber,
-            kind,
-            text,
-            DurationEstimator.EstimateSeconds(text, cps),
+            spec.AttemptNumber,
+            spec.Kind,
+            spec.Text,
+            DurationEstimator.EstimateSeconds(spec.Text, cps),
             window,
             DurationEstimator.MaxCharsForWindow(window * (1.0 + _options.ToleranceFraction), cps),
             QaVerdict.Fail,
-            translationTokens,
+            spec.TranslationTokens,
             0,
-            translationTokens,
+            spec.TranslationTokens,
             MetaAuth.GetModel(),
             TimingVerdict: QaVerdict.Fail,
             MeaningVerdict: MeaningVerdict.NotEvaluated);
@@ -689,6 +801,11 @@ public sealed class AuditionService
         }
     }
 
+    private string ResolveModelId()
+    {
+        return (_tts as ElevenLabsTtsProvider)?.ModelId ?? _tts.GetType().Name;
+    }
+
     // The audio tag for a segment, or null: feature disabled, no label, an
     // unmappable label, or a model that would speak the tag aloud. Tags are
     // gated on the provider's per-model support, never assumed.
@@ -727,7 +844,9 @@ public sealed class AuditionService
             // The tag exists only in the synthesis request: the take's text,
             // and everything the meaning gate judged, stays byte-identical.
             string synthesisText = take.EmotionTag is null ? take.Attempt.Translation : $"{take.EmotionTag} {take.Attempt.Translation}";
-            result = await _tts.SynthesizeAsync(voice.VoiceId, synthesisText, run.TargetLanguage, speed, cancellationToken).ConfigureAwait(false);
+            result = await _tts.SynthesizeAsync(
+                new TtsSynthesisRequest(voice.VoiceId, synthesisText, run.TargetLanguage, speed),
+                cancellationToken).ConfigureAwait(false);
         }
         catch (TtsApiException ex) when (!ex.IsAuthFailure)
         {
@@ -859,6 +978,22 @@ public sealed class AuditionService
 
     // One segment's QA result, with the cast voice resolved for its speaker.
     private sealed record SegmentCandidates(AuditionSegmentInput Segment, QaSegmentReport Qa, AuditionCastVoice? Cast);
+
+    // Shared state for the per-segment retake and alternate attempts.
+    private sealed record SegmentRunContext(SegmentCandidates Work, List<TakeWork> Takes, RunState Run);
+
+    private sealed record AlternatesBatch(MetaClient.VariantsCompletionResult Variants, int Tokens);
+
+    private sealed record RetakeContext(SegmentRunContext Segment, string ModelId, bool Supported);
+
+    private sealed record SyntheticTakeSpec(int AttemptNumber, QaAttemptKind Kind, string Text, int TranslationTokens);
+
+    private enum RetakeOutcome
+    {
+        Skipped,
+        Added,
+        CapReached,
+    }
 
     private sealed class RunState
     {
