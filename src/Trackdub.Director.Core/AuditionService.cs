@@ -428,12 +428,20 @@ public sealed class AuditionService
         var retakeContext = new RetakeContext(context, modelId, _tts.SupportsSpeedSetting(modelId));
         double effectiveCap = Math.Clamp(_speedRetake.Cap, 1.0, SpeedRetakeMath.HardCeiling);
         int retakesUsed = 0;
+        // One retake per candidate text: duplicate translations must not spend
+        // the per-segment retake budget on the same text twice.
+        var retakenTexts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (TakeWork source in context.Takes.ToArray())
         {
             if (retakesUsed >= _speedRetake.MaxRetakesPerSegment)
             {
                 break;
+            }
+
+            if (retakenTexts.Contains(source.Attempt.Translation.Trim()))
+            {
+                continue;
             }
 
             RetakeOutcome outcome = await TryAddComputedSpeedRetakeAsync(retakeContext, source, effectiveCap, cancellationToken).ConfigureAwait(false);
@@ -445,6 +453,7 @@ public sealed class AuditionService
             if (outcome == RetakeOutcome.Added)
             {
                 retakesUsed++;
+                retakenTexts.Add(source.Attempt.Translation.Trim());
             }
         }
 
@@ -559,13 +568,14 @@ public sealed class AuditionService
 
         if (ShouldRecordCalibration(retakeContext, retake))
         {
+            double realized = retake.MeasuredSeconds!.Value;
             context.Run.Calibration.Add(new SpeedCalibrationSample(
                 context.Work.Cast!.VoiceId,
                 retakeContext.ModelId,
                 requested,
                 source.MeasuredSeconds.Value / requested,
-                retake.MeasuredSeconds.Value,
-                retake.MeasuredSeconds.Value / source.MeasuredSeconds.Value));
+                realized,
+                realized / source.MeasuredSeconds.Value));
         }
     }
 
@@ -886,7 +896,15 @@ public sealed class AuditionService
             return "ElevenLabs cap already hit; synthesis stopped.";
         }
 
-        if (run.ElevenLabsCharacters + take.Attempt.Translation.Length > MaxElevenLabsCharacters)
+        // The synthesis request prepends the emotion tag, and CharactersBilled is
+        // the request text length, so the cap must account for the tag too.
+        int billedLength = take.Attempt.Translation.Length;
+        if (take.EmotionTag is not null)
+        {
+            billedLength += take.EmotionTag.Length + 1;
+        }
+
+        if (run.ElevenLabsCharacters + billedLength > MaxElevenLabsCharacters)
         {
             run.ElevenLabsCapHit = true;
             return $"ElevenLabs character cap ({MaxElevenLabsCharacters}) would be exceeded; synthesis stopped for the run.";

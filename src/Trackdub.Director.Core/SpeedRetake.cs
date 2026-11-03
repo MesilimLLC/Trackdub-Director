@@ -54,8 +54,10 @@ public static class SpeedRetakeMath
     }
 
     /// <summary>
-    /// Median realized response ratio (realized_ratio / requested_speed) across
-    /// samples, clamped to a [0.95, 1.05] correction. Fewer than
+    /// Median realized-vs-predicted ratio (predicted_duration / realized_duration)
+    /// across samples, clamped to a [0.95, 1.05] correction. An ideal response
+    /// realizes exactly the predicted duration, so the ratio is 1.0 and the
+    /// requested speed is the raw overshoot factor. Fewer than
     /// <see cref="MinSamplesForCorrection"/> samples: no correction (1.0).
     /// </summary>
     public static double CorrectionFactor(IReadOnlyList<SpeedCalibrationSample> samples, string voiceId, string modelId)
@@ -64,7 +66,7 @@ public static class SpeedRetakeMath
             .Where(s => string.Equals(s.VoiceId, voiceId, StringComparison.Ordinal)
                 && string.Equals(s.ModelId, modelId, StringComparison.Ordinal)
                 && s.RequestedSpeed > 0)
-            .Select(s => s.RealizedRatio / s.RequestedSpeed)
+            .Select(s => s.PredictedDuration / s.RealizedDuration)
             .OrderBy(v => v)
             .ToArray();
         if (ratios.Length < MinSamplesForCorrection)

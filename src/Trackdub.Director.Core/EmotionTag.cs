@@ -103,8 +103,11 @@ public static class EmotionTagMap
 
     /// <summary>
     /// The tags for a label: at most one emotion tag plus at most one pacing
-    /// tag, in that order. Empty when the label names nothing mappable
-    /// (including neutral): no tag is ever invented for an unrecognized label.
+    /// tag, in that order. Empty when the label names nothing mappable: no
+    /// tag is ever invented for an unrecognized label. A keyword counts only
+    /// as a whole word and only when a negator does not govern it, so
+    /// "unhappy" or "not happy" never maps to "[happily]" and a neutral
+    /// emotion label still lets a pacing label through (e.g. "neutral, brisk").
     /// </summary>
     public static IReadOnlyList<string> TagsForLabel(string? emotionToneLabel)
     {
@@ -114,11 +117,6 @@ public static class EmotionTagMap
         }
 
         string normalized = emotionToneLabel.Trim().ToLowerInvariant();
-        if (normalized.Contains("neutral", StringComparison.Ordinal))
-        {
-            return [];
-        }
-
         string? emotion = FirstMatch(normalized, EmotionMap);
         string? pacing = FirstMatch(normalized, PacingMap);
         return new[] { emotion, pacing }.Where(t => t is not null).Cast<string>().ToArray();
@@ -131,16 +129,65 @@ public static class EmotionTagMap
         return tags.Count == 0 ? null : string.Join(" ", tags);
     }
 
+    private static readonly string[] Negators = ["not", "no", "never", "without"];
+
     private static string? FirstMatch(string normalized, (string Keyword, string Tag)[] map)
     {
         foreach ((string keyword, string tag) in map)
         {
-            if (normalized.Contains(keyword, StringComparison.Ordinal))
+            if (HasUnnegatedWholeWord(normalized, keyword))
             {
                 return tag;
             }
         }
 
         return null;
+    }
+
+    // A keyword counts only when it appears as a whole word (never inside
+    // "unhappy") and when no negator directly precedes it ("not happy" is not
+    // a happy line). Keywords and text are already lowercase.
+    private static bool HasUnnegatedWholeWord(string text, string keyword)
+    {
+        int index = text.IndexOf(keyword, StringComparison.Ordinal);
+        while (index >= 0)
+        {
+            if (IsWholeWord(text, index, keyword.Length) && !IsNegated(text, index))
+            {
+                return true;
+            }
+
+            index = text.IndexOf(keyword, index + 1, StringComparison.Ordinal);
+        }
+
+        return false;
+    }
+
+    private static bool IsWholeWord(string text, int start, int length)
+    {
+        bool startOk = start == 0 || !IsWordChar(text[start - 1]);
+        int end = start + length;
+        return startOk && (end == text.Length || !IsWordChar(text[end]));
+    }
+
+    private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c is '-' or '_';
+
+    // The word immediately before the keyword occurrence, when it is a negator.
+    private static bool IsNegated(string text, int index)
+    {
+        int wordEnd = index;
+        while (wordEnd > 0 && text[wordEnd - 1] == ' ')
+        {
+            wordEnd--;
+        }
+
+        int wordStart = wordEnd;
+        while (wordStart > 0 && text[wordStart - 1] != ' ')
+        {
+            wordStart--;
+        }
+
+        string preceding = text[wordStart..wordEnd];
+        return Negators.Contains(preceding, StringComparer.Ordinal);
     }
 }

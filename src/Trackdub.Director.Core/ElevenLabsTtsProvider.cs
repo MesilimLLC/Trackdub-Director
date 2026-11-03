@@ -61,11 +61,13 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider, IDisposable
     }
 
     // Measured 2026-11-02: eleven_v3 honors bracket audio tags as delivery
-    // control; eleven_multilingual_v2 speaks them aloud. Tags go only to v3.
+    // control; eleven_multilingual_v2 speaks them aloud. eleven_v4 was probed
+    // on the same terms. Tags go only to the measured models, never to a
+    // prefix guess: eleven_v4* variants get no tag until individually probed.
     public bool SupportsEmotionTags(string modelId)
     {
         return modelId.StartsWith("eleven_v3", StringComparison.OrdinalIgnoreCase)
-            || modelId.StartsWith("eleven_v4", StringComparison.OrdinalIgnoreCase);
+            || string.Equals(modelId, "eleven_v4", StringComparison.OrdinalIgnoreCase);
     }
 
     public void EnsureConfigured()

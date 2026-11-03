@@ -1,5 +1,9 @@
 # Emotion tag probe — record (2026-11-02)
 
+> Superseded for the default and the model gate. Pipeline runs enable tags by
+> default, and the ElevenLabs gate admits eleven_v3* plus exactly eleven_v4.
+> See samples/emotion-probe-v4/NOTES.md for current behavior.
+
 Question: can the scene stage's emotion_tone_label be carried into ElevenLabs
 generation, and on which model?
 

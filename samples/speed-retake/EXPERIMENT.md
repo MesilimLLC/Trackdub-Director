@@ -47,5 +47,8 @@ monotonic, error within tolerance) fails on this data. The shipped behavior stay
 revision-or-refusal: the computed-speed retake remains in code behind
 `speed_retake.enabled: false` (default), with its unit tests, manifest labeling,
 calibration sidecar, and verify-only surfacing in place should the provider's
-speed response become orderly enough to re-measure. Claim wording is unchanged:
-no speed-adjusted audio is claimed or produced by any shipped run.
+speed response become orderly enough to re-measure. Claim wording is adjusted:
+computed-speed audio is never claimed by a shipped run, but a segment with no
+winner can still get one fixed-factor `SpeedVariant` synthesized at 1.15 (see
+`AddSpeedVariantAsync`) when a meaning-passing take exists and the per-segment
+cap allows it — the audition-v4 run records such a take for voa10-005.

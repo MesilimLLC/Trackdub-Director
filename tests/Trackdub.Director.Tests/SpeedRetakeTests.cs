@@ -162,13 +162,14 @@ public sealed class SpeedRetakeTests
     [Fact]
     public void Calibration_math_median_clamp_and_passthrough()
     {
-        static SpeedCalibrationSample Sample(double requested, double ratio) => new("v1", "m1", requested, 2.0, 2.0 * ratio, ratio);
+        // ratio is the predicted/realized ratio the correction sees (2.0 predicted, 2.0/ratio realized).
+        static SpeedCalibrationSample Sample(double requested, double ratio) => new("v1", "m1", requested, 2.0, 2.0 / ratio, ratio);
 
         // Fewer than 3 samples: passthrough, no correction.
         Assert.Equal(1.0, SpeedRetakeMath.CorrectionFactor([Sample(1.1, 0.90), Sample(1.1, 0.90)], "v1", "m1"));
 
         // Median response 0.98/1.0 pattern: correction divides the factor.
-        var samples = new[] { Sample(1.10, 1.078), Sample(1.10, 1.078), Sample(1.20, 1.176) };
+        var samples = new[] { Sample(1.10, 0.98), Sample(1.10, 0.98), Sample(1.20, 0.98) };
         double requested = SpeedRetakeMath.RequestedSpeed(new SpeedRetakeRequest(2.30, 2.0, 1.20, samples, "v1", "m1"), out double factor, out bool corrected);
         Assert.Equal(1.15, factor, 3);
         Assert.True(corrected);

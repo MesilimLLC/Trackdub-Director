@@ -177,9 +177,98 @@ public sealed class EmotionTagTests
     }
 
     [Theory]
+    [InlineData("unhappy")] // keyword inside a larger word: never matches
+    [InlineData("not happy")] // negated keyword: never matches
+    [InlineData("no joyful mood")]
+    [InlineData("neutral")] // neutral maps to nothing by itself
+    public void Keyword_inside_a_word_or_negated_maps_to_no_tag(string label)
+    {
+        Assert.Null(EmotionTagMap.ForLabel(label));
+    }
+
+    [Fact]
+    public void Neutral_emotion_label_still_lets_pacing_through()
+    {
+        Assert.Equal("[briskly]", EmotionTagMap.ForLabel("neutral, brisk"));
+    }
+
+    [Fact]
+    public async Task Pacing_label_from_segment_input_is_prepended_with_emotion()
+    {
+        var tts = new FakeTagTts(supportsTags: true);
+        string? previous = Environment.GetEnvironmentVariable(MetaAuth.PrimaryApiKeyEnv);
+        Environment.SetEnvironmentVariable(MetaAuth.PrimaryApiKeyEnv, "test-fake-key");
+        AuditionReport report;
+        try
+        {
+            var service = new AuditionService(BuildMeta(), tts, QaOptions.Default, new AuditionRuntimeOptions(EmotionTags: new EmotionTagOptions(Enabled: true)));
+            report = await service.RunAsync(
+                [new AuditionSegmentInput("seg-1", "Hi Ashley!", 2.0, "anna", "cheerful", "unhurried")], "en", "es");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(MetaAuth.PrimaryApiKeyEnv, previous);
+        }
+
+        AuditionTakeReport take = Assert.Single(report.Segments[0].Takes, t => t.Synthesized);
+        Assert.Equal("[cheerfully] [slowly]", take.EmotionTag);
+        Assert.Equal("[cheerfully] [slowly] Hola, Ashley.", tts.Texts[0]);
+        // The gated text is byte-identical: no tag in the take text.
+        Assert.Equal("Hola, Ashley.", take.Text);
+    }
+
+    [Theory]
+    [InlineData("eleven_v3", true)]
+    [InlineData("eleven_multilingual_v2", false)]
+    public async Task Real_provider_model_id_decides_tag_at_synthesis(string modelId, bool tagged)
+    {
+        var handler = new HandlerStub(async (request, cancellationToken) =>
+        {
+            if (request.Method == HttpMethod.Get)
+            {
+                const string voices = """{"voices":[{"voice_id":"voice-alba","name":"Alba","category":"premade","labels":{"gender":"female"},"high_quality_base_model_ids":["eleven_multilingual_v2"]},{"voice_id":"voice-zoe","name":"Zoe","category":"premade","labels":{"gender":"female"},"high_quality_base_model_ids":["eleven_multilingual_v2"]}]}""";
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(voices, Encoding.UTF8, "application/json"),
+                };
+            }
+
+            // 1.0 s of raw PCM mono 16-bit at 16 kHz, accepted as audio by the provider.
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[16000 * 2]) };
+        });
+        using var provider = new ElevenLabsTtsProvider(new HttpClient(handler), modelId);
+
+        string? previousMeta = Environment.GetEnvironmentVariable(MetaAuth.PrimaryApiKeyEnv);
+        string? previousEleven = Environment.GetEnvironmentVariable(ElevenLabsAuth.ApiKeyEnv);
+        Environment.SetEnvironmentVariable(MetaAuth.PrimaryApiKeyEnv, "test-fake-key");
+        Environment.SetEnvironmentVariable(ElevenLabsAuth.ApiKeyEnv, "test-eleven-key");
+        try
+        {
+            var service = new AuditionService(BuildMeta(), provider, QaOptions.Default, new AuditionRuntimeOptions(EmotionTags: new EmotionTagOptions(Enabled: true)));
+            AuditionReport report = await service.RunAsync(
+                [new AuditionSegmentInput("seg-1", "Hi Ashley!", 2.0, "anna", "cheerful")], "en", "es");
+
+            AuditionTakeReport take = Assert.Single(report.Segments[0].Takes, t => t.Synthesized);
+            if (tagged)
+            {
+                Assert.Equal("[cheerfully]", take.EmotionTag);
+            }
+            else
+            {
+                Assert.Null(take.EmotionTag);
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(MetaAuth.PrimaryApiKeyEnv, previousMeta);
+            Environment.SetEnvironmentVariable(ElevenLabsAuth.ApiKeyEnv, previousEleven);
+        }
+    }
+
+    [Theory]
     [InlineData("eleven_v3", true)]
     [InlineData("eleven_v4", true)]
-    [InlineData("eleven_v4_turbo", true)]
+    [InlineData("eleven_v4_turbo", false)]
     [InlineData("eleven_multilingual_v2", false)]
     [InlineData("eleven_flash_v2_5", false)]
     public void ElevenLabs_tag_support_is_v3_and_v4_only(string modelId, bool expected)

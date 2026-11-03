@@ -29,9 +29,14 @@ ratings; no adopt decision is recorded here without them.
 
 - EmotionTagMap expanded: roughly 50 emotion keywords plus pacing/pause
   keywords; emotion and pacing combine (one each), unmappable labels still
-  get no tag, never an invented one.
-- ElevenLabs tag gate now admits eleven_v3* and eleven_v4*; v2 and all
-  other models still can never receive a tag.
-- Default remains disabled, production model unchanged. Passing detected
-  delivery straight through is exactly what the gated path does at
-  synthesis time; it does not make v4 the default.
+  get no tag, never an invented one. Keywords match whole words only, and a
+  negator such as "not happy" suppresses a match.
+- ElevenLabs tag gate now admits eleven_v3* and exactly eleven_v4 (variants
+  such as eleven_v4_turbo are not tagged until individually probed); v2 and
+  all other models still can never receive a tag.
+- The default model is now eleven_v4 (ElevenLabsTtsProvider.DefaultModelId),
+  replacing eleven_multilingual_v2. The CLI and server construct the provider
+  without a model id, so both use v4.
+- Emotion tags are enabled by default (EmotionTagOptions.EnabledDefault).
+  PipelineService passes this value when the audition stage runs; the audition
+  stage itself stays off unless requested.
