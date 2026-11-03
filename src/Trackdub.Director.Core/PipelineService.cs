@@ -167,11 +167,14 @@ public sealed class PipelineService
         }
         else
         {
-            var auditionService = new AuditionService(_client, _tts, _options);
+            var auditionService = new AuditionService(_client, _tts, _options, emotionTags: EmotionTagOptions.EnabledDefault);
             try
             {
                 audition = await auditionService.RunAsync(
-                    segments.Select(s => new AuditionSegmentInput(s.Id, s.Text, s.DurationSeconds, s.Speaker)).ToArray(),
+                    segments.Select(s => new AuditionSegmentInput(
+                        s.Id, s.Text, s.DurationSeconds, s.Speaker,
+                        scene?.Segments.FirstOrDefault(sc => sc.Id == s.Id)?.Context?.EmotionToneLabel,
+                        scene?.Segments.FirstOrDefault(sc => sc.Id == s.Id)?.Context?.PacingLabel)).ToArray(),
                     request.SourceLanguage,
                     request.TargetLanguage,
                     cancellationToken).ConfigureAwait(false);

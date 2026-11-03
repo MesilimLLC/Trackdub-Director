@@ -14,7 +14,7 @@ namespace Trackdub.Director.Core;
 public sealed class ElevenLabsTtsProvider : ITtsProvider, IDisposable
 {
     /// <summary>Multilingual model used for Spanish synthesis.</summary>
-    public const string DefaultModelId = "eleven_multilingual_v2";
+    public const string DefaultModelId = "eleven_v4";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -50,6 +50,23 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider, IDisposable
     public int PcmBitsPerSample => 16;
 
     public string ModelId => _modelId;
+
+    // Older ElevenLabs models accept voice_settings without a speed control;
+    // speed is feature-detected per model, never assumed.
+    private static readonly string[] SpeedUnsupportedModelIds = ["eleven_monolingual_v1", "eleven_multilingual_v1"];
+
+    public bool SupportsSpeedSetting(string modelId)
+    {
+        return !SpeedUnsupportedModelIds.Contains(modelId, StringComparer.OrdinalIgnoreCase);
+    }
+
+    // Measured 2026-11-02: eleven_v3 honors bracket audio tags as delivery
+    // control; eleven_multilingual_v2 speaks them aloud. Tags go only to v3.
+    public bool SupportsEmotionTags(string modelId)
+    {
+        return modelId.StartsWith("eleven_v3", StringComparison.OrdinalIgnoreCase)
+            || modelId.StartsWith("eleven_v4", StringComparison.OrdinalIgnoreCase);
+    }
 
     public void EnsureConfigured()
     {

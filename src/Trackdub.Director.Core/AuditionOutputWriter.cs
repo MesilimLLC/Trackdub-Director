@@ -13,6 +13,8 @@ public static class AuditionOutputWriter
 {
     public const string ManifestFileName = "audition-manifest.json";
 
+    public const string SpeedCalibrationFileName = "speed-calibration.json";
+
     public static readonly string[] MediaSubfolders = ["media", "audition"];
 
     private static readonly JsonSerializerOptions ManifestJson = new(JsonSerializerDefaults.Web) { WriteIndented = true };
@@ -60,6 +62,7 @@ public static class AuditionOutputWriter
 
             string manifestPath = Path.Combine(outputDir, ManifestFileName);
             File.Move(stagedManifest, manifestPath, overwrite: true);
+            await WriteSpeedCalibrationAsync(report, outputDir, cancellationToken).ConfigureAwait(false);
             return manifestPath;
         }
         finally
@@ -69,6 +72,30 @@ public static class AuditionOutputWriter
                 Directory.Delete(stagingDir, recursive: true);
             }
         }
+    }
+
+    // Append-only calibration log: this run's samples are appended to any
+    // samples already on record in the run folder, never rewritten or dropped.
+    private static async Task WriteSpeedCalibrationAsync(AuditionReport report, string outputDir, CancellationToken cancellationToken)
+    {
+        if (report.SpeedCalibration is not { Length: > 0 } newSamples)
+        {
+            return;
+        }
+
+        string path = Path.Combine(outputDir, SpeedCalibrationFileName);
+        var all = new List<SpeedCalibrationSample>();
+        if (File.Exists(path))
+        {
+            string existing = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(existing))
+            {
+                all.AddRange(JsonSerializer.Deserialize<SpeedCalibrationSample[]>(existing, ManifestJson) ?? []);
+            }
+        }
+
+        all.AddRange(newSamples);
+        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(all.ToArray(), ManifestJson), cancellationToken).ConfigureAwait(false);
     }
 
     // The file name comes from AuditionService.TakeFileName, which keeps it inside one folder. The check

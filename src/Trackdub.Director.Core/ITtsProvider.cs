@@ -32,6 +32,20 @@ public interface ITtsProvider
     /// <summary>Synthesize one text in one voice, pronounced as <paramref name="languageCode"/>. Text-only input: never any reference audio. <paramref name="speed"/>, when set, is the provider's speed setting (1.0 is normal); the returned audio is still measured, never estimated.</summary>
     Task<TtsSynthesisResult> SynthesizeAsync(string voiceId, string text, string languageCode, double? speed = null, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Whether the provider's model accepts a speed setting. Feature-detected per
+    /// model, never assumed. Default: supported. When false, a speed retake omits
+    /// the setting and the attempt is logged as unsupported.
+    /// </summary>
+    bool SupportsSpeedSetting(string modelId) => true;
+
+    /// <summary>
+    /// Whether the provider's model honors bracket audio tags (e.g. [warmly]) as
+    /// delivery control rather than speaking them. Feature-detected per model,
+    /// never assumed. Default: not supported.
+    /// </summary>
+    bool SupportsEmotionTags(string modelId) => false;
+
     /// <summary>Declared PCM parameters for raw (non-WAV-container) synthesis output.</summary>
     int PcmSampleRate { get; }
 

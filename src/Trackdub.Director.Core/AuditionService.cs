@@ -38,18 +38,30 @@ public sealed class AuditionService
     public const int MaxElevenLabsCharacters = 3000;
     public const int MaxMetaCalls = 40;
 
-    private const string SpanishCapableModelId = "eleven_multilingual_v2";
+    private static readonly string[] SpanishCapableModelIds = ["eleven_v4", "eleven_multilingual_v2"];
     private const int MaxStemLength = 64;
 
     private readonly MetaClient _client;
     private readonly ITtsProvider _tts;
     private readonly QaOptions _options;
+    private readonly SpeedRetakeOptions _speedRetake;
+    private readonly IReadOnlyList<SpeedCalibrationSample> _priorCalibration;
+    private readonly EmotionTagOptions _emotionTags;
 
-    public AuditionService(MetaClient client, ITtsProvider tts, QaOptions? options = null)
+    public AuditionService(
+        MetaClient client,
+        ITtsProvider tts,
+        QaOptions? options = null,
+        SpeedRetakeOptions? speedRetake = null,
+        IReadOnlyList<SpeedCalibrationSample>? priorCalibration = null,
+        EmotionTagOptions? emotionTags = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _tts = tts ?? throw new ArgumentNullException(nameof(tts));
         _options = options ?? QaOptions.Default;
+        _speedRetake = speedRetake ?? SpeedRetakeOptions.Disabled;
+        _priorCalibration = priorCalibration ?? [];
+        _emotionTags = emotionTags ?? EmotionTagOptions.EnabledDefault;
     }
 
     public async Task<AuditionReport> RunAsync(
@@ -75,6 +87,7 @@ public sealed class AuditionService
 
         var budget = new CallBudget(MaxMetaCalls);
         var run = new RunState(budget, _client.WithBudget(budget), sourceLanguage, targetLanguage);
+        run.Calibration.AddRange(_priorCalibration);
         AuditionCastVoice[] cast = await CastAsync(cancellationToken).ConfigureAwait(false);
         var castBySpeaker = cast.ToDictionary(c => c.SpeakerId, StringComparer.OrdinalIgnoreCase);
 
@@ -100,7 +113,10 @@ public sealed class AuditionService
             ElevenLabsCapHit: run.ElevenLabsCapHit,
             MetaCapHit: run.MetaCapHit);
 
-        return new AuditionReport(sourceLanguage, targetLanguage, cast, segmentReports.ToArray(), totals);
+        SpeedCalibrationSample[] newSamples = run.Calibration.Skip(_priorCalibration.Count).ToArray();
+        return new AuditionReport(
+            sourceLanguage, targetLanguage, cast, segmentReports.ToArray(), totals,
+            SpeedRetake: _speedRetake, SpeedCalibration: newSamples);
     }
 
     private static void ValidateSegments(IReadOnlyList<AuditionSegmentInput> segments)
@@ -154,7 +170,7 @@ public sealed class AuditionService
         // multilingual model; when it advertises none, the synthesis request's
         // model decides and per-take errors surface honestly instead.
         return voice.ModelIds is not { Length: > 0 } models
-            || models.Contains(SpanishCapableModelId, StringComparer.Ordinal);
+            || models.Any(m => SpanishCapableModelIds.Contains(m, StringComparer.Ordinal));
     }
 
     // Worst case for one segment: an initial translation and up to MaxAttempts
@@ -312,19 +328,30 @@ public sealed class AuditionService
         foreach (TakeWork take in takes)
         {
             take.Cast = work.Cast;
+            take.EmotionTag = ResolveEmotionTag(work);
             await SynthesizeAsync(take, run, cancellationToken).ConfigureAwait(false);
         }
 
         TakeWork? winner = PickWinner(takes, work.Qa.WindowSeconds);
         string? note = null;
-        if (winner is null)
+        if (winner is null && _speedRetake.Enabled)
         {
-            note = await AddAlternatesAsync(work, takes, run, cancellationToken).ConfigureAwait(false);
+            // Computed-speed correction first: it changes no words, so it runs
+            // before the paths that do (alternates, then refusal on exhaustion).
+            note = await AddComputedSpeedRetakesAsync(work, takes, run, cancellationToken).ConfigureAwait(false);
             winner = PickWinner(takes, work.Qa.WindowSeconds);
         }
 
         if (winner is null)
         {
+            note ??= await AddAlternatesAsync(work, takes, run, cancellationToken).ConfigureAwait(false);
+            winner = PickWinner(takes, work.Qa.WindowSeconds);
+        }
+
+        if (winner is null && !_speedRetake.Enabled)
+        {
+            // The blind fixed-factor variant is legacy behavior, kept only while
+            // the computed path is disabled (config-off behavior is unchanged).
             string? speedNote = await AddSpeedVariantAsync(work, takes, run, cancellationToken).ConfigureAwait(false);
             note ??= speedNote;
             winner = PickWinner(takes, work.Qa.WindowSeconds);
@@ -358,6 +385,87 @@ public sealed class AuditionService
     private static bool SegmentSynthFull(IReadOnlyList<TakeWork> takes)
     {
         return takes.Count(t => t.Synthesized) >= MaxSynthesizedTakesPerSegment;
+    }
+
+    // Computed-speed retakes: for each synthesized, meaning-passing take that
+    // failed timing, one retake of the identical text at the computed speed
+    // (factor = measured / window, calibration-corrected, capped). At most
+    // MaxRetakesPerSegment per segment and one per candidate text. The retake
+    // is measured like any take; the gates decide. No second speed attempt.
+    private async Task<string?> AddComputedSpeedRetakesAsync(
+        SegmentCandidates work,
+        List<TakeWork> takes,
+        RunState run,
+        CancellationToken cancellationToken)
+    {
+        if (work.Cast is null)
+        {
+            return null;
+        }
+
+        string modelId = (_tts as ElevenLabsTtsProvider)?.ModelId ?? _tts.GetType().Name;
+        bool supported = _tts.SupportsSpeedSetting(modelId);
+        double effectiveCap = Math.Clamp(_speedRetake.Cap, 1.0, SpeedRetakeMath.HardCeiling);
+        int retakesUsed = 0;
+
+        foreach (TakeWork source in takes.ToArray())
+        {
+            if (retakesUsed >= _speedRetake.MaxRetakesPerSegment)
+            {
+                break;
+            }
+
+            if (!source.Synthesized || source.MeasuredSeconds is null
+                || source.MeaningVerdict != MeaningVerdict.Pass
+                || source.TimingVerdict != AuditionTimingVerdict.Fail)
+            {
+                continue;
+            }
+
+            double factor = SpeedRetakeMath.Factor(source.MeasuredSeconds.Value, work.Qa.WindowSeconds);
+            if (factor > effectiveCap || factor <= 1.0)
+            {
+                continue;
+            }
+
+            if (SegmentSynthFull(takes))
+            {
+                return $"Per-segment take cap ({MaxSynthesizedTakesPerSegment}) reached; speed retake not synthesized.";
+            }
+
+            double requested = SpeedRetakeMath.RequestedSpeed(
+                source.MeasuredSeconds.Value, work.Qa.WindowSeconds, _speedRetake.Cap,
+                run.Calibration, work.Cast.VoiceId, modelId, out _, out bool corrected);
+
+            int nextNumber = takes.Max(t => t.TakeNumber) + 1;
+            QaAttemptReport attempt = SyntheticAttempt(work, run, nextNumber, QaAttemptKind.SpeedRetake, source.Attempt.Translation, 0);
+            var retake = new TakeWork(attempt) { Cast = work.Cast, EmotionTag = ResolveEmotionTag(work) };
+            retake.ApplyMeaning(MeaningVerdict.Pass, source.MeaningIssues, source.MeaningExplanation, 0);
+            retake.ComputedFactor = factor;
+            retake.CalibrationCorrected = corrected;
+            retake.SpeedRequested = supported ? requested : 1.0;
+            if (!supported)
+            {
+                retake.Note = $"Speed setting unsupported for model {modelId}; retake synthesized without it.";
+            }
+
+            await SynthesizeAsync(retake, run, cancellationToken, supported ? requested : null).ConfigureAwait(false);
+            takes.Add(retake);
+            retakesUsed++;
+
+            if (supported && retake.Synthesized && retake.MeasuredSeconds is not null)
+            {
+                run.Calibration.Add(new SpeedCalibrationSample(
+                    work.Cast.VoiceId,
+                    modelId,
+                    requested,
+                    source.MeasuredSeconds.Value / requested,
+                    retake.MeasuredSeconds.Value,
+                    retake.MeasuredSeconds.Value / source.MeasuredSeconds.Value));
+            }
+        }
+
+        return null;
     }
 
     // Requests up to MaxAlternateVariants phrasings of the segment's best text when no
@@ -434,6 +542,7 @@ public sealed class AuditionService
             tokensAttributed = true;
             TakeWork take = await ResolveMeaningAsync(work.Segment, attempt, run, cancellationToken).ConfigureAwait(false);
             take.Cast = work.Cast;
+            take.EmotionTag = ResolveEmotionTag(work);
             await SynthesizeAsync(take, run, cancellationToken).ConfigureAwait(false);
             takes.Add(take);
         }
@@ -466,6 +575,7 @@ public sealed class AuditionService
         var take = new TakeWork(attempt)
         {
             Cast = work.Cast,
+            EmotionTag = ResolveEmotionTag(work),
         };
         // The text passed the gate already; carry the verdict with zero new tokens.
         take.ApplyMeaning(MeaningVerdict.Pass, best.MeaningIssues, best.MeaningExplanation, 0);
@@ -478,6 +588,7 @@ public sealed class AuditionService
 
         // Labeled only once the take will actually be synthesized at the factor.
         take.SpeedFactor = SpeedVariantFactor;
+        take.SpeedRequested = SpeedVariantFactor;
         await SynthesizeAsync(take, run, cancellationToken, SpeedVariantFactor).ConfigureAwait(false);
         takes.Add(take);
         return null;
@@ -578,6 +689,28 @@ public sealed class AuditionService
         }
     }
 
+    // The audio tag for a segment, or null: feature disabled, no label, an
+    // unmappable label, or a model that would speak the tag aloud. Tags are
+    // gated on the provider's per-model support, never assumed.
+    private string? ResolveEmotionTag(SegmentCandidates work)
+    {
+        if (!_emotionTags.Enabled)
+        {
+            return null;
+        }
+
+        string modelId = (_tts as ElevenLabsTtsProvider)?.ModelId ?? string.Empty;
+        if (!_tts.SupportsEmotionTags(modelId))
+        {
+            return null;
+        }
+
+        string combined = string.Join(
+            ", ",
+            new[] { work.Segment.EmotionToneLabel, work.Segment.PacingLabel }.Where(l => !string.IsNullOrWhiteSpace(l)));
+        return combined.Length == 0 ? null : EmotionTagMap.ForLabel(combined);
+    }
+
     private async Task SynthesizeAsync(TakeWork take, RunState run, CancellationToken cancellationToken, double? speed = null)
     {
         string? skipReason = SkipReason(take, run);
@@ -591,7 +724,10 @@ public sealed class AuditionService
         TtsSynthesisResult result;
         try
         {
-            result = await _tts.SynthesizeAsync(voice.VoiceId, take.Attempt.Translation, run.TargetLanguage, speed, cancellationToken).ConfigureAwait(false);
+            // The tag exists only in the synthesis request: the take's text,
+            // and everything the meaning gate judged, stays byte-identical.
+            string synthesisText = take.EmotionTag is null ? take.Attempt.Translation : $"{take.EmotionTag} {take.Attempt.Translation}";
+            result = await _tts.SynthesizeAsync(voice.VoiceId, synthesisText, run.TargetLanguage, speed, cancellationToken).ConfigureAwait(false);
         }
         catch (TtsApiException ex) when (!ex.IsAuthFailure)
         {
@@ -750,6 +886,9 @@ public sealed class AuditionService
         public int TakesSynthesized;
         public bool ElevenLabsCapHit;
         public bool MetaCapHit;
+
+        // Prior calibration samples plus this run's, in attempt order.
+        public List<SpeedCalibrationSample> Calibration { get; } = [];
     }
 
     private sealed class TakeWork
@@ -789,6 +928,14 @@ public sealed class AuditionService
 
         public double? SpeedFactor { get; set; }
 
+        public double SpeedRequested { get; set; } = 1.0;
+
+        public double? ComputedFactor { get; set; }
+
+        public bool CalibrationCorrected { get; set; }
+
+        public string? EmotionTag { get; set; }
+
         public void ApplyMeaning(MeaningVerdict verdict, string[]? issues, string? explanation, int tokens)
         {
             MeaningVerdict = verdict;
@@ -823,6 +970,10 @@ public sealed class AuditionService
                 MeaningTokens: MeaningTokens,
                 ElevenLabsCharacters: Characters,
                 SpeedFactor: SpeedFactor,
+                SpeedRequested: SpeedRequested,
+                ComputedFactor: ComputedFactor,
+                CalibrationCorrected: CalibrationCorrected,
+                EmotionTag: EmotionTag,
                 AudioBytes: AudioBytes);
         }
     }

@@ -12,7 +12,8 @@ public sealed record VisionEnrichment(
     string? EmotionToneLabel,
     string? SpeakerDescription,
     string[]? OnScreenText,
-    string[]? BurnedInText);
+    string[]? BurnedInText,
+    string? PacingLabel = null);
 
 public sealed record VisionParseResult(bool IsMalformed, VisionEnrichment? Enrichment, string? Error);
 
@@ -59,7 +60,8 @@ public static class SceneVisionParser
                     Scalar(root, "emotion_tone_label"),
                     Scalar(root, "speaker_description"),
                     TextArray(root, "on_screen_text"),
-                    TextArray(root, "burned_in_text")),
+                    TextArray(root, "burned_in_text"),
+                    root.TryGetProperty("pacing_label", out _) ? Scalar(root, "pacing_label") : null),
                 null);
         }
         catch (JsonException ex)
