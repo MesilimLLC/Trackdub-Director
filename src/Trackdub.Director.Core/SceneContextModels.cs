@@ -24,7 +24,9 @@ public sealed record DirectorContext(
     [property: JsonPropertyName("scene_summary")] string? SceneSummary,
     [property: JsonPropertyName("regions")] SceneRegion[]? Regions = null,
     [property: JsonPropertyName("speaker_description")] string? SpeakerDescription = null,
-    [property: JsonPropertyName("burned_in_text")] string[]? BurnedInText = null);
+    [property: JsonPropertyName("burned_in_text")] string[]? BurnedInText = null,
+    // Delivery pacing/pauses as extracted by the vision pass (scene-vision-v2), or null.
+    [property: JsonPropertyName("pacing_label")] string? PacingLabel = null);
 
 /// <summary>
 /// One segmented region for a caller-supplied concept phrase, parsed from the

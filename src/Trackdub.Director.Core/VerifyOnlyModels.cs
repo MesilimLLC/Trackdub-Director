@@ -78,7 +78,10 @@ public sealed record SegmentReceipt(
     [property: JsonPropertyName("media")] MediaCheck? Media,
     [property: JsonPropertyName("refusals")] RefusedTake[] Refusals,
     [property: JsonPropertyName("verdict")] SegmentVerdict Verdict,
-    [property: JsonPropertyName("reasons")] VerifyReason[] Reasons);
+    [property: JsonPropertyName("reasons")] VerifyReason[] Reasons,
+    // True when the winning take was a computed-speed retake. A label only:
+    // it never enters the verdict or reasons above.
+    [property: JsonPropertyName("speed_adjusted_winner")] bool SpeedAdjustedWinner = false);
 
 public sealed record VerifyReceipt(
     [property: JsonPropertyName("schema")] string Schema,
@@ -92,7 +95,9 @@ public sealed record VerifyReceipt(
     [property: JsonPropertyName("segments_verified")] int SegmentsVerified,
     [property: JsonPropertyName("voices")] AuditionCastVoice[] Voices,
     [property: JsonPropertyName("inputs")] InputHash[] Inputs,
-    [property: JsonPropertyName("segments")] SegmentReceipt[] Segments)
+    [property: JsonPropertyName("segments")] SegmentReceipt[] Segments,
+    // Count of segments whose winner is a computed-speed retake (label only).
+    [property: JsonPropertyName("speed_adjusted_count")] int SpeedAdjustedCount = 0)
 {
     public const string SchemaId = "trackdub-director.verify-only/v1";
 

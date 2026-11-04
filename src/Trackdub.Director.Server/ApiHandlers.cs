@@ -69,7 +69,7 @@ internal static class ApiHandlers
 
         try
         {
-            var service = new AuditionService(client, tts, QaOptions.FromEnvironment());
+            var service = new AuditionService(client, tts, QaOptions.FromEnvironment(), new AuditionRuntimeOptions(req.SpeedRetake, EmotionTags: req.EmotionTags));
             AuditionReport report = await service.RunAsync(req.Segments, from, to, ct).ConfigureAwait(false);
             await TryWriteAuditionOutputsAsync(report, ct).ConfigureAwait(false);
             return Results.Json(report);

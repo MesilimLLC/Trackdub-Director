@@ -22,6 +22,7 @@ public enum QaAttemptKind
     // Audition-only kinds: never produced by the QA lane itself.
     Alternate,
     SpeedVariant,
+    SpeedRetake,
 }
 
 public sealed record QaAttemptReport(

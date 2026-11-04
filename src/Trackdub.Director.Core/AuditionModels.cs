@@ -7,7 +7,11 @@ public sealed record AuditionSegmentInput(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("text")] string Text,
     [property: JsonPropertyName("duration_seconds")] double? DurationSeconds = null,
-    [property: JsonPropertyName("speaker_id")] string? SpeakerId = null);
+    [property: JsonPropertyName("speaker_id")] string? SpeakerId = null,
+    // Scene emotion/tone label for this line, when the scene stage produced one.
+    [property: JsonPropertyName("emotion_tone_label")] string? EmotionToneLabel = null,
+    // Scene pacing/pause label for this line (scene-vision-v2), when produced.
+    [property: JsonPropertyName("pacing_label")] string? PacingLabel = null);
 
 /// <summary>The stock voice cast for one character, as chosen from the account voice list.</summary>
 public sealed record AuditionCastVoice(
@@ -48,6 +52,14 @@ public sealed record AuditionTakeReport(
     [property: JsonPropertyName("elevenlabs_characters")] int ElevenLabsCharacters,
     // Set only on the speed-variant take: the provider speed setting used for its synthesis.
     [property: JsonPropertyName("speed_factor")] double? SpeedFactor = null,
+    // Provider speed requested for this take's synthesis (1.0 unless a speed path set it).
+    [property: JsonPropertyName("speed_requested")] double SpeedRequested = 1.0,
+    // Measured overshoot factor the requested speed was computed from; null when not a speed retake.
+    [property: JsonPropertyName("computed_factor")] double? ComputedFactor = null,
+    // True when calibration data corrected the computed factor before the request.
+    [property: JsonPropertyName("calibration_corrected")] bool CalibrationCorrected = false,
+    // Provider audio tag prepended at synthesis time only (never part of Text); null when none.
+    [property: JsonPropertyName("emotion_tag")] string? EmotionTag = null,
     // Set by AuditionOutputWriter when it writes the take: SHA-256 of the file as written (lowercase hex).
     [property: JsonPropertyName("audio_sha256"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AudioSha256 = null,
     [property: JsonIgnore] byte[]? AudioBytes = null);
@@ -80,4 +92,8 @@ public sealed record AuditionReport(
     [property: JsonPropertyName("target_language")] string TargetLanguage,
     [property: JsonPropertyName("cast")] AuditionCastVoice[] Cast,
     [property: JsonPropertyName("segments")] AuditionSegmentReport[] Segments,
-    [property: JsonPropertyName("totals")] AuditionTotals Totals);
+    [property: JsonPropertyName("totals")] AuditionTotals Totals,
+    // Per-run speed-retake configuration as recorded for this run (disabled by default).
+    [property: JsonPropertyName("speed_retake")] SpeedRetakeOptions? SpeedRetake = null,
+    // Calibration samples this run produced (also appended to speed-calibration.json by the writer).
+    [property: JsonPropertyName("speed_calibration")] SpeedCalibrationSample[]? SpeedCalibration = null);

@@ -1,0 +1,18 @@
+# Answer key - do not send to reviewer
+
+1. R01.wav = voa10-001-Alice-v3-plain.wav (v3-plain, 1.440s)
+2. R02.wav = voa10-001-Alice-v2-tagged.wav (v2-tagged, 1.765s)
+3. R03.wav = voa10-005-Alice-v3-tagged.wav (v3-tagged, 2.480s)
+4. R04.wav = voa10-004-Bella-v2-plain.wav (v2-plain, 2.740s)
+5. R05.wav = voa10-005-Alice-v3-plain.wav (v3-plain, 2.560s)
+6. R06.wav = voa10-005-Alice-v2-tagged.wav (v2-tagged, 3.065s)
+7. R07.wav = voa10-002-Bella-v3-plain.wav (v3-plain, 3.600s)
+8. R08.wav = voa10-004-Bella-v3-tagged.wav (v3-tagged, 3.360s)
+9. R09.wav = voa10-002-Bella-v2-tagged.wav (v2-tagged, 4.272s)
+10. R10.wav = voa10-004-Bella-v3-plain.wav (v3-plain, 3.360s)
+11. R11.wav = voa10-001-Alice-v3-tagged.wav (v3-tagged, 1.280s)
+12. R12.wav = voa10-001-Alice-v2-plain.wav (v2-plain, 1.254s)
+13. R13.wav = voa10-002-Bella-v2-plain.wav (v2-plain, 2.554s)
+14. R14.wav = voa10-005-Alice-v2-plain.wav (v2-plain, 2.368s)
+15. R15.wav = voa10-004-Bella-v2-tagged.wav (v2-tagged, 3.808s)
+16. R16.wav = voa10-002-Bella-v3-tagged.wav (v3-tagged, 3.680s)
