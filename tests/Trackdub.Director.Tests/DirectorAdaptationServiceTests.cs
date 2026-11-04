@@ -186,6 +186,89 @@ public sealed class DirectorAdaptationServiceTests
             new DirectorAdaptationSpec(register));
     }
 
+    private static void ExpectCalls(LaneStub stub, int adaptation, int meaning)
+    {
+        Assert.Equal(adaptation, stub.AdaptationCalls);
+        Assert.Equal(meaning, stub.MeaningCalls);
+    }
+
+    private static void ExpectMeaning(DirectorAdaptationSegmentResult result, MeaningVerdict verdict, int tokens)
+    {
+        Assert.NotNull(result.Meaning);
+        Assert.Equal(verdict, result.Meaning.Verdict);
+        Assert.Equal(tokens, result.Meaning.Usage.TotalTokens);
+    }
+
+    private static void ExpectBilledAdaptationFailure(DirectorAdaptationSegmentResult result, string errorFragment)
+    {
+        ExpectFailedBeforeGates(result);
+        ExpectError(result, errorFragment);
+
+        // The call was made and billed; usage is recorded, not discarded.
+        ExpectUsage(result, 160);
+    }
+
+    private static void ExpectPassed(DirectorAdaptationSegmentResult result, string adapted, bool changed)
+    {
+        Assert.Equal(DirectorAdaptationStatus.Passed, result.Status);
+        Assert.Equal(adapted, result.AdaptedTranslation);
+        Assert.Equal(changed, result.Changed);
+    }
+
+    private static void ExpectBothGatesRan(DirectorAdaptationSegmentResult result, LaneStub stub)
+    {
+        Assert.Equal(QaVerdict.Pass, result.TimingVerdict);
+        ExpectMeaning(result, MeaningVerdict.Pass, 120);
+        ExpectCalls(stub, 1, 1);
+    }
+
+    private static void ExpectFailedBeforeGates(DirectorAdaptationSegmentResult result)
+    {
+        Assert.Equal(DirectorAdaptationStatus.Failed, result.Status);
+        Assert.Null(result.AdaptedTranslation);
+        Assert.Null(result.TimingVerdict);
+
+        var meaning = result.Meaning;
+        Assert.Null(meaning);
+    }
+
+    private static void ExpectError(DirectorAdaptationSegmentResult result, string fragment)
+    {
+        Assert.NotNull(result.Error);
+        Assert.Contains(fragment, result.Error, StringComparison.Ordinal);
+    }
+
+    private static void ExpectUsage(DirectorAdaptationSegmentResult result, int totalTokens)
+    {
+        Assert.NotNull(result.Usage);
+        Assert.Equal(totalTokens, result.Usage.TotalTokens);
+    }
+
+    private static void ExpectProvenance(DirectorAdaptationSegmentResult result)
+    {
+        var provenance = result.Provenance;
+        Assert.NotNull(provenance);
+        Assert.Equal("muse-spark-1.1", provenance.ModelId);
+        Assert.Equal("api.meta.ai", provenance.EndpointHost);
+
+        string template = provenance.PromptTemplateVersion;
+        Assert.Equal("director-v1", template);
+    }
+
+    private static void ExpectNoSpend(DirectorAdaptationSegmentResult result)
+    {
+        Assert.Null(result.AdaptedTranslation);
+        Assert.Null(result.Usage);
+    }
+
+    private static void ExpectBodyContains(string body, params string[] fragments)
+    {
+        foreach (string fragment in fragments)
+        {
+            Assert.Contains(fragment, body, StringComparison.Ordinal);
+        }
+    }
+
     [Fact]
     public async Task AdaptationProduced_AndBothGatesPass()
     {
@@ -195,41 +278,36 @@ public sealed class DirectorAdaptationServiceTests
 
         DirectorAdaptationBatch batch = await service.RunAsync([OptedIn()], "en", "es");
 
-        DirectorAdaptationSegmentResult result = Assert.Single(batch.Segments);
+        DirectorAdaptationSegmentResult result = batch.Segments.Single();
         Assert.Equal(DirectorAdaptationStatus.Passed, result.Status);
         Assert.Equal(ExistingTranslation, result.OriginalTranslation);
         Assert.Equal(AdaptedInformal, result.AdaptedTranslation);
-        Assert.Equal("informal", result.TargetRegister);
+
+        string? register = result.TargetRegister;
+        Assert.Equal("informal", register);
+
+        ExpectMeaning(result, MeaningVerdict.Pass, 120);
         Assert.Null(result.Error);
+        Assert.Empty(result.Meaning!.Issues);
 
+        double? estimated = result.EstimatedSeconds;
         Assert.Equal(QaVerdict.Pass, result.TimingVerdict);
-        Assert.NotNull(result.EstimatedSeconds);
+        Assert.NotNull(estimated);
         Assert.Equal(4.0, result.WindowSeconds);
-        Assert.NotNull(result.Meaning);
-        Assert.Equal(MeaningVerdict.Pass, result.Meaning.Verdict);
-        Assert.Empty(result.Meaning.Issues);
-        Assert.Equal(120, result.Meaning.Usage.TotalTokens);
 
-        Assert.NotNull(result.Provenance);
-        Assert.Equal("muse-spark-1.1", result.Provenance.ModelId);
-        Assert.Equal("api.meta.ai", result.Provenance.EndpointHost);
-        Assert.Equal("director-v1", result.Provenance.PromptTemplateVersion);
-        Assert.NotNull(result.Usage);
-        Assert.Equal(160, result.Usage.TotalTokens);
-        Assert.Equal(12, result.Usage.ReasoningTokens);
+        ExpectProvenance(result);
+        ExpectUsage(result, 160);
 
-        Assert.Equal(1, stub.AdaptationCalls);
-        Assert.Equal(1, stub.MeaningCalls);
-        string body = Assert.Single(stub.AdaptationBodies);
-        Assert.Contains("muse-spark-1.1", body, StringComparison.Ordinal);
-        Assert.Contains("\"reasoning_effort\":\"low\"", body, StringComparison.Ordinal);
-        Assert.Contains(SourceText, body, StringComparison.Ordinal);
-        // Body is JSON-escaped (á becomes á), so match the ASCII prefix.
-        Assert.Contains("Necesitamos una toma", body, StringComparison.Ordinal);
-        Assert.Contains("informal", body, StringComparison.Ordinal);
+        int? reasoning = result.Usage?.ReasoningTokens;
+        Assert.Equal(12, reasoning);
 
+        ExpectCalls(stub, 1, 1);
         Assert.Equal(160, batch.UsageTotal.TotalTokens);
         Assert.Equal(120, batch.MeaningUsageTotal.TotalTokens);
+
+        string body = stub.AdaptationBodies.Single();
+        // Body is JSON-escaped (á becomes á), so match the ASCII prefix.
+        ExpectBodyContains(body, "muse-spark-1.1", "\"reasoning_effort\":\"low\"", SourceText, "Necesitamos una toma", "informal");
     }
 
     [Fact]
@@ -244,16 +322,16 @@ public sealed class DirectorAdaptationServiceTests
 
         DirectorAdaptationBatch batch = await service.RunAsync([OptedIn()], "en", "es");
 
-        DirectorAdaptationSegmentResult result = Assert.Single(batch.Segments);
+        ExpectCalls(stub, 1, 1);
+        DirectorAdaptationSegmentResult result = batch.Segments.Single();
         Assert.Equal(DirectorAdaptationStatus.Failed, result.Status);
         Assert.Equal(AdaptedInformal, result.AdaptedTranslation);
         Assert.Equal(QaVerdict.Pass, result.TimingVerdict);
-        Assert.NotNull(result.Meaning);
-        Assert.Equal(MeaningVerdict.Fail, result.Meaning.Verdict);
-        Assert.Equal(["dropped modality: source says the take is needed"], result.Meaning.Issues);
-        Assert.Equal("Candidate drops the obligation.", result.Meaning.Explanation);
-        Assert.Equal(1, stub.AdaptationCalls);
-        Assert.Equal(1, stub.MeaningCalls);
+
+        var meaning = result.Meaning;
+        ExpectMeaning(result, MeaningVerdict.Fail, 120);
+        Assert.Equal(["dropped modality: source says the take is needed"], meaning!.Issues);
+        Assert.Equal("Candidate drops the obligation.", meaning.Explanation);
     }
 
     [Fact]
@@ -265,18 +343,19 @@ public sealed class DirectorAdaptationServiceTests
 
         DirectorAdaptationBatch batch = await service.RunAsync([OptedIn("formal", durationSeconds: 0.5)], "en", "es");
 
-        DirectorAdaptationSegmentResult result = Assert.Single(batch.Segments);
+        DirectorAdaptationSegmentResult result = batch.Segments.Single();
         Assert.Equal(DirectorAdaptationStatus.Failed, result.Status);
         Assert.Equal(AdaptedLong, result.AdaptedTranslation);
         Assert.Equal(QaVerdict.Fail, result.TimingVerdict);
-        Assert.NotNull(result.EstimatedSeconds);
-        Assert.True(result.EstimatedSeconds.Value > 0.5);
-        Assert.Equal(0.5, result.WindowSeconds);
-        Assert.NotNull(result.Meaning);
-        Assert.Equal(MeaningVerdict.NotEvaluated, result.Meaning.Verdict);
-        Assert.Equal(0, result.Meaning.Usage.TotalTokens);
-        Assert.Equal(1, stub.AdaptationCalls);
-        Assert.Equal(0, stub.MeaningCalls);
+
+        double? estimated = result.EstimatedSeconds;
+        ExpectMeaning(result, MeaningVerdict.NotEvaluated, 0);
+        Assert.NotNull(estimated);
+        Assert.True(estimated.Value > 0.5);
+
+        double? window = result.WindowSeconds;
+        Assert.Equal(0.5, window);
+        ExpectCalls(stub, 1, 0);
         Assert.Equal(0, batch.MeaningUsageTotal.TotalTokens);
     }
 
@@ -324,16 +403,14 @@ public sealed class DirectorAdaptationServiceTests
             DirectorAdaptationSegmentResult withContext = batch.Segments[0];
             Assert.Equal(["emotion_tone_label", "scene_summary"], withContext.ContextFieldsUsed);
             Assert.Equal(DirectorAdaptationStatus.Passed, withContext.Status);
-            Assert.Contains("cheerful", stub.AdaptationBodies[0], StringComparison.Ordinal);
-            Assert.Contains("coffee shop", stub.AdaptationBodies[0], StringComparison.Ordinal);
+            ExpectBodyContains(stub.AdaptationBodies[0], "cheerful", "coffee shop");
 
             DirectorAdaptationSegmentResult withoutContext = batch.Segments[1];
             Assert.Empty(withoutContext.ContextFieldsUsed);
             Assert.Equal(DirectorAdaptationStatus.Passed, withoutContext.Status);
             Assert.DoesNotContain("SCENE CONTEXT", stub.AdaptationBodies[1], StringComparison.Ordinal);
 
-            Assert.Equal(2, stub.AdaptationCalls);
-            Assert.Equal(2, stub.MeaningCalls);
+            ExpectCalls(stub, 2, 2);
         }
         finally
         {
@@ -359,19 +436,16 @@ public sealed class DirectorAdaptationServiceTests
         DirectorAdaptationSegmentResult invalid = batch.Segments[0];
         Assert.Equal(DirectorAdaptationStatus.Failed, invalid.Status);
         Assert.Equal("royal", invalid.TargetRegister);
-        Assert.Null(invalid.AdaptedTranslation);
-        Assert.Null(invalid.Usage);
+        ExpectNoSpend(invalid);
         Assert.Null(invalid.Provenance);
         Assert.NotNull(invalid.Error);
         Assert.Contains("target_register", invalid.Error, StringComparison.Ordinal);
 
         DirectorAdaptationSegmentResult untouched = batch.Segments[1];
         Assert.Equal(DirectorAdaptationStatus.NotRequested, untouched.Status);
-        Assert.Null(untouched.AdaptedTranslation);
-        Assert.Null(untouched.Usage);
+        ExpectNoSpend(untouched);
 
-        Assert.Equal(0, stub.AdaptationCalls);
-        Assert.Equal(0, stub.MeaningCalls);
+        ExpectCalls(stub, 0, 0);
         Assert.Equal(0, batch.UsageTotal.TotalTokens);
         Assert.Equal(0, batch.MeaningUsageTotal.TotalTokens);
     }
@@ -388,18 +462,8 @@ public sealed class DirectorAdaptationServiceTests
         DirectorAdaptationBatch batch = await service.RunAsync([OptedIn()], "en", "es");
 
         DirectorAdaptationSegmentResult result = Assert.Single(batch.Segments);
-        Assert.Equal(DirectorAdaptationStatus.Failed, result.Status);
-        Assert.Null(result.AdaptedTranslation);
-        Assert.Null(result.TimingVerdict);
-        Assert.Null(result.Meaning);
-        Assert.NotNull(result.Error);
-        Assert.Contains("Malformed", result.Error, StringComparison.Ordinal);
-
-        // The call was made and billed; usage is recorded, not discarded.
-        Assert.NotNull(result.Usage);
-        Assert.Equal(160, result.Usage.TotalTokens);
-        Assert.Equal(1, stub.AdaptationCalls);
-        Assert.Equal(0, stub.MeaningCalls);
+        ExpectBilledAdaptationFailure(result, "Malformed");
+        ExpectCalls(stub, 1, 0);
     }
 
     [Fact]
@@ -418,11 +482,8 @@ public sealed class DirectorAdaptationServiceTests
         DirectorAdaptationBatch batch = await service.RunAsync([segment], "en", "es");
 
         DirectorAdaptationSegmentResult result = Assert.Single(batch.Segments);
-        Assert.Equal(DirectorAdaptationStatus.Passed, result.Status);
-        Assert.Equal("Le veremos en la próxima etapa.", result.AdaptedTranslation);
-        Assert.True(result.Changed);
-        Assert.Equal(1, stub.AdaptationCalls);
-        Assert.Equal(1, stub.MeaningCalls);
+        ExpectPassed(result, "Le veremos en la próxima etapa.", changed: true);
+        ExpectBothGatesRan(result, stub);
     }
 
     [Fact]
@@ -442,14 +503,8 @@ public sealed class DirectorAdaptationServiceTests
         DirectorAdaptationBatch batch = await service.RunAsync([segment], "en", "es");
 
         DirectorAdaptationSegmentResult result = Assert.Single(batch.Segments);
-        Assert.Equal(DirectorAdaptationStatus.Passed, result.Status);
-        Assert.Equal("Nos vemos en la próxima etapa.", result.AdaptedTranslation);
-        Assert.False(result.Changed);
-        Assert.Equal(QaVerdict.Pass, result.TimingVerdict);
-        Assert.NotNull(result.Meaning);
-        Assert.Equal(MeaningVerdict.Pass, result.Meaning.Verdict);
-        Assert.Equal(1, stub.AdaptationCalls);
-        Assert.Equal(1, stub.MeaningCalls);
+        ExpectPassed(result, "Nos vemos en la próxima etapa.", changed: false);
+        ExpectBothGatesRan(result, stub);
     }
 
     [Fact]
@@ -464,16 +519,8 @@ public sealed class DirectorAdaptationServiceTests
         DirectorAdaptationBatch batch = await service.RunAsync([OptedIn(durationSeconds: 4.0)], "en", "es");
 
         DirectorAdaptationSegmentResult result = Assert.Single(batch.Segments);
-        Assert.Equal(DirectorAdaptationStatus.Failed, result.Status);
-        Assert.Null(result.AdaptedTranslation);
-        Assert.Null(result.TimingVerdict);
-        Assert.Null(result.Meaning);
-        Assert.NotNull(result.Error);
-        Assert.Contains("length", result.Error, StringComparison.Ordinal);
-        Assert.NotNull(result.Usage);
-        Assert.Equal(160, result.Usage.TotalTokens);
-        Assert.Equal(1, stub.AdaptationCalls);
-        Assert.Equal(0, stub.MeaningCalls);
+        ExpectBilledAdaptationFailure(result, "length");
+        ExpectCalls(stub, 1, 0);
     }
 
     [Fact]
@@ -516,20 +563,17 @@ public sealed class DirectorAdaptationServiceTests
 
         DirectorAdaptationSegmentResult result = Assert.Single(batch.Segments);
         Assert.Equal(DirectorAdaptationStatus.Failed, result.Status);
-        Assert.Equal(1, stub.AdaptationCalls);
 
         if (adaptationFails)
         {
             Assert.NotNull(result.Error);
             Assert.Contains(failure == TransportFailure.BodyRead ? "body read reset" : "HTTP 500", result.Error, StringComparison.Ordinal);
-            Assert.Equal(0, stub.MeaningCalls);
+            ExpectCalls(stub, 1, 0);
             return;
         }
 
         Assert.Equal(QaVerdict.Pass, result.TimingVerdict);
-        Assert.NotNull(result.Meaning);
-        Assert.Equal(MeaningVerdict.Error, result.Meaning.Verdict);
-        Assert.Equal(0, result.Meaning.Usage.TotalTokens);
-        Assert.Equal(1, stub.MeaningCalls);
+        ExpectMeaning(result, MeaningVerdict.Error, 0);
+        ExpectCalls(stub, 1, 1);
     }
 }
