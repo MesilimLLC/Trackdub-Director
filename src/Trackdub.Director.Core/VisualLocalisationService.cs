@@ -262,7 +262,7 @@ public sealed class VisualLocalisationService : IDisposable
 
         string trimmed = dataUrl.Trim();
         int marker = trimmed.IndexOf(";base64,", StringComparison.OrdinalIgnoreCase);
-        if (!trimmed.StartsWith("data:image/png;", StringComparison.OrdinalIgnoreCase) && !trimmed.StartsWith("data:image/jpeg;", StringComparison.OrdinalIgnoreCase) && !trimmed.StartsWith("data:image/webp;", StringComparison.OrdinalIgnoreCase) || marker < 0)
+        if ((!trimmed.StartsWith("data:image/png;", StringComparison.OrdinalIgnoreCase) && !trimmed.StartsWith("data:image/jpeg;", StringComparison.OrdinalIgnoreCase) && !trimmed.StartsWith("data:image/webp;", StringComparison.OrdinalIgnoreCase)) || marker < 0)
         {
             error = "Frame image must be a base64 PNG, JPEG, or WebP data URL.";
             return false;
