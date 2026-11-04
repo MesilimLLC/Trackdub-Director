@@ -101,22 +101,12 @@ public sealed class TranscribeServiceFileTests : IDisposable
         await service.WriteSegmentsAsync(path, result);
 
         using JsonDocument doc = JsonDocument.Parse(await File.ReadAllTextAsync(path));
+        JsonElement first = doc.RootElement[0];
+
         Assert.Equal(JsonValueKind.Array, doc.RootElement.ValueKind);
-        Assert.Equal("seg-001", doc.RootElement[0].GetProperty("id").GetString());
-        Assert.Equal("hola", doc.RootElement[0].GetProperty("text").GetString());
-        Assert.Equal("A", doc.RootElement[0].GetProperty("speaker").GetString());
-    }
-
-    [Fact]
-    public async Task WriteSegmentsAsync_rejects_a_blank_path_and_a_null_result()
-    {
-        var service = new TranscribeService(new FakeClient());
-        TranscribeResult result = await service.TranscribeFileAsync(WriteWav([0x01]));
-
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => service.WriteSegmentsAsync("  ", result));
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => service.WriteSegmentsAsync(Path.Combine(_folder, "segments.json"), null!));
+        Assert.Equal(
+            ("seg-001", "hola", "A"),
+            (first.GetProperty("id").GetString(), first.GetProperty("text").GetString(), first.GetProperty("speaker").GetString()));
     }
 
     [Fact]
@@ -140,14 +130,23 @@ public sealed class TranscribeServiceFileTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteResultAsync_rejects_a_blank_path_and_a_null_result()
+    public async Task The_writers_reject_a_blank_path_and_a_null_result()
     {
         var service = new TranscribeService(new FakeClient());
         TranscribeResult result = await service.TranscribeFileAsync(WriteWav([0x01]));
+        string path = Path.Combine(_folder, "out.json");
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => service.WriteResultAsync("  ", result));
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => service.WriteResultAsync(Path.Combine(_folder, "result.json"), null!));
+        // Both writers share the same guard contract, so they are asserted together.
+        Func<string, TranscribeResult, Task>[] writers =
+        [
+            (p, r) => service.WriteSegmentsAsync(p, r),
+            (p, r) => service.WriteResultAsync(p, r),
+        ];
+
+        foreach (Func<string, TranscribeResult, Task> write in writers)
+        {
+            await Assert.ThrowsAsync<ArgumentException>(() => write("  ", result));
+            await Assert.ThrowsAsync<ArgumentNullException>(() => write(path, null!));
+        }
     }
 }

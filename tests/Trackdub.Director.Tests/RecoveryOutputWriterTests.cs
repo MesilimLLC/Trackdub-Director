@@ -82,6 +82,32 @@ public sealed class RecoveryOutputWriterTests : IDisposable
             ]);
     }
 
+    /// <summary>Asserts that every marker appears in <paramref name="text"/>.</summary>
+    private static void ExpectMarkers(string text, params string[] markers)
+    {
+        foreach (string marker in markers)
+        {
+            Assert.Contains(marker, text);
+        }
+    }
+
+    /// <summary>Asserts that none of the markers appear in <paramref name="text"/>.</summary>
+    private static void ExpectNoMarkers(string text, params string[] markers)
+    {
+        foreach (string marker in markers)
+        {
+            Assert.DoesNotContain(marker, text);
+        }
+    }
+
+    /// <summary>The report header: the required fields and their explicit snake_case wire names.</summary>
+    private static void ExpectReportHeader(JsonDocument doc)
+    {
+        Assert.Equal("es", doc.RootElement.GetProperty("source_language").GetString());
+        Assert.Equal("muse-glimmer-1", doc.RootElement.GetProperty("glimmer_model").GetString());
+        Assert.Equal(2, doc.RootElement.GetProperty("totals").GetProperty("total_items").GetInt32());
+    }
+
     [Fact]
     public async Task WriteReportAsync_writes_indented_json_and_creates_the_folder()
     {
@@ -94,11 +120,9 @@ public sealed class RecoveryOutputWriterTests : IDisposable
         string json = await File.ReadAllTextAsync(path);
         using JsonDocument doc = JsonDocument.Parse(json);
 
-        // The report records carry explicit JsonPropertyName names (snake_case) for their consumers.
-        Assert.Equal("es", doc.RootElement.GetProperty("source_language").GetString());
-        Assert.Equal("muse-glimmer-1", doc.RootElement.GetProperty("glimmer_model").GetString());
-        Assert.Equal(2, doc.RootElement.GetProperty("totals").GetProperty("total_items").GetInt32());
-        Assert.Contains(Environment.NewLine, json);
+        ExpectReportHeader(doc);
+        // WriteIndented emits a line break between members; LF is in the output on every platform.
+        Assert.Contains("\n", json);
     }
 
     [Fact]
@@ -162,18 +186,19 @@ public sealed class RecoveryOutputWriterTests : IDisposable
 
         string notes = await File.ReadAllTextAsync(Path.Combine(_folder, RecoveryOutputWriter.NotesFileName));
 
-        Assert.Contains("# Glimmer recovery run notes", notes);
-        Assert.Contains("- Direction: es -> en", notes);
-        Assert.Contains("muse-glimmer-1", notes);
-        Assert.Contains("muse-spark-1.1", notes);
-        Assert.Contains("1/2 items recovered", notes);
-        Assert.Contains("1/2 lines recovered", notes);
-        Assert.Contains("Glimmer calls 4/20, Meta calls 2/10", notes);
-        Assert.Contains("## Leakage rule", notes);
-        Assert.Contains("## Per-item outcomes", notes);
+        ExpectMarkers(
+            notes,
+            "# Glimmer recovery run notes",
+            "- Direction: es -> en",
+            "muse-glimmer-1",
+            "muse-spark-1.1",
+            "1/2 items recovered",
+            "1/2 lines recovered",
+            "Glimmer calls 4/20, Meta calls 2/10",
+            "## Leakage rule",
+            "## Per-item outcomes");
         // No probe and no run error: neither optional section may appear.
-        Assert.DoesNotContain("### Pre-flight probe", notes);
-        Assert.DoesNotContain("## Run failure", notes);
+        ExpectNoMarkers(notes, "### Pre-flight probe", "## Run failure");
     }
 
     [Fact]
@@ -192,11 +217,13 @@ public sealed class RecoveryOutputWriterTests : IDisposable
 
         string notes = await File.ReadAllTextAsync(Path.Combine(_folder, RecoveryOutputWriter.NotesFileName));
 
-        Assert.Contains("### Pre-flight probe", notes);
-        Assert.Contains("api.meta.ai", notes);
-        Assert.Contains("prompt=12 completion=3 total=15", notes);
-        Assert.Contains("## Run failure", notes);
-        Assert.Contains("provider 502", notes);
+        ExpectMarkers(
+            notes,
+            "### Pre-flight probe",
+            "api.meta.ai",
+            "prompt=12 completion=3 total=15",
+            "## Run failure",
+            "provider 502");
     }
 
     [Fact]
@@ -212,11 +239,14 @@ public sealed class RecoveryOutputWriterTests : IDisposable
 
         string notes = await File.ReadAllTextAsync(Path.Combine(_folder, RecoveryOutputWriter.NotesFileName));
 
-        Assert.Contains("`seg-001` att#1 (samples/source.json, Timing, window", notes);
-        Assert.Contains("Recovered -> \"hola!\" [1 attempt(s)]", notes);
-        Assert.Contains("`seg-002` att#1", notes);
-        Assert.Contains("ExhaustedAttempts [1 attempt(s)]", notes);
-        Assert.DoesNotContain("ExhaustedAttempts ->", notes);
+        ExpectMarkers(
+            notes,
+            "`seg-001` att#1 (samples/source.json, Timing, window",
+            "Recovered -> \"hola!\" [1 attempt(s)]",
+            "`seg-002` att#1",
+            "ExhaustedAttempts [1 attempt(s)]");
+        // A refused item has no recovered text, so no arrow line for it.
+        ExpectNoMarkers(notes, "ExhaustedAttempts ->");
     }
 
     [Fact]
