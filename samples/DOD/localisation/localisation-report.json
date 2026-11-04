@@ -1,0 +1,34 @@
+{
+  "wall_seconds": 19.64,
+  "segment": {
+    "id": "dod-harris-095",
+    "status": "Localised",
+    "box": {
+      "x1": 420,
+      "y1": 420,
+      "x2": 820,
+      "y2": 635
+    },
+    "source_text": "THE CULINARY OUTPOST",
+    "target_text": "EL PUESTO CULINARIO",
+    "outside_box_diff": 0,
+    "provenance": {
+      "model_id": "muse-image-1.0",
+      "endpoint_host": "api.meta.ai",
+      "timestamp_utc": "2026-11-04T12:35:55.7788468Z",
+      "prompt_template_version": "image-edit-v1"
+    },
+    "usage": {
+      "prompt_tokens": 26528,
+      "completion_tokens": 1549,
+      "total_tokens": 28077
+    },
+    "image_calls": 1
+  },
+  "usage_total": {
+    "prompt_tokens": 26528,
+    "completion_tokens": 1549,
+    "total_tokens": 28077
+  },
+  "image_calls_total": 1
+}

@@ -1,0 +1,5004 @@
+{
+  "stage": "static-shot-composite",
+  "status": "Composited",
+  "reason": null,
+  "video": "samples\\DOD\\DOD_111078203.mp4",
+  "reference_frame": "samples\\DOD\\localisation\\reference-095.jpg",
+  "localised_frame": "samples\\DOD\\localisation\\localised-095.png",
+  "box": {
+    "x1": 420,
+    "y1": 420,
+    "x2": 820,
+    "y2": 635
+  },
+  "window": {
+    "start_seconds": 92.5,
+    "end_seconds": 116.18
+  },
+  "fps": 29.97,
+  "metric": "luma SSIM over 8x8 blocks covering the whole box region (trailing strip measured by an edge-anchored block), frame vs reference frame; gate on the block mean SSIM and on the largest single-block mean-luma shift",
+  "min_ssim_threshold": 0.95,
+  "max_block_luma_shift_threshold": 30,
+  "frames_checked": 709,
+  "ssim_min": 0.9838478860976051,
+  "ssim_min_frame": 3300,
+  "ssim_mean": 0.9862,
+  "block_luma_shift_max": 16.611921874999865,
+  "block_luma_shift_max_frame": 3277,
+  "first_failing_frame": null,
+  "frames_composited": 709,
+  "outside_box_diff_max": 0,
+  "image_calls": 0,
+  "output": "samples\\DOD\\localisation\\DOD_111078203-sign-es.mp4",
+  "notes": [
+    "image_calls is 0: this stage reuses one already-localised frame; that repaint\u0027s Muse Image cost is recorded in the localisation manifest.",
+    "outside_box_diff_max is counted on decoded RGB frames before encoding; the h264 output is lossy everywhere, including outside the box.",
+    "Frame times assume a constant frame rate (index / fps)."
+  ],
+  "timestamp_utc": "2026-11-04T12:44:02.9000849Z",
+  "frames": [
+    {
+      "frame_index": 2773,
+      "time_seconds": 92.526,
+      "ssim": 0.9853198318526052,
+      "max_block_luma_shift": 14.959000000000145,
+      "pass": true
+    },
+    {
+      "frame_index": 2774,
+      "time_seconds": 92.559,
+      "ssim": 0.9854680748736733,
+      "max_block_luma_shift": 14.434796875000046,
+      "pass": true
+    },
+    {
+      "frame_index": 2775,
+      "time_seconds": 92.592,
+      "ssim": 0.9853164102665672,
+      "max_block_luma_shift": 14.434796875000046,
+      "pass": true
+    },
+    {
+      "frame_index": 2776,
+      "time_seconds": 92.626,
+      "ssim": 0.9856512204356049,
+      "max_block_luma_shift": 14.434796875000046,
+      "pass": true
+    },
+    {
+      "frame_index": 2777,
+      "time_seconds": 92.659,
+      "ssim": 0.9857179846132361,
+      "max_block_luma_shift": 14.512921875000046,
+      "pass": true
+    },
+    {
+      "frame_index": 2778,
+      "time_seconds": 92.693,
+      "ssim": 0.9860183221140557,
+      "max_block_luma_shift": 13.795171874999966,
+      "pass": true
+    },
+    {
+      "frame_index": 2779,
+      "time_seconds": 92.726,
+      "ssim": 0.986075207702923,
+      "max_block_luma_shift": 13.309796875000075,
+      "pass": true
+    },
+    {
+      "frame_index": 2780,
+      "time_seconds": 92.759,
+      "ssim": 0.9862112227559868,
+      "max_block_luma_shift": 13.219171874999859,
+      "pass": true
+    },
+    {
+      "frame_index": 2781,
+      "time_seconds": 92.793,
+      "ssim": 0.9862589275509296,
+      "max_block_luma_shift": 13.219171874999859,
+      "pass": true
+    },
+    {
+      "frame_index": 2782,
+      "time_seconds": 92.826,
+      "ssim": 0.9863633164492639,
+      "max_block_luma_shift": 13.219171874999859,
+      "pass": true
+    },
+    {
+      "frame_index": 2783,
+      "time_seconds": 92.859,
+      "ssim": 0.9862590249002358,
+      "max_block_luma_shift": 13.219171874999859,
+      "pass": true
+    },
+    {
+      "frame_index": 2784,
+      "time_seconds": 92.893,
+      "ssim": 0.9865418343874048,
+      "max_block_luma_shift": 12.628031249999992,
+      "pass": true
+    },
+    {
+      "frame_index": 2785,
+      "time_seconds": 92.926,
+      "ssim": 0.9865083153377331,
+      "max_block_luma_shift": 12.612406249999992,
+      "pass": true
+    },
+    {
+      "frame_index": 2786,
+      "time_seconds": 92.96,
+      "ssim": 0.9867086996624125,
+      "max_block_luma_shift": 12.549906249999992,
+      "pass": true
+    },
+    {
+      "frame_index": 2787,
+      "time_seconds": 92.993,
+      "ssim": 0.986561161866098,
+      "max_block_luma_shift": 12.581156249999992,
+      "pass": true
+    },
+    {
+      "frame_index": 2788,
+      "time_seconds": 93.026,
+      "ssim": 0.9867276527291619,
+      "max_block_luma_shift": 12.581156249999992,
+      "pass": true
+    },
+    {
+      "frame_index": 2789,
+      "time_seconds": 93.06,
+      "ssim": 0.9867051414661834,
+      "max_block_luma_shift": 11.741921875000031,
+      "pass": true
+    },
+    {
+      "frame_index": 2790,
+      "time_seconds": 93.093,
+      "ssim": 0.9871496346964531,
+      "max_block_luma_shift": 6.2203281249999804,
+      "pass": true
+    },
+    {
+      "frame_index": 2791,
+      "time_seconds": 93.126,
+      "ssim": 0.986975861909473,
+      "max_block_luma_shift": 6.221015625000007,
+      "pass": true
+    },
+    {
+      "frame_index": 2792,
+      "time_seconds": 93.16,
+      "ssim": 0.9873833849336463,
+      "max_block_luma_shift": 6.049140625000007,
+      "pass": true
+    },
+    {
+      "frame_index": 2793,
+      "time_seconds": 93.193,
+      "ssim": 0.9874227723370665,
+      "max_block_luma_shift": 7.752593750000102,
+      "pass": true
+    },
+    {
+      "frame_index": 2794,
+      "time_seconds": 93.226,
+      "ssim": 0.9871638327281018,
+      "max_block_luma_shift": 11.058999999999912,
+      "pass": true
+    },
+    {
+      "frame_index": 2795,
+      "time_seconds": 93.26,
+      "ssim": 0.9871168706915711,
+      "max_block_luma_shift": 10.99659374999996,
+      "pass": true
+    },
+    {
+      "frame_index": 2796,
+      "time_seconds": 93.293,
+      "ssim": 0.9870705594620977,
+      "max_block_luma_shift": 10.977906250000018,
+      "pass": true
+    },
+    {
+      "frame_index": 2797,
+      "time_seconds": 93.327,
+      "ssim": 0.9870617575491338,
+      "max_block_luma_shift": 10.99659374999996,
+      "pass": true
+    },
+    {
+      "frame_index": 2798,
+      "time_seconds": 93.36,
+      "ssim": 0.9869274068265991,
+      "max_block_luma_shift": 10.99659374999996,
+      "pass": true
+    },
+    {
+      "frame_index": 2799,
+      "time_seconds": 93.393,
+      "ssim": 0.9868542521314337,
+      "max_block_luma_shift": 11.050187499999936,
+      "pass": true
+    },
+    {
+      "frame_index": 2800,
+      "time_seconds": 93.427,
+      "ssim": 0.9869974463695159,
+      "max_block_luma_shift": 11.067781250000138,
+      "pass": true
+    },
+    {
+      "frame_index": 2801,
+      "time_seconds": 93.46,
+      "ssim": 0.9870030447941432,
+      "max_block_luma_shift": 11.067781250000138,
+      "pass": true
+    },
+    {
+      "frame_index": 2802,
+      "time_seconds": 93.493,
+      "ssim": 0.9869576494484191,
+      "max_block_luma_shift": 11.067781250000138,
+      "pass": true
+    },
+    {
+      "frame_index": 2803,
+      "time_seconds": 93.527,
+      "ssim": 0.9867172996062163,
+      "max_block_luma_shift": 11.465906250000103,
+      "pass": true
+    },
+    {
+      "frame_index": 2804,
+      "time_seconds": 93.56,
+      "ssim": 0.9868641193457209,
+      "max_block_luma_shift": 11.667875000000294,
+      "pass": true
+    },
+    {
+      "frame_index": 2805,
+      "time_seconds": 93.594,
+      "ssim": 0.9868085854141891,
+      "max_block_luma_shift": 12.783843750000159,
+      "pass": true
+    },
+    {
+      "frame_index": 2806,
+      "time_seconds": 93.627,
+      "ssim": 0.9865970056984898,
+      "max_block_luma_shift": 12.551125000000155,
+      "pass": true
+    },
+    {
+      "frame_index": 2807,
+      "time_seconds": 93.66,
+      "ssim": 0.9881541748296937,
+      "max_block_luma_shift": 12.634687500000013,
+      "pass": true
+    },
+    {
+      "frame_index": 2808,
+      "time_seconds": 93.694,
+      "ssim": 0.9887991391219509,
+      "max_block_luma_shift": 12.634687500000013,
+      "pass": true
+    },
+    {
+      "frame_index": 2809,
+      "time_seconds": 93.727,
+      "ssim": 0.9888546646669051,
+      "max_block_luma_shift": 12.146125000000296,
+      "pass": true
+    },
+    {
+      "frame_index": 2810,
+      "time_seconds": 93.76,
+      "ssim": 0.9892721233257099,
+      "max_block_luma_shift": 11.453640625000048,
+      "pass": true
+    },
+    {
+      "frame_index": 2811,
+      "time_seconds": 93.794,
+      "ssim": 0.9896033840491725,
+      "max_block_luma_shift": 9.919171874999932,
+      "pass": true
+    },
+    {
+      "frame_index": 2812,
+      "time_seconds": 93.827,
+      "ssim": 0.9903595205027439,
+      "max_block_luma_shift": 4.52474999999999,
+      "pass": true
+    },
+    {
+      "frame_index": 2813,
+      "time_seconds": 93.86,
+      "ssim": 0.9905620614017066,
+      "max_block_luma_shift": 4.007249999999985,
+      "pass": true
+    },
+    {
+      "frame_index": 2814,
+      "time_seconds": 93.894,
+      "ssim": 0.9906528862987445,
+      "max_block_luma_shift": 3.3937812499999893,
+      "pass": true
+    },
+    {
+      "frame_index": 2815,
+      "time_seconds": 93.927,
+      "ssim": 0.9905776842622754,
+      "max_block_luma_shift": 3.534578124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 2816,
+      "time_seconds": 93.961,
+      "ssim": 0.9908653075423837,
+      "max_block_luma_shift": 2.939374999999842,
+      "pass": true
+    },
+    {
+      "frame_index": 2817,
+      "time_seconds": 93.994,
+      "ssim": 0.9908584585539498,
+      "max_block_luma_shift": 3.514750000000191,
+      "pass": true
+    },
+    {
+      "frame_index": 2818,
+      "time_seconds": 94.027,
+      "ssim": 0.9908873697904834,
+      "max_block_luma_shift": 3.546000000000191,
+      "pass": true
+    },
+    {
+      "frame_index": 2819,
+      "time_seconds": 94.061,
+      "ssim": 0.9909199742905583,
+      "max_block_luma_shift": 3.780375000000191,
+      "pass": true
+    },
+    {
+      "frame_index": 2820,
+      "time_seconds": 94.094,
+      "ssim": 0.9910779094521224,
+      "max_block_luma_shift": 3.624125000000191,
+      "pass": true
+    },
+    {
+      "frame_index": 2821,
+      "time_seconds": 94.127,
+      "ssim": 0.9910757781081397,
+      "max_block_luma_shift": 3.592875000000191,
+      "pass": true
+    },
+    {
+      "frame_index": 2822,
+      "time_seconds": 94.161,
+      "ssim": 0.9910927199570116,
+      "max_block_luma_shift": 3.436625000000191,
+      "pass": true
+    },
+    {
+      "frame_index": 2823,
+      "time_seconds": 94.194,
+      "ssim": 0.991068327077915,
+      "max_block_luma_shift": 3.467875000000191,
+      "pass": true
+    },
+    {
+      "frame_index": 2824,
+      "time_seconds": 94.227,
+      "ssim": 0.9916068959014798,
+      "max_block_luma_shift": 2.9333906249999444,
+      "pass": true
+    },
+    {
+      "frame_index": 2825,
+      "time_seconds": 94.261,
+      "ssim": 0.9916282520067944,
+      "max_block_luma_shift": 3.6833906249999444,
+      "pass": true
+    },
+    {
+      "frame_index": 2826,
+      "time_seconds": 94.294,
+      "ssim": 0.9916865561182591,
+      "max_block_luma_shift": 2.960171875000043,
+      "pass": true
+    },
+    {
+      "frame_index": 2827,
+      "time_seconds": 94.328,
+      "ssim": 0.991531371826522,
+      "max_block_luma_shift": 2.975796875000043,
+      "pass": true
+    },
+    {
+      "frame_index": 2828,
+      "time_seconds": 94.361,
+      "ssim": 0.9916638862318443,
+      "max_block_luma_shift": 2.897671875000043,
+      "pass": true
+    },
+    {
+      "frame_index": 2829,
+      "time_seconds": 94.394,
+      "ssim": 0.9917754960865731,
+      "max_block_luma_shift": 2.821046874999979,
+      "pass": true
+    },
+    {
+      "frame_index": 2830,
+      "time_seconds": 94.428,
+      "ssim": 0.9917714694618034,
+      "max_block_luma_shift": 3.1979687500000296,
+      "pass": true
+    },
+    {
+      "frame_index": 2831,
+      "time_seconds": 94.461,
+      "ssim": 0.9918189534770124,
+      "max_block_luma_shift": 2.821046874999979,
+      "pass": true
+    },
+    {
+      "frame_index": 2832,
+      "time_seconds": 94.494,
+      "ssim": 0.9918778960518189,
+      "max_block_luma_shift": 2.6942499999999256,
+      "pass": true
+    },
+    {
+      "frame_index": 2833,
+      "time_seconds": 94.528,
+      "ssim": 0.9919580307143091,
+      "max_block_luma_shift": 2.6942499999999256,
+      "pass": true
+    },
+    {
+      "frame_index": 2834,
+      "time_seconds": 94.561,
+      "ssim": 0.9919696156446852,
+      "max_block_luma_shift": 2.6942499999999256,
+      "pass": true
+    },
+    {
+      "frame_index": 2835,
+      "time_seconds": 94.594,
+      "ssim": 0.9919765346949864,
+      "max_block_luma_shift": 2.7307499999998583,
+      "pass": true
+    },
+    {
+      "frame_index": 2836,
+      "time_seconds": 94.628,
+      "ssim": 0.9921864862202551,
+      "max_block_luma_shift": 2.694546875000043,
+      "pass": true
+    },
+    {
+      "frame_index": 2837,
+      "time_seconds": 94.661,
+      "ssim": 0.9924002197792908,
+      "max_block_luma_shift": 2.4890000000000327,
+      "pass": true
+    },
+    {
+      "frame_index": 2838,
+      "time_seconds": 94.695,
+      "ssim": 0.9924812087874096,
+      "max_block_luma_shift": 2.7827968749999457,
+      "pass": true
+    },
+    {
+      "frame_index": 2839,
+      "time_seconds": 94.728,
+      "ssim": 0.9926068675555003,
+      "max_block_luma_shift": 3.2255312500000457,
+      "pass": true
+    },
+    {
+      "frame_index": 2840,
+      "time_seconds": 94.761,
+      "ssim": 0.9928597377929874,
+      "max_block_luma_shift": 2.729999999999933,
+      "pass": true
+    },
+    {
+      "frame_index": 2841,
+      "time_seconds": 94.795,
+      "ssim": 0.9929269557361043,
+      "max_block_luma_shift": 2.6997187500000166,
+      "pass": true
+    },
+    {
+      "frame_index": 2842,
+      "time_seconds": 94.828,
+      "ssim": 0.9929413403962916,
+      "max_block_luma_shift": 2.5665312500000255,
+      "pass": true
+    },
+    {
+      "frame_index": 2843,
+      "time_seconds": 94.861,
+      "ssim": 0.9929524155907484,
+      "max_block_luma_shift": 2.6829999999997938,
+      "pass": true
+    },
+    {
+      "frame_index": 2844,
+      "time_seconds": 94.895,
+      "ssim": 0.9930353547344614,
+      "max_block_luma_shift": 3.146546875000098,
+      "pass": true
+    },
+    {
+      "frame_index": 2845,
+      "time_seconds": 94.928,
+      "ssim": 0.9930851874921208,
+      "max_block_luma_shift": 2.6076718750002215,
+      "pass": true
+    },
+    {
+      "frame_index": 2846,
+      "time_seconds": 94.962,
+      "ssim": 0.9930615966640227,
+      "max_block_luma_shift": 2.936687500000005,
+      "pass": true
+    },
+    {
+      "frame_index": 2847,
+      "time_seconds": 94.995,
+      "ssim": 0.9931695341747393,
+      "max_block_luma_shift": 2.921000000000191,
+      "pass": true
+    },
+    {
+      "frame_index": 2848,
+      "time_seconds": 95.028,
+      "ssim": 0.9934439831982229,
+      "max_block_luma_shift": 2.3859999999999673,
+      "pass": true
+    },
+    {
+      "frame_index": 2849,
+      "time_seconds": 95.062,
+      "ssim": 0.9932942849321932,
+      "max_block_luma_shift": 2.780375000000191,
+      "pass": true
+    },
+    {
+      "frame_index": 2850,
+      "time_seconds": 95.095,
+      "ssim": 0.9931976983012392,
+      "max_block_luma_shift": 2.764750000000191,
+      "pass": true
+    },
+    {
+      "frame_index": 2851,
+      "time_seconds": 95.128,
+      "ssim": 0.9927814417173751,
+      "max_block_luma_shift": 3.196812499999993,
+      "pass": true
+    },
+    {
+      "frame_index": 2852,
+      "time_seconds": 95.162,
+      "ssim": 0.9926793800120207,
+      "max_block_luma_shift": 3.024937499999993,
+      "pass": true
+    },
+    {
+      "frame_index": 2853,
+      "time_seconds": 95.195,
+      "ssim": 0.9925568450372669,
+      "max_block_luma_shift": 3.087437499999993,
+      "pass": true
+    },
+    {
+      "frame_index": 2854,
+      "time_seconds": 95.228,
+      "ssim": 0.9921014323403061,
+      "max_block_luma_shift": 3.287906249999935,
+      "pass": true
+    },
+    {
+      "frame_index": 2855,
+      "time_seconds": 95.262,
+      "ssim": 0.9916209902480023,
+      "max_block_luma_shift": 3.602359374999878,
+      "pass": true
+    },
+    {
+      "frame_index": 2856,
+      "time_seconds": 95.295,
+      "ssim": 0.9916246933077215,
+      "max_block_luma_shift": 3.602359374999878,
+      "pass": true
+    },
+    {
+      "frame_index": 2857,
+      "time_seconds": 95.329,
+      "ssim": 0.9914357931436208,
+      "max_block_luma_shift": 4.245374999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2858,
+      "time_seconds": 95.362,
+      "ssim": 0.9913343575990563,
+      "max_block_luma_shift": 4.223499999999973,
+      "pass": true
+    },
+    {
+      "frame_index": 2859,
+      "time_seconds": 95.395,
+      "ssim": 0.9910254767530571,
+      "max_block_luma_shift": 4.846374999999924,
+      "pass": true
+    },
+    {
+      "frame_index": 2860,
+      "time_seconds": 95.429,
+      "ssim": 0.9910673192870022,
+      "max_block_luma_shift": 5.501749999999923,
+      "pass": true
+    },
+    {
+      "frame_index": 2861,
+      "time_seconds": 95.462,
+      "ssim": 0.9909806177964645,
+      "max_block_luma_shift": 5.563937499999895,
+      "pass": true
+    },
+    {
+      "frame_index": 2862,
+      "time_seconds": 95.495,
+      "ssim": 0.9908225356048979,
+      "max_block_luma_shift": 6.037296875000067,
+      "pass": true
+    },
+    {
+      "frame_index": 2863,
+      "time_seconds": 95.529,
+      "ssim": 0.9906520434229845,
+      "max_block_luma_shift": 7.733671875000027,
+      "pass": true
+    },
+    {
+      "frame_index": 2864,
+      "time_seconds": 95.562,
+      "ssim": 0.9902321249743079,
+      "max_block_luma_shift": 7.795671874999925,
+      "pass": true
+    },
+    {
+      "frame_index": 2865,
+      "time_seconds": 95.596,
+      "ssim": 0.9899550830216031,
+      "max_block_luma_shift": 8.398312499999818,
+      "pass": true
+    },
+    {
+      "frame_index": 2866,
+      "time_seconds": 95.629,
+      "ssim": 0.9891563870964347,
+      "max_block_luma_shift": 8.648312499999818,
+      "pass": true
+    },
+    {
+      "frame_index": 2867,
+      "time_seconds": 95.662,
+      "ssim": 0.9877244053037589,
+      "max_block_luma_shift": 9.078312499999953,
+      "pass": true
+    },
+    {
+      "frame_index": 2868,
+      "time_seconds": 95.696,
+      "ssim": 0.9878936325389064,
+      "max_block_luma_shift": 9.520562499999926,
+      "pass": true
+    },
+    {
+      "frame_index": 2869,
+      "time_seconds": 95.729,
+      "ssim": 0.9878455357232192,
+      "max_block_luma_shift": 9.584874999999869,
+      "pass": true
+    },
+    {
+      "frame_index": 2870,
+      "time_seconds": 95.762,
+      "ssim": 0.9878283053698254,
+      "max_block_luma_shift": 9.483390625000197,
+      "pass": true
+    },
+    {
+      "frame_index": 2871,
+      "time_seconds": 95.796,
+      "ssim": 0.9876659978363757,
+      "max_block_luma_shift": 9.952140625000197,
+      "pass": true
+    },
+    {
+      "frame_index": 2872,
+      "time_seconds": 95.829,
+      "ssim": 0.9878207392477636,
+      "max_block_luma_shift": 9.499015625000197,
+      "pass": true
+    },
+    {
+      "frame_index": 2873,
+      "time_seconds": 95.862,
+      "ssim": 0.9877991160170658,
+      "max_block_luma_shift": 9.450562500000046,
+      "pass": true
+    },
+    {
+      "frame_index": 2874,
+      "time_seconds": 95.896,
+      "ssim": 0.9877377464890198,
+      "max_block_luma_shift": 11.384031250000163,
+      "pass": true
+    },
+    {
+      "frame_index": 2875,
+      "time_seconds": 95.929,
+      "ssim": 0.9873800151291314,
+      "max_block_luma_shift": 11.430906250000163,
+      "pass": true
+    },
+    {
+      "frame_index": 2876,
+      "time_seconds": 95.963,
+      "ssim": 0.9875681203274755,
+      "max_block_luma_shift": 11.081031250000166,
+      "pass": true
+    },
+    {
+      "frame_index": 2877,
+      "time_seconds": 95.996,
+      "ssim": 0.987512391055737,
+      "max_block_luma_shift": 11.793703124999894,
+      "pass": true
+    },
+    {
+      "frame_index": 2878,
+      "time_seconds": 96.029,
+      "ssim": 0.987518861366041,
+      "max_block_luma_shift": 11.793703124999894,
+      "pass": true
+    },
+    {
+      "frame_index": 2879,
+      "time_seconds": 96.063,
+      "ssim": 0.9871621702973067,
+      "max_block_luma_shift": 11.793703124999894,
+      "pass": true
+    },
+    {
+      "frame_index": 2880,
+      "time_seconds": 96.096,
+      "ssim": 0.9873180534918087,
+      "max_block_luma_shift": 11.84876562499997,
+      "pass": true
+    },
+    {
+      "frame_index": 2881,
+      "time_seconds": 96.129,
+      "ssim": 0.9872256002208415,
+      "max_block_luma_shift": 12.17689062499997,
+      "pass": true
+    },
+    {
+      "frame_index": 2882,
+      "time_seconds": 96.163,
+      "ssim": 0.9870585554385993,
+      "max_block_luma_shift": 12.17689062499997,
+      "pass": true
+    },
+    {
+      "frame_index": 2883,
+      "time_seconds": 96.196,
+      "ssim": 0.986819952435875,
+      "max_block_luma_shift": 12.17689062499997,
+      "pass": true
+    },
+    {
+      "frame_index": 2884,
+      "time_seconds": 96.229,
+      "ssim": 0.987265548571498,
+      "max_block_luma_shift": 11.47860937499999,
+      "pass": true
+    },
+    {
+      "frame_index": 2885,
+      "time_seconds": 96.263,
+      "ssim": 0.9871048542735291,
+      "max_block_luma_shift": 11.526828125000037,
+      "pass": true
+    },
+    {
+      "frame_index": 2886,
+      "time_seconds": 96.296,
+      "ssim": 0.9871342325445134,
+      "max_block_luma_shift": 11.50985937499999,
+      "pass": true
+    },
+    {
+      "frame_index": 2887,
+      "time_seconds": 96.33,
+      "ssim": 0.9869038128820375,
+      "max_block_luma_shift": 11.50985937499999,
+      "pass": true
+    },
+    {
+      "frame_index": 2888,
+      "time_seconds": 96.363,
+      "ssim": 0.98710614187217,
+      "max_block_luma_shift": 11.305343750000162,
+      "pass": true
+    },
+    {
+      "frame_index": 2889,
+      "time_seconds": 96.396,
+      "ssim": 0.9871331426709087,
+      "max_block_luma_shift": 11.564171875,
+      "pass": true
+    },
+    {
+      "frame_index": 2890,
+      "time_seconds": 96.43,
+      "ssim": 0.9871610716245524,
+      "max_block_luma_shift": 11.082171875000114,
+      "pass": true
+    },
+    {
+      "frame_index": 2891,
+      "time_seconds": 96.463,
+      "ssim": 0.9869628433160716,
+      "max_block_luma_shift": 11.472796875000114,
+      "pass": true
+    },
+    {
+      "frame_index": 2892,
+      "time_seconds": 96.496,
+      "ssim": 0.9871521867806518,
+      "max_block_luma_shift": 10.746593750000159,
+      "pass": true
+    },
+    {
+      "frame_index": 2893,
+      "time_seconds": 96.53,
+      "ssim": 0.9871786908109013,
+      "max_block_luma_shift": 11.089656250000132,
+      "pass": true
+    },
+    {
+      "frame_index": 2894,
+      "time_seconds": 96.563,
+      "ssim": 0.9871859473770911,
+      "max_block_luma_shift": 10.968781250000006,
+      "pass": true
+    },
+    {
+      "frame_index": 2895,
+      "time_seconds": 96.596,
+      "ssim": 0.9870448411857607,
+      "max_block_luma_shift": 11.53765624999994,
+      "pass": true
+    },
+    {
+      "frame_index": 2896,
+      "time_seconds": 96.63,
+      "ssim": 0.9873299945471544,
+      "max_block_luma_shift": 10.194531250000011,
+      "pass": true
+    },
+    {
+      "frame_index": 2897,
+      "time_seconds": 96.663,
+      "ssim": 0.9875297599698761,
+      "max_block_luma_shift": 7.657156250000099,
+      "pass": true
+    },
+    {
+      "frame_index": 2898,
+      "time_seconds": 96.697,
+      "ssim": 0.9875525309426988,
+      "max_block_luma_shift": 7.240921875000012,
+      "pass": true
+    },
+    {
+      "frame_index": 2899,
+      "time_seconds": 96.73,
+      "ssim": 0.9872280063997528,
+      "max_block_luma_shift": 7.220546875000039,
+      "pass": true
+    },
+    {
+      "frame_index": 2900,
+      "time_seconds": 96.763,
+      "ssim": 0.9873130918000464,
+      "max_block_luma_shift": 6.439296875000039,
+      "pass": true
+    },
+    {
+      "frame_index": 2901,
+      "time_seconds": 96.797,
+      "ssim": 0.9873237297301739,
+      "max_block_luma_shift": 6.405140624999916,
+      "pass": true
+    },
+    {
+      "frame_index": 2902,
+      "time_seconds": 96.83,
+      "ssim": 0.9872870514324723,
+      "max_block_luma_shift": 6.791843749999913,
+      "pass": true
+    },
+    {
+      "frame_index": 2903,
+      "time_seconds": 96.863,
+      "ssim": 0.9870844043890734,
+      "max_block_luma_shift": 6.567125000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2904,
+      "time_seconds": 96.897,
+      "ssim": 0.9871849557463941,
+      "max_block_luma_shift": 6.567125000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2905,
+      "time_seconds": 96.93,
+      "ssim": 0.9871943403989959,
+      "max_block_luma_shift": 6.567125000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2906,
+      "time_seconds": 96.964,
+      "ssim": 0.9872134224078085,
+      "max_block_luma_shift": 6.567125000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2907,
+      "time_seconds": 96.997,
+      "ssim": 0.9871045368976799,
+      "max_block_luma_shift": 6.567125000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2908,
+      "time_seconds": 97.03,
+      "ssim": 0.987321634190565,
+      "max_block_luma_shift": 5.988312500000063,
+      "pass": true
+    },
+    {
+      "frame_index": 2909,
+      "time_seconds": 97.064,
+      "ssim": 0.9873197473939936,
+      "max_block_luma_shift": 6.138687499999975,
+      "pass": true
+    },
+    {
+      "frame_index": 2910,
+      "time_seconds": 97.097,
+      "ssim": 0.9873248597442573,
+      "max_block_luma_shift": 6.567125000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2911,
+      "time_seconds": 97.13,
+      "ssim": 0.9870343027352544,
+      "max_block_luma_shift": 6.567125000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2912,
+      "time_seconds": 97.164,
+      "ssim": 0.9872951391928213,
+      "max_block_luma_shift": 6.239000000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2913,
+      "time_seconds": 97.197,
+      "ssim": 0.9872893883422136,
+      "max_block_luma_shift": 6.504625000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2914,
+      "time_seconds": 97.23,
+      "ssim": 0.9873820061092989,
+      "max_block_luma_shift": 6.332750000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2915,
+      "time_seconds": 97.264,
+      "ssim": 0.9870086751405502,
+      "max_block_luma_shift": 6.629625000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2916,
+      "time_seconds": 97.297,
+      "ssim": 0.9871190044018362,
+      "max_block_luma_shift": 6.629625000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2917,
+      "time_seconds": 97.331,
+      "ssim": 0.9870816323282523,
+      "max_block_luma_shift": 6.629625000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2918,
+      "time_seconds": 97.364,
+      "ssim": 0.9870331736598481,
+      "max_block_luma_shift": 6.629625000000061,
+      "pass": true
+    },
+    {
+      "frame_index": 2919,
+      "time_seconds": 97.397,
+      "ssim": 0.9868261702107777,
+      "max_block_luma_shift": 6.674218750000023,
+      "pass": true
+    },
+    {
+      "frame_index": 2920,
+      "time_seconds": 97.431,
+      "ssim": 0.98697334823428,
+      "max_block_luma_shift": 6.674218750000023,
+      "pass": true
+    },
+    {
+      "frame_index": 2921,
+      "time_seconds": 97.464,
+      "ssim": 0.9870057199326356,
+      "max_block_luma_shift": 6.674218750000023,
+      "pass": true
+    },
+    {
+      "frame_index": 2922,
+      "time_seconds": 97.497,
+      "ssim": 0.9870032996510553,
+      "max_block_luma_shift": 6.934828125000024,
+      "pass": true
+    },
+    {
+      "frame_index": 2923,
+      "time_seconds": 97.531,
+      "ssim": 0.9868967929516435,
+      "max_block_luma_shift": 6.934828125000024,
+      "pass": true
+    },
+    {
+      "frame_index": 2924,
+      "time_seconds": 97.564,
+      "ssim": 0.9883544352970771,
+      "max_block_luma_shift": 7.473062499999941,
+      "pass": true
+    },
+    {
+      "frame_index": 2925,
+      "time_seconds": 97.598,
+      "ssim": 0.9883007697466403,
+      "max_block_luma_shift": 7.473062499999941,
+      "pass": true
+    },
+    {
+      "frame_index": 2926,
+      "time_seconds": 97.631,
+      "ssim": 0.9880608788983043,
+      "max_block_luma_shift": 7.473062499999941,
+      "pass": true
+    },
+    {
+      "frame_index": 2927,
+      "time_seconds": 97.664,
+      "ssim": 0.9871495144000636,
+      "max_block_luma_shift": 7.473062499999941,
+      "pass": true
+    },
+    {
+      "frame_index": 2928,
+      "time_seconds": 97.698,
+      "ssim": 0.9873129049971578,
+      "max_block_luma_shift": 7.347296875000012,
+      "pass": true
+    },
+    {
+      "frame_index": 2929,
+      "time_seconds": 97.731,
+      "ssim": 0.987347797035522,
+      "max_block_luma_shift": 7.390046875000024,
+      "pass": true
+    },
+    {
+      "frame_index": 2930,
+      "time_seconds": 97.764,
+      "ssim": 0.9872721757723489,
+      "max_block_luma_shift": 8.534093749999784,
+      "pass": true
+    },
+    {
+      "frame_index": 2931,
+      "time_seconds": 97.798,
+      "ssim": 0.9869659923801476,
+      "max_block_luma_shift": 9.252843749999755,
+      "pass": true
+    },
+    {
+      "frame_index": 2932,
+      "time_seconds": 97.831,
+      "ssim": 0.9871217384612097,
+      "max_block_luma_shift": 9.143468749999755,
+      "pass": true
+    },
+    {
+      "frame_index": 2933,
+      "time_seconds": 97.864,
+      "ssim": 0.9869428701735746,
+      "max_block_luma_shift": 11.343953124999956,
+      "pass": true
+    },
+    {
+      "frame_index": 2934,
+      "time_seconds": 97.898,
+      "ssim": 0.9866887131557293,
+      "max_block_luma_shift": 11.109749999999934,
+      "pass": true
+    },
+    {
+      "frame_index": 2935,
+      "time_seconds": 97.931,
+      "ssim": 0.9862642931450393,
+      "max_block_luma_shift": 12.62909375000018,
+      "pass": true
+    },
+    {
+      "frame_index": 2936,
+      "time_seconds": 97.965,
+      "ssim": 0.9864569114714228,
+      "max_block_luma_shift": 12.864156250000207,
+      "pass": true
+    },
+    {
+      "frame_index": 2937,
+      "time_seconds": 97.998,
+      "ssim": 0.9863516429212991,
+      "max_block_luma_shift": 13.3380312500002,
+      "pass": true
+    },
+    {
+      "frame_index": 2938,
+      "time_seconds": 98.031,
+      "ssim": 0.9862328978726521,
+      "max_block_luma_shift": 13.397109374999928,
+      "pass": true
+    },
+    {
+      "frame_index": 2939,
+      "time_seconds": 98.065,
+      "ssim": 0.9858690785659214,
+      "max_block_luma_shift": 14.073109375000001,
+      "pass": true
+    },
+    {
+      "frame_index": 2940,
+      "time_seconds": 98.098,
+      "ssim": 0.9859454729004272,
+      "max_block_luma_shift": 14.229359375000001,
+      "pass": true
+    },
+    {
+      "frame_index": 2941,
+      "time_seconds": 98.131,
+      "ssim": 0.9858724059477558,
+      "max_block_luma_shift": 14.754546875000045,
+      "pass": true
+    },
+    {
+      "frame_index": 2942,
+      "time_seconds": 98.165,
+      "ssim": 0.9858331224671161,
+      "max_block_luma_shift": 14.504546875000045,
+      "pass": true
+    },
+    {
+      "frame_index": 2943,
+      "time_seconds": 98.198,
+      "ssim": 0.9854859406698822,
+      "max_block_luma_shift": 15.165406250000188,
+      "pass": true
+    },
+    {
+      "frame_index": 2944,
+      "time_seconds": 98.231,
+      "ssim": 0.9857125572311108,
+      "max_block_luma_shift": 14.985031250000134,
+      "pass": true
+    },
+    {
+      "frame_index": 2945,
+      "time_seconds": 98.265,
+      "ssim": 0.9856041592955586,
+      "max_block_luma_shift": 15.332671875000045,
+      "pass": true
+    },
+    {
+      "frame_index": 2946,
+      "time_seconds": 98.298,
+      "ssim": 0.9855167606528218,
+      "max_block_luma_shift": 15.332671875000045,
+      "pass": true
+    },
+    {
+      "frame_index": 2947,
+      "time_seconds": 98.332,
+      "ssim": 0.9851441380313372,
+      "max_block_luma_shift": 15.332671875000045,
+      "pass": true
+    },
+    {
+      "frame_index": 2948,
+      "time_seconds": 98.365,
+      "ssim": 0.9854898610413452,
+      "max_block_luma_shift": 14.84289062500011,
+      "pass": true
+    },
+    {
+      "frame_index": 2949,
+      "time_seconds": 98.398,
+      "ssim": 0.985513002160249,
+      "max_block_luma_shift": 14.84289062500011,
+      "pass": true
+    },
+    {
+      "frame_index": 2950,
+      "time_seconds": 98.432,
+      "ssim": 0.9856986958966708,
+      "max_block_luma_shift": 14.639593750000188,
+      "pass": true
+    },
+    {
+      "frame_index": 2951,
+      "time_seconds": 98.465,
+      "ssim": 0.9856028365856122,
+      "max_block_luma_shift": 14.693968750000153,
+      "pass": true
+    },
+    {
+      "frame_index": 2952,
+      "time_seconds": 98.498,
+      "ssim": 0.9859856196990388,
+      "max_block_luma_shift": 14.123343750000174,
+      "pass": true
+    },
+    {
+      "frame_index": 2953,
+      "time_seconds": 98.532,
+      "ssim": 0.9858908451624363,
+      "max_block_luma_shift": 14.413687499999867,
+      "pass": true
+    },
+    {
+      "frame_index": 2954,
+      "time_seconds": 98.565,
+      "ssim": 0.9860858554660141,
+      "max_block_luma_shift": 13.647671874999986,
+      "pass": true
+    },
+    {
+      "frame_index": 2955,
+      "time_seconds": 98.598,
+      "ssim": 0.9860134831518367,
+      "max_block_luma_shift": 13.639484374999995,
+      "pass": true
+    },
+    {
+      "frame_index": 2956,
+      "time_seconds": 98.632,
+      "ssim": 0.9865026721793577,
+      "max_block_luma_shift": 12.57115625000003,
+      "pass": true
+    },
+    {
+      "frame_index": 2957,
+      "time_seconds": 98.665,
+      "ssim": 0.9865930484586882,
+      "max_block_luma_shift": 11.382249999999942,
+      "pass": true
+    },
+    {
+      "frame_index": 2958,
+      "time_seconds": 98.699,
+      "ssim": 0.9866123057198111,
+      "max_block_luma_shift": 11.382249999999942,
+      "pass": true
+    },
+    {
+      "frame_index": 2959,
+      "time_seconds": 98.732,
+      "ssim": 0.9863564435014389,
+      "max_block_luma_shift": 10.80326562499991,
+      "pass": true
+    },
+    {
+      "frame_index": 2960,
+      "time_seconds": 98.765,
+      "ssim": 0.9865764542786621,
+      "max_block_luma_shift": 10.235968749999842,
+      "pass": true
+    },
+    {
+      "frame_index": 2961,
+      "time_seconds": 98.799,
+      "ssim": 0.9865490951500061,
+      "max_block_luma_shift": 8.22601562500003,
+      "pass": true
+    },
+    {
+      "frame_index": 2962,
+      "time_seconds": 98.832,
+      "ssim": 0.9866447975849574,
+      "max_block_luma_shift": 8.019625000000218,
+      "pass": true
+    },
+    {
+      "frame_index": 2963,
+      "time_seconds": 98.865,
+      "ssim": 0.9865686663298597,
+      "max_block_luma_shift": 8.160250000000218,
+      "pass": true
+    },
+    {
+      "frame_index": 2964,
+      "time_seconds": 98.899,
+      "ssim": 0.9866048524955543,
+      "max_block_luma_shift": 7.985656250000034,
+      "pass": true
+    },
+    {
+      "frame_index": 2965,
+      "time_seconds": 98.932,
+      "ssim": 0.9866205933404234,
+      "max_block_luma_shift": 7.985656250000034,
+      "pass": true
+    },
+    {
+      "frame_index": 2966,
+      "time_seconds": 98.966,
+      "ssim": 0.9866185264005233,
+      "max_block_luma_shift": 7.985656250000034,
+      "pass": true
+    },
+    {
+      "frame_index": 2967,
+      "time_seconds": 98.999,
+      "ssim": 0.986459375678091,
+      "max_block_luma_shift": 9.325624999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2968,
+      "time_seconds": 99.032,
+      "ssim": 0.9866049528376883,
+      "max_block_luma_shift": 9.028749999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2969,
+      "time_seconds": 99.066,
+      "ssim": 0.9866256034930198,
+      "max_block_luma_shift": 9.028749999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2970,
+      "time_seconds": 99.099,
+      "ssim": 0.9866109676322419,
+      "max_block_luma_shift": 8.856874999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2971,
+      "time_seconds": 99.132,
+      "ssim": 0.9865141946992321,
+      "max_block_luma_shift": 8.856874999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2972,
+      "time_seconds": 99.166,
+      "ssim": 0.9867110344766757,
+      "max_block_luma_shift": 8.763124999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2973,
+      "time_seconds": 99.199,
+      "ssim": 0.9867311393024095,
+      "max_block_luma_shift": 8.809999999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2974,
+      "time_seconds": 99.232,
+      "ssim": 0.9867123684717704,
+      "max_block_luma_shift": 8.747499999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2975,
+      "time_seconds": 99.266,
+      "ssim": 0.9865625119755457,
+      "max_block_luma_shift": 8.950624999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2976,
+      "time_seconds": 99.299,
+      "ssim": 0.9866606674040221,
+      "max_block_luma_shift": 8.934999999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2977,
+      "time_seconds": 99.333,
+      "ssim": 0.9865673715163878,
+      "max_block_luma_shift": 8.934999999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2978,
+      "time_seconds": 99.366,
+      "ssim": 0.9866218578856502,
+      "max_block_luma_shift": 8.934999999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2979,
+      "time_seconds": 99.399,
+      "ssim": 0.9865611180269966,
+      "max_block_luma_shift": 8.950624999999974,
+      "pass": true
+    },
+    {
+      "frame_index": 2980,
+      "time_seconds": 99.433,
+      "ssim": 0.9867074703697429,
+      "max_block_luma_shift": 8.362312499999959,
+      "pass": true
+    },
+    {
+      "frame_index": 2981,
+      "time_seconds": 99.466,
+      "ssim": 0.9867229974035066,
+      "max_block_luma_shift": 8.37249999999996,
+      "pass": true
+    },
+    {
+      "frame_index": 2982,
+      "time_seconds": 99.499,
+      "ssim": 0.9867062227867432,
+      "max_block_luma_shift": 8.37487499999996,
+      "pass": true
+    },
+    {
+      "frame_index": 2983,
+      "time_seconds": 99.533,
+      "ssim": 0.9866211202451245,
+      "max_block_luma_shift": 8.427874999999972,
+      "pass": true
+    },
+    {
+      "frame_index": 2984,
+      "time_seconds": 99.566,
+      "ssim": 0.9867207941452624,
+      "max_block_luma_shift": 8.427874999999972,
+      "pass": true
+    },
+    {
+      "frame_index": 2985,
+      "time_seconds": 99.6,
+      "ssim": 0.9866407622218388,
+      "max_block_luma_shift": 8.427874999999972,
+      "pass": true
+    },
+    {
+      "frame_index": 2986,
+      "time_seconds": 99.633,
+      "ssim": 0.9865862380313534,
+      "max_block_luma_shift": 8.882265625000002,
+      "pass": true
+    },
+    {
+      "frame_index": 2987,
+      "time_seconds": 99.666,
+      "ssim": 0.9868522932487926,
+      "max_block_luma_shift": 8.217624999999941,
+      "pass": true
+    },
+    {
+      "frame_index": 2988,
+      "time_seconds": 99.7,
+      "ssim": 0.9870124117684187,
+      "max_block_luma_shift": 8.083124999999995,
+      "pass": true
+    },
+    {
+      "frame_index": 2989,
+      "time_seconds": 99.733,
+      "ssim": 0.9870096429706635,
+      "max_block_luma_shift": 8.145624999999995,
+      "pass": true
+    },
+    {
+      "frame_index": 2990,
+      "time_seconds": 99.766,
+      "ssim": 0.9869733070877601,
+      "max_block_luma_shift": 8.083124999999995,
+      "pass": true
+    },
+    {
+      "frame_index": 2991,
+      "time_seconds": 99.8,
+      "ssim": 0.9868542124230458,
+      "max_block_luma_shift": 8.223062499999969,
+      "pass": true
+    },
+    {
+      "frame_index": 2992,
+      "time_seconds": 99.833,
+      "ssim": 0.9869276836455713,
+      "max_block_luma_shift": 8.223062499999969,
+      "pass": true
+    },
+    {
+      "frame_index": 2993,
+      "time_seconds": 99.866,
+      "ssim": 0.9869536531840687,
+      "max_block_luma_shift": 8.223062499999969,
+      "pass": true
+    },
+    {
+      "frame_index": 2994,
+      "time_seconds": 99.9,
+      "ssim": 0.9869581664946709,
+      "max_block_luma_shift": 8.223062499999969,
+      "pass": true
+    },
+    {
+      "frame_index": 2995,
+      "time_seconds": 99.933,
+      "ssim": 0.9868900835337483,
+      "max_block_luma_shift": 8.223062499999969,
+      "pass": true
+    },
+    {
+      "frame_index": 2996,
+      "time_seconds": 99.967,
+      "ssim": 0.9869332991652475,
+      "max_block_luma_shift": 8.223062499999969,
+      "pass": true
+    },
+    {
+      "frame_index": 2997,
+      "time_seconds": 100,
+      "ssim": 0.9869418842487157,
+      "max_block_luma_shift": 8.223062499999969,
+      "pass": true
+    },
+    {
+      "frame_index": 2998,
+      "time_seconds": 100.033,
+      "ssim": 0.9869335458533585,
+      "max_block_luma_shift": 8.223062499999969,
+      "pass": true
+    },
+    {
+      "frame_index": 2999,
+      "time_seconds": 100.067,
+      "ssim": 0.9868678072249776,
+      "max_block_luma_shift": 8.223062499999969,
+      "pass": true
+    },
+    {
+      "frame_index": 3000,
+      "time_seconds": 100.1,
+      "ssim": 0.9869840035783077,
+      "max_block_luma_shift": 8.223062499999969,
+      "pass": true
+    },
+    {
+      "frame_index": 3001,
+      "time_seconds": 100.133,
+      "ssim": 0.9870027039829626,
+      "max_block_luma_shift": 8.223062499999969,
+      "pass": true
+    },
+    {
+      "frame_index": 3002,
+      "time_seconds": 100.167,
+      "ssim": 0.9870359733994467,
+      "max_block_luma_shift": 8.223062499999969,
+      "pass": true
+    },
+    {
+      "frame_index": 3003,
+      "time_seconds": 100.2,
+      "ssim": 0.9868746029528164,
+      "max_block_luma_shift": 8.255499999999941,
+      "pass": true
+    },
+    {
+      "frame_index": 3004,
+      "time_seconds": 100.233,
+      "ssim": 0.9870622629520583,
+      "max_block_luma_shift": 8.27418749999994,
+      "pass": true
+    },
+    {
+      "frame_index": 3005,
+      "time_seconds": 100.267,
+      "ssim": 0.9869998850761341,
+      "max_block_luma_shift": 8.255499999999941,
+      "pass": true
+    },
+    {
+      "frame_index": 3006,
+      "time_seconds": 100.3,
+      "ssim": 0.9869790065264074,
+      "max_block_luma_shift": 8.176687499999943,
+      "pass": true
+    },
+    {
+      "frame_index": 3007,
+      "time_seconds": 100.334,
+      "ssim": 0.9867646292640041,
+      "max_block_luma_shift": 8.224249999999941,
+      "pass": true
+    },
+    {
+      "frame_index": 3008,
+      "time_seconds": 100.367,
+      "ssim": 0.9868286635936137,
+      "max_block_luma_shift": 8.239874999999941,
+      "pass": true
+    },
+    {
+      "frame_index": 3009,
+      "time_seconds": 100.4,
+      "ssim": 0.9868350535336665,
+      "max_block_luma_shift": 8.255499999999941,
+      "pass": true
+    },
+    {
+      "frame_index": 3010,
+      "time_seconds": 100.434,
+      "ssim": 0.9868239924253824,
+      "max_block_luma_shift": 8.254812499999943,
+      "pass": true
+    },
+    {
+      "frame_index": 3011,
+      "time_seconds": 100.467,
+      "ssim": 0.9867123595175155,
+      "max_block_luma_shift": 8.530140625000001,
+      "pass": true
+    },
+    {
+      "frame_index": 3012,
+      "time_seconds": 100.5,
+      "ssim": 0.9868920796599333,
+      "max_block_luma_shift": 8.530140625000001,
+      "pass": true
+    },
+    {
+      "frame_index": 3013,
+      "time_seconds": 100.534,
+      "ssim": 0.9868902175998198,
+      "max_block_luma_shift": 8.530140625000001,
+      "pass": true
+    },
+    {
+      "frame_index": 3014,
+      "time_seconds": 100.567,
+      "ssim": 0.9868896592054441,
+      "max_block_luma_shift": 8.530140625000001,
+      "pass": true
+    },
+    {
+      "frame_index": 3015,
+      "time_seconds": 100.6,
+      "ssim": 0.986549231687435,
+      "max_block_luma_shift": 8.530140625000001,
+      "pass": true
+    },
+    {
+      "frame_index": 3016,
+      "time_seconds": 100.634,
+      "ssim": 0.9867895775937413,
+      "max_block_luma_shift": 8.146124999999941,
+      "pass": true
+    },
+    {
+      "frame_index": 3017,
+      "time_seconds": 100.667,
+      "ssim": 0.9868222395081414,
+      "max_block_luma_shift": 8.22037499999999,
+      "pass": true
+    },
+    {
+      "frame_index": 3018,
+      "time_seconds": 100.701,
+      "ssim": 0.986790555853169,
+      "max_block_luma_shift": 8.146124999999941,
+      "pass": true
+    },
+    {
+      "frame_index": 3019,
+      "time_seconds": 100.734,
+      "ssim": 0.986134331629302,
+      "max_block_luma_shift": 9.152781249999975,
+      "pass": true
+    },
+    {
+      "frame_index": 3020,
+      "time_seconds": 100.767,
+      "ssim": 0.9863314740248239,
+      "max_block_luma_shift": 8.54600000000002,
+      "pass": true
+    },
+    {
+      "frame_index": 3021,
+      "time_seconds": 100.801,
+      "ssim": 0.9862774329278311,
+      "max_block_luma_shift": 9.559031250000004,
+      "pass": true
+    },
+    {
+      "frame_index": 3022,
+      "time_seconds": 100.834,
+      "ssim": 0.9861534683122151,
+      "max_block_luma_shift": 9.527781250000004,
+      "pass": true
+    },
+    {
+      "frame_index": 3023,
+      "time_seconds": 100.867,
+      "ssim": 0.9859661106290583,
+      "max_block_luma_shift": 9.574375000000089,
+      "pass": true
+    },
+    {
+      "frame_index": 3024,
+      "time_seconds": 100.901,
+      "ssim": 0.9861008378773383,
+      "max_block_luma_shift": 9.934031249999975,
+      "pass": true
+    },
+    {
+      "frame_index": 3025,
+      "time_seconds": 100.934,
+      "ssim": 0.9860979392394702,
+      "max_block_luma_shift": 9.52442187499986,
+      "pass": true
+    },
+    {
+      "frame_index": 3026,
+      "time_seconds": 100.968,
+      "ssim": 0.9861289494470011,
+      "max_block_luma_shift": 10.889718750000156,
+      "pass": true
+    },
+    {
+      "frame_index": 3027,
+      "time_seconds": 101.001,
+      "ssim": 0.9857592499797555,
+      "max_block_luma_shift": 11.886249999999848,
+      "pass": true
+    },
+    {
+      "frame_index": 3028,
+      "time_seconds": 101.034,
+      "ssim": 0.9860170806689824,
+      "max_block_luma_shift": 12.523812499999849,
+      "pass": true
+    },
+    {
+      "frame_index": 3029,
+      "time_seconds": 101.068,
+      "ssim": 0.9857817785668402,
+      "max_block_luma_shift": 13.187406250000123,
+      "pass": true
+    },
+    {
+      "frame_index": 3030,
+      "time_seconds": 101.101,
+      "ssim": 0.9858213138645125,
+      "max_block_luma_shift": 13.232906250000099,
+      "pass": true
+    },
+    {
+      "frame_index": 3031,
+      "time_seconds": 101.134,
+      "ssim": 0.9853556696233818,
+      "max_block_luma_shift": 13.497781250000031,
+      "pass": true
+    },
+    {
+      "frame_index": 3032,
+      "time_seconds": 101.168,
+      "ssim": 0.9856139949259215,
+      "max_block_luma_shift": 13.925781249999972,
+      "pass": true
+    },
+    {
+      "frame_index": 3033,
+      "time_seconds": 101.201,
+      "ssim": 0.9855719180088762,
+      "max_block_luma_shift": 14.091531250000031,
+      "pass": true
+    },
+    {
+      "frame_index": 3034,
+      "time_seconds": 101.234,
+      "ssim": 0.985281397632196,
+      "max_block_luma_shift": 15.358843749999977,
+      "pass": true
+    },
+    {
+      "frame_index": 3035,
+      "time_seconds": 101.268,
+      "ssim": 0.9846867740501294,
+      "max_block_luma_shift": 15.561968749999977,
+      "pass": true
+    },
+    {
+      "frame_index": 3036,
+      "time_seconds": 101.301,
+      "ssim": 0.9848841491556115,
+      "max_block_luma_shift": 15.561968749999977,
+      "pass": true
+    },
+    {
+      "frame_index": 3037,
+      "time_seconds": 101.335,
+      "ssim": 0.9846273750677904,
+      "max_block_luma_shift": 15.561968749999977,
+      "pass": true
+    },
+    {
+      "frame_index": 3038,
+      "time_seconds": 101.368,
+      "ssim": 0.9845599177723954,
+      "max_block_luma_shift": 16.201234374999927,
+      "pass": true
+    },
+    {
+      "frame_index": 3039,
+      "time_seconds": 101.401,
+      "ssim": 0.9845010943786371,
+      "max_block_luma_shift": 16.201234374999927,
+      "pass": true
+    },
+    {
+      "frame_index": 3040,
+      "time_seconds": 101.435,
+      "ssim": 0.9848039238641862,
+      "max_block_luma_shift": 16.201234374999927,
+      "pass": true
+    },
+    {
+      "frame_index": 3041,
+      "time_seconds": 101.468,
+      "ssim": 0.9850033823560763,
+      "max_block_luma_shift": 15.129296875000051,
+      "pass": true
+    },
+    {
+      "frame_index": 3042,
+      "time_seconds": 101.501,
+      "ssim": 0.9851607014307924,
+      "max_block_luma_shift": 15.129296875000051,
+      "pass": true
+    },
+    {
+      "frame_index": 3043,
+      "time_seconds": 101.535,
+      "ssim": 0.9850890467243314,
+      "max_block_luma_shift": 15.223046875000051,
+      "pass": true
+    },
+    {
+      "frame_index": 3044,
+      "time_seconds": 101.568,
+      "ssim": 0.9866991170695605,
+      "max_block_luma_shift": 14.526421875000068,
+      "pass": true
+    },
+    {
+      "frame_index": 3045,
+      "time_seconds": 101.602,
+      "ssim": 0.9867275093977393,
+      "max_block_luma_shift": 14.471734375000011,
+      "pass": true
+    },
+    {
+      "frame_index": 3046,
+      "time_seconds": 101.635,
+      "ssim": 0.9864312307823564,
+      "max_block_luma_shift": 14.406406249999947,
+      "pass": true
+    },
+    {
+      "frame_index": 3047,
+      "time_seconds": 101.668,
+      "ssim": 0.9854408888939042,
+      "max_block_luma_shift": 14.762343749999872,
+      "pass": true
+    },
+    {
+      "frame_index": 3048,
+      "time_seconds": 101.702,
+      "ssim": 0.9857073544512973,
+      "max_block_luma_shift": 14.693031249999962,
+      "pass": true
+    },
+    {
+      "frame_index": 3049,
+      "time_seconds": 101.735,
+      "ssim": 0.9854797125741653,
+      "max_block_luma_shift": 14.688046875000055,
+      "pass": true
+    },
+    {
+      "frame_index": 3050,
+      "time_seconds": 101.768,
+      "ssim": 0.9854798970026059,
+      "max_block_luma_shift": 14.693031249999962,
+      "pass": true
+    },
+    {
+      "frame_index": 3051,
+      "time_seconds": 101.802,
+      "ssim": 0.9852830219054113,
+      "max_block_luma_shift": 14.875531249999625,
+      "pass": true
+    },
+    {
+      "frame_index": 3052,
+      "time_seconds": 101.835,
+      "ssim": 0.9854720509993592,
+      "max_block_luma_shift": 14.688046875000055,
+      "pass": true
+    },
+    {
+      "frame_index": 3053,
+      "time_seconds": 101.868,
+      "ssim": 0.9854582556077319,
+      "max_block_luma_shift": 14.623093749999924,
+      "pass": true
+    },
+    {
+      "frame_index": 3054,
+      "time_seconds": 101.902,
+      "ssim": 0.9856904753076288,
+      "max_block_luma_shift": 14.721593749999926,
+      "pass": true
+    },
+    {
+      "frame_index": 3055,
+      "time_seconds": 101.935,
+      "ssim": 0.9854560412118473,
+      "max_block_luma_shift": 14.746656249999972,
+      "pass": true
+    },
+    {
+      "frame_index": 3056,
+      "time_seconds": 101.969,
+      "ssim": 0.985691240235645,
+      "max_block_luma_shift": 13.955624999999884,
+      "pass": true
+    },
+    {
+      "frame_index": 3057,
+      "time_seconds": 102.002,
+      "ssim": 0.9857319723875487,
+      "max_block_luma_shift": 13.92506249999991,
+      "pass": true
+    },
+    {
+      "frame_index": 3058,
+      "time_seconds": 102.035,
+      "ssim": 0.9857661405736441,
+      "max_block_luma_shift": 13.835062499999935,
+      "pass": true
+    },
+    {
+      "frame_index": 3059,
+      "time_seconds": 102.069,
+      "ssim": 0.9856638984923493,
+      "max_block_luma_shift": 13.885624999999834,
+      "pass": true
+    },
+    {
+      "frame_index": 3060,
+      "time_seconds": 102.102,
+      "ssim": 0.9855653914999997,
+      "max_block_luma_shift": 11.998593750000168,
+      "pass": true
+    },
+    {
+      "frame_index": 3061,
+      "time_seconds": 102.135,
+      "ssim": 0.9858408701846386,
+      "max_block_luma_shift": 10.436093750000197,
+      "pass": true
+    },
+    {
+      "frame_index": 3062,
+      "time_seconds": 102.169,
+      "ssim": 0.9859393723614803,
+      "max_block_luma_shift": 10.281156249999952,
+      "pass": true
+    },
+    {
+      "frame_index": 3063,
+      "time_seconds": 102.202,
+      "ssim": 0.9859854623377501,
+      "max_block_luma_shift": 10.234281249999952,
+      "pass": true
+    },
+    {
+      "frame_index": 3064,
+      "time_seconds": 102.235,
+      "ssim": 0.9856519492003532,
+      "max_block_luma_shift": 10.441781249999906,
+      "pass": true
+    },
+    {
+      "frame_index": 3065,
+      "time_seconds": 102.269,
+      "ssim": 0.9858933734261527,
+      "max_block_luma_shift": 10.521281249999902,
+      "pass": true
+    },
+    {
+      "frame_index": 3066,
+      "time_seconds": 102.302,
+      "ssim": 0.9859026539911757,
+      "max_block_luma_shift": 10.94859374999993,
+      "pass": true
+    },
+    {
+      "frame_index": 3067,
+      "time_seconds": 102.336,
+      "ssim": 0.9858593854755284,
+      "max_block_luma_shift": 11.092343750000168,
+      "pass": true
+    },
+    {
+      "frame_index": 3068,
+      "time_seconds": 102.369,
+      "ssim": 0.9856705106468051,
+      "max_block_luma_shift": 12.83846874999989,
+      "pass": true
+    },
+    {
+      "frame_index": 3069,
+      "time_seconds": 102.402,
+      "ssim": 0.9857643745768836,
+      "max_block_luma_shift": 12.59453124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 3070,
+      "time_seconds": 102.436,
+      "ssim": 0.98573811625347,
+      "max_block_luma_shift": 12.884593749999937,
+      "pass": true
+    },
+    {
+      "frame_index": 3071,
+      "time_seconds": 102.469,
+      "ssim": 0.9856726730319374,
+      "max_block_luma_shift": 12.884593749999937,
+      "pass": true
+    },
+    {
+      "frame_index": 3072,
+      "time_seconds": 102.502,
+      "ssim": 0.9855779484139248,
+      "max_block_luma_shift": 12.884593749999937,
+      "pass": true
+    },
+    {
+      "frame_index": 3073,
+      "time_seconds": 102.536,
+      "ssim": 0.9857457649259846,
+      "max_block_luma_shift": 12.840093749999909,
+      "pass": true
+    },
+    {
+      "frame_index": 3074,
+      "time_seconds": 102.569,
+      "ssim": 0.9858114989465862,
+      "max_block_luma_shift": 12.717343750000197,
+      "pass": true
+    },
+    {
+      "frame_index": 3075,
+      "time_seconds": 102.602,
+      "ssim": 0.9858748670093777,
+      "max_block_luma_shift": 10.782453125000075,
+      "pass": true
+    },
+    {
+      "frame_index": 3076,
+      "time_seconds": 102.636,
+      "ssim": 0.985699874220547,
+      "max_block_luma_shift": 10.782453125000075,
+      "pass": true
+    },
+    {
+      "frame_index": 3077,
+      "time_seconds": 102.669,
+      "ssim": 0.9859215795140992,
+      "max_block_luma_shift": 10.054828125000085,
+      "pass": true
+    },
+    {
+      "frame_index": 3078,
+      "time_seconds": 102.703,
+      "ssim": 0.9859665560372022,
+      "max_block_luma_shift": 9.951093750000013,
+      "pass": true
+    },
+    {
+      "frame_index": 3079,
+      "time_seconds": 102.736,
+      "ssim": 0.985957112934859,
+      "max_block_luma_shift": 9.763593750000013,
+      "pass": true
+    },
+    {
+      "frame_index": 3080,
+      "time_seconds": 102.769,
+      "ssim": 0.98581961986215,
+      "max_block_luma_shift": 9.951093750000013,
+      "pass": true
+    },
+    {
+      "frame_index": 3081,
+      "time_seconds": 102.803,
+      "ssim": 0.9859102327213949,
+      "max_block_luma_shift": 10.341156250000012,
+      "pass": true
+    },
+    {
+      "frame_index": 3082,
+      "time_seconds": 102.836,
+      "ssim": 0.9858077028286584,
+      "max_block_luma_shift": 12.481781250000012,
+      "pass": true
+    },
+    {
+      "frame_index": 3083,
+      "time_seconds": 102.869,
+      "ssim": 0.9857249363512424,
+      "max_block_luma_shift": 13.626906250000275,
+      "pass": true
+    },
+    {
+      "frame_index": 3084,
+      "time_seconds": 102.903,
+      "ssim": 0.9855957682085386,
+      "max_block_luma_shift": 13.626906250000275,
+      "pass": true
+    },
+    {
+      "frame_index": 3085,
+      "time_seconds": 102.936,
+      "ssim": 0.9855240117343227,
+      "max_block_luma_shift": 14.102531249999885,
+      "pass": true
+    },
+    {
+      "frame_index": 3086,
+      "time_seconds": 102.97,
+      "ssim": 0.9853432814082478,
+      "max_block_luma_shift": 14.278234375000068,
+      "pass": true
+    },
+    {
+      "frame_index": 3087,
+      "time_seconds": 103.003,
+      "ssim": 0.9852057120863339,
+      "max_block_luma_shift": 14.278234375000068,
+      "pass": true
+    },
+    {
+      "frame_index": 3088,
+      "time_seconds": 103.036,
+      "ssim": 0.9848716760074615,
+      "max_block_luma_shift": 14.448312500000128,
+      "pass": true
+    },
+    {
+      "frame_index": 3089,
+      "time_seconds": 103.07,
+      "ssim": 0.9850479308676963,
+      "max_block_luma_shift": 14.401671874999948,
+      "pass": true
+    },
+    {
+      "frame_index": 3090,
+      "time_seconds": 103.103,
+      "ssim": 0.9849531651043625,
+      "max_block_luma_shift": 14.401671874999948,
+      "pass": true
+    },
+    {
+      "frame_index": 3091,
+      "time_seconds": 103.136,
+      "ssim": 0.9850563035645935,
+      "max_block_luma_shift": 14.364984374999977,
+      "pass": true
+    },
+    {
+      "frame_index": 3092,
+      "time_seconds": 103.17,
+      "ssim": 0.9849976584203688,
+      "max_block_luma_shift": 14.326421875000051,
+      "pass": true
+    },
+    {
+      "frame_index": 3093,
+      "time_seconds": 103.203,
+      "ssim": 0.9853072832332088,
+      "max_block_luma_shift": 14.326421875000051,
+      "pass": true
+    },
+    {
+      "frame_index": 3094,
+      "time_seconds": 103.236,
+      "ssim": 0.9853429211456367,
+      "max_block_luma_shift": 14.279546875000051,
+      "pass": true
+    },
+    {
+      "frame_index": 3095,
+      "time_seconds": 103.27,
+      "ssim": 0.9852362847789131,
+      "max_block_luma_shift": 14.279546875000051,
+      "pass": true
+    },
+    {
+      "frame_index": 3096,
+      "time_seconds": 103.303,
+      "ssim": 0.9850688986329336,
+      "max_block_luma_shift": 14.262421875000001,
+      "pass": true
+    },
+    {
+      "frame_index": 3097,
+      "time_seconds": 103.337,
+      "ssim": 0.9852693492893991,
+      "max_block_luma_shift": 13.83640625000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3098,
+      "time_seconds": 103.37,
+      "ssim": 0.9852700926346917,
+      "max_block_luma_shift": 13.567734374999901,
+      "pass": true
+    },
+    {
+      "frame_index": 3099,
+      "time_seconds": 103.403,
+      "ssim": 0.9852040488433522,
+      "max_block_luma_shift": 13.55515625000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3100,
+      "time_seconds": 103.437,
+      "ssim": 0.9850101163311227,
+      "max_block_luma_shift": 13.418906249999907,
+      "pass": true
+    },
+    {
+      "frame_index": 3101,
+      "time_seconds": 103.47,
+      "ssim": 0.9852396018806466,
+      "max_block_luma_shift": 13.418906249999907,
+      "pass": true
+    },
+    {
+      "frame_index": 3102,
+      "time_seconds": 103.503,
+      "ssim": 0.9852628531401586,
+      "max_block_luma_shift": 13.497828125000098,
+      "pass": true
+    },
+    {
+      "frame_index": 3103,
+      "time_seconds": 103.537,
+      "ssim": 0.9853996278058553,
+      "max_block_luma_shift": 13.497828125000098,
+      "pass": true
+    },
+    {
+      "frame_index": 3104,
+      "time_seconds": 103.57,
+      "ssim": 0.9854042714702345,
+      "max_block_luma_shift": 10.954453125000043,
+      "pass": true
+    },
+    {
+      "frame_index": 3105,
+      "time_seconds": 103.604,
+      "ssim": 0.9855435210955716,
+      "max_block_luma_shift": 10.954453125000043,
+      "pass": true
+    },
+    {
+      "frame_index": 3106,
+      "time_seconds": 103.637,
+      "ssim": 0.9854750919493815,
+      "max_block_luma_shift": 10.954453125000043,
+      "pass": true
+    },
+    {
+      "frame_index": 3107,
+      "time_seconds": 103.67,
+      "ssim": 0.9854687297564491,
+      "max_block_luma_shift": 10.954453125000043,
+      "pass": true
+    },
+    {
+      "frame_index": 3108,
+      "time_seconds": 103.704,
+      "ssim": 0.985388579769822,
+      "max_block_luma_shift": 10.995265625000059,
+      "pass": true
+    },
+    {
+      "frame_index": 3109,
+      "time_seconds": 103.737,
+      "ssim": 0.985538336753277,
+      "max_block_luma_shift": 11.354640625000059,
+      "pass": true
+    },
+    {
+      "frame_index": 3110,
+      "time_seconds": 103.77,
+      "ssim": 0.985545843304782,
+      "max_block_luma_shift": 11.060015624999835,
+      "pass": true
+    },
+    {
+      "frame_index": 3111,
+      "time_seconds": 103.804,
+      "ssim": 0.9854831732260609,
+      "max_block_luma_shift": 10.657578125000043,
+      "pass": true
+    },
+    {
+      "frame_index": 3112,
+      "time_seconds": 103.837,
+      "ssim": 0.9852040452323839,
+      "max_block_luma_shift": 10.657578125000043,
+      "pass": true
+    },
+    {
+      "frame_index": 3113,
+      "time_seconds": 103.87,
+      "ssim": 0.985241048516488,
+      "max_block_luma_shift": 12.691843750000004,
+      "pass": true
+    },
+    {
+      "frame_index": 3114,
+      "time_seconds": 103.904,
+      "ssim": 0.9850132794469514,
+      "max_block_luma_shift": 13.477328125000014,
+      "pass": true
+    },
+    {
+      "frame_index": 3115,
+      "time_seconds": 103.937,
+      "ssim": 0.9848546914141053,
+      "max_block_luma_shift": 14.023906250000152,
+      "pass": true
+    },
+    {
+      "frame_index": 3116,
+      "time_seconds": 103.971,
+      "ssim": 0.9846210002795255,
+      "max_block_luma_shift": 14.898093749999958,
+      "pass": true
+    },
+    {
+      "frame_index": 3117,
+      "time_seconds": 104.004,
+      "ssim": 0.9857823540439054,
+      "max_block_luma_shift": 14.315218749999957,
+      "pass": true
+    },
+    {
+      "frame_index": 3118,
+      "time_seconds": 104.037,
+      "ssim": 0.9857625612076893,
+      "max_block_luma_shift": 14.315218749999957,
+      "pass": true
+    },
+    {
+      "frame_index": 3119,
+      "time_seconds": 104.071,
+      "ssim": 0.9855969356906433,
+      "max_block_luma_shift": 14.107343749999956,
+      "pass": true
+    },
+    {
+      "frame_index": 3120,
+      "time_seconds": 104.104,
+      "ssim": 0.9842351797261397,
+      "max_block_luma_shift": 14.645281250000039,
+      "pass": true
+    },
+    {
+      "frame_index": 3121,
+      "time_seconds": 104.137,
+      "ssim": 0.984823443391168,
+      "max_block_luma_shift": 14.040656250000097,
+      "pass": true
+    },
+    {
+      "frame_index": 3122,
+      "time_seconds": 104.171,
+      "ssim": 0.9848699866073933,
+      "max_block_luma_shift": 12.184171875000061,
+      "pass": true
+    },
+    {
+      "frame_index": 3123,
+      "time_seconds": 104.204,
+      "ssim": 0.9849833105495975,
+      "max_block_luma_shift": 11.270531250000232,
+      "pass": true
+    },
+    {
+      "frame_index": 3124,
+      "time_seconds": 104.237,
+      "ssim": 0.9846825888979049,
+      "max_block_luma_shift": 11.376453125000012,
+      "pass": true
+    },
+    {
+      "frame_index": 3125,
+      "time_seconds": 104.271,
+      "ssim": 0.9848929924809361,
+      "max_block_luma_shift": 11.41728125000023,
+      "pass": true
+    },
+    {
+      "frame_index": 3126,
+      "time_seconds": 104.304,
+      "ssim": 0.9848892029903092,
+      "max_block_luma_shift": 12.93290625000023,
+      "pass": true
+    },
+    {
+      "frame_index": 3127,
+      "time_seconds": 104.338,
+      "ssim": 0.9847971341774682,
+      "max_block_luma_shift": 14.776656250000201,
+      "pass": true
+    },
+    {
+      "frame_index": 3128,
+      "time_seconds": 104.371,
+      "ssim": 0.9846702563460672,
+      "max_block_luma_shift": 14.776656250000201,
+      "pass": true
+    },
+    {
+      "frame_index": 3129,
+      "time_seconds": 104.404,
+      "ssim": 0.9846986874086916,
+      "max_block_luma_shift": 14.63603125000023,
+      "pass": true
+    },
+    {
+      "frame_index": 3130,
+      "time_seconds": 104.438,
+      "ssim": 0.9847132951054793,
+      "max_block_luma_shift": 15.002750000000447,
+      "pass": true
+    },
+    {
+      "frame_index": 3131,
+      "time_seconds": 104.471,
+      "ssim": 0.9845847743928008,
+      "max_block_luma_shift": 15.092500000000513,
+      "pass": true
+    },
+    {
+      "frame_index": 3132,
+      "time_seconds": 104.504,
+      "ssim": 0.9845015690444424,
+      "max_block_luma_shift": 15.592500000000513,
+      "pass": true
+    },
+    {
+      "frame_index": 3133,
+      "time_seconds": 104.538,
+      "ssim": 0.9846775707645313,
+      "max_block_luma_shift": 14.846281249999635,
+      "pass": true
+    },
+    {
+      "frame_index": 3134,
+      "time_seconds": 104.571,
+      "ssim": 0.9847188387987441,
+      "max_block_luma_shift": 14.861906249999635,
+      "pass": true
+    },
+    {
+      "frame_index": 3135,
+      "time_seconds": 104.604,
+      "ssim": 0.9846413508437543,
+      "max_block_luma_shift": 14.627531249999635,
+      "pass": true
+    },
+    {
+      "frame_index": 3136,
+      "time_seconds": 104.638,
+      "ssim": 0.9847296991455522,
+      "max_block_luma_shift": 14.485968749999955,
+      "pass": true
+    },
+    {
+      "frame_index": 3137,
+      "time_seconds": 104.671,
+      "ssim": 0.9849887243694436,
+      "max_block_luma_shift": 14.729781250000201,
+      "pass": true
+    },
+    {
+      "frame_index": 3138,
+      "time_seconds": 104.705,
+      "ssim": 0.9849931920881052,
+      "max_block_luma_shift": 14.995406250000201,
+      "pass": true
+    },
+    {
+      "frame_index": 3139,
+      "time_seconds": 104.738,
+      "ssim": 0.9850053667202465,
+      "max_block_luma_shift": 15.171406249999961,
+      "pass": true
+    },
+    {
+      "frame_index": 3140,
+      "time_seconds": 104.771,
+      "ssim": 0.9845824406466201,
+      "max_block_luma_shift": 15.870406250000201,
+      "pass": true
+    },
+    {
+      "frame_index": 3141,
+      "time_seconds": 104.805,
+      "ssim": 0.9846730555649706,
+      "max_block_luma_shift": 15.901656250000201,
+      "pass": true
+    },
+    {
+      "frame_index": 3142,
+      "time_seconds": 104.838,
+      "ssim": 0.9846138196056553,
+      "max_block_luma_shift": 15.584656249999796,
+      "pass": true
+    },
+    {
+      "frame_index": 3143,
+      "time_seconds": 104.871,
+      "ssim": 0.9845651288723775,
+      "max_block_luma_shift": 16.54228125000023,
+      "pass": true
+    },
+    {
+      "frame_index": 3144,
+      "time_seconds": 104.905,
+      "ssim": 0.9847127122272307,
+      "max_block_luma_shift": 15.49540625000023,
+      "pass": true
+    },
+    {
+      "frame_index": 3145,
+      "time_seconds": 104.938,
+      "ssim": 0.9849710482875805,
+      "max_block_luma_shift": 14.33915625000023,
+      "pass": true
+    },
+    {
+      "frame_index": 3146,
+      "time_seconds": 104.972,
+      "ssim": 0.9852168737160537,
+      "max_block_luma_shift": 13.354781250000201,
+      "pass": true
+    },
+    {
+      "frame_index": 3147,
+      "time_seconds": 105.005,
+      "ssim": 0.985221098556324,
+      "max_block_luma_shift": 12.54228125000023,
+      "pass": true
+    },
+    {
+      "frame_index": 3148,
+      "time_seconds": 105.038,
+      "ssim": 0.9850788489630063,
+      "max_block_luma_shift": 11.791265625000051,
+      "pass": true
+    },
+    {
+      "frame_index": 3149,
+      "time_seconds": 105.072,
+      "ssim": 0.9853513854346144,
+      "max_block_luma_shift": 10.707703125000023,
+      "pass": true
+    },
+    {
+      "frame_index": 3150,
+      "time_seconds": 105.105,
+      "ssim": 0.9853864263698155,
+      "max_block_luma_shift": 10.554499999999962,
+      "pass": true
+    },
+    {
+      "frame_index": 3151,
+      "time_seconds": 105.138,
+      "ssim": 0.9854155509193635,
+      "max_block_luma_shift": 11.27665625000023,
+      "pass": true
+    },
+    {
+      "frame_index": 3152,
+      "time_seconds": 105.172,
+      "ssim": 0.9852771255715896,
+      "max_block_luma_shift": 13.04228125000023,
+      "pass": true
+    },
+    {
+      "frame_index": 3153,
+      "time_seconds": 105.205,
+      "ssim": 0.9856087024107776,
+      "max_block_luma_shift": 13.164265624999956,
+      "pass": true
+    },
+    {
+      "frame_index": 3154,
+      "time_seconds": 105.238,
+      "ssim": 0.9855449383073217,
+      "max_block_luma_shift": 14.12209374999992,
+      "pass": true
+    },
+    {
+      "frame_index": 3155,
+      "time_seconds": 105.272,
+      "ssim": 0.9855210204615714,
+      "max_block_luma_shift": 14.12209374999992,
+      "pass": true
+    },
+    {
+      "frame_index": 3156,
+      "time_seconds": 105.305,
+      "ssim": 0.9853253269460199,
+      "max_block_luma_shift": 14.12209374999992,
+      "pass": true
+    },
+    {
+      "frame_index": 3157,
+      "time_seconds": 105.339,
+      "ssim": 0.9855157650937961,
+      "max_block_luma_shift": 14.14078124999989,
+      "pass": true
+    },
+    {
+      "frame_index": 3158,
+      "time_seconds": 105.372,
+      "ssim": 0.9855492909497062,
+      "max_block_luma_shift": 14.13771874999992,
+      "pass": true
+    },
+    {
+      "frame_index": 3159,
+      "time_seconds": 105.405,
+      "ssim": 0.9856421599039561,
+      "max_block_luma_shift": 14.13771874999992,
+      "pass": true
+    },
+    {
+      "frame_index": 3160,
+      "time_seconds": 105.439,
+      "ssim": 0.9853678620260026,
+      "max_block_luma_shift": 14.137875000000008,
+      "pass": true
+    },
+    {
+      "frame_index": 3161,
+      "time_seconds": 105.472,
+      "ssim": 0.985611590428931,
+      "max_block_luma_shift": 12.202656249999933,
+      "pass": true
+    },
+    {
+      "frame_index": 3162,
+      "time_seconds": 105.505,
+      "ssim": 0.9856568031747514,
+      "max_block_luma_shift": 10.029406249999909,
+      "pass": true
+    },
+    {
+      "frame_index": 3163,
+      "time_seconds": 105.539,
+      "ssim": 0.9856754699762387,
+      "max_block_luma_shift": 9.966874999999902,
+      "pass": true
+    },
+    {
+      "frame_index": 3164,
+      "time_seconds": 105.572,
+      "ssim": 0.9855787118822912,
+      "max_block_luma_shift": 9.966874999999902,
+      "pass": true
+    },
+    {
+      "frame_index": 3165,
+      "time_seconds": 105.606,
+      "ssim": 0.9856384360985738,
+      "max_block_luma_shift": 9.966874999999902,
+      "pass": true
+    },
+    {
+      "frame_index": 3166,
+      "time_seconds": 105.639,
+      "ssim": 0.9856218563242762,
+      "max_block_luma_shift": 9.966874999999902,
+      "pass": true
+    },
+    {
+      "frame_index": 3167,
+      "time_seconds": 105.672,
+      "ssim": 0.9856068751967754,
+      "max_block_luma_shift": 9.966874999999902,
+      "pass": true
+    },
+    {
+      "frame_index": 3168,
+      "time_seconds": 105.706,
+      "ssim": 0.9855580973848833,
+      "max_block_luma_shift": 9.966874999999902,
+      "pass": true
+    },
+    {
+      "frame_index": 3169,
+      "time_seconds": 105.739,
+      "ssim": 0.9858655028319971,
+      "max_block_luma_shift": 10.051906249999803,
+      "pass": true
+    },
+    {
+      "frame_index": 3170,
+      "time_seconds": 105.772,
+      "ssim": 0.9858373162837518,
+      "max_block_luma_shift": 10.051906249999803,
+      "pass": true
+    },
+    {
+      "frame_index": 3171,
+      "time_seconds": 105.806,
+      "ssim": 0.9858627122833707,
+      "max_block_luma_shift": 8.983984374999892,
+      "pass": true
+    },
+    {
+      "frame_index": 3172,
+      "time_seconds": 105.839,
+      "ssim": 0.9856825968031232,
+      "max_block_luma_shift": 8.983984374999892,
+      "pass": true
+    },
+    {
+      "frame_index": 3173,
+      "time_seconds": 105.872,
+      "ssim": 0.9858819839907644,
+      "max_block_luma_shift": 8.983984374999892,
+      "pass": true
+    },
+    {
+      "frame_index": 3174,
+      "time_seconds": 105.906,
+      "ssim": 0.9858858139126758,
+      "max_block_luma_shift": 8.983984374999892,
+      "pass": true
+    },
+    {
+      "frame_index": 3175,
+      "time_seconds": 105.939,
+      "ssim": 0.9859293013387642,
+      "max_block_luma_shift": 8.983984374999892,
+      "pass": true
+    },
+    {
+      "frame_index": 3176,
+      "time_seconds": 105.973,
+      "ssim": 0.9858759211250765,
+      "max_block_luma_shift": 9.191203124999987,
+      "pass": true
+    },
+    {
+      "frame_index": 3177,
+      "time_seconds": 106.006,
+      "ssim": 0.9873211025800798,
+      "max_block_luma_shift": 8.67512499999988,
+      "pass": true
+    },
+    {
+      "frame_index": 3178,
+      "time_seconds": 106.039,
+      "ssim": 0.9872977455065836,
+      "max_block_luma_shift": 9.618953125000019,
+      "pass": true
+    },
+    {
+      "frame_index": 3179,
+      "time_seconds": 106.073,
+      "ssim": 0.9869562674414075,
+      "max_block_luma_shift": 9.618953125000019,
+      "pass": true
+    },
+    {
+      "frame_index": 3180,
+      "time_seconds": 106.106,
+      "ssim": 0.9852867564096434,
+      "max_block_luma_shift": 10.153578124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 3181,
+      "time_seconds": 106.139,
+      "ssim": 0.9855369741507983,
+      "max_block_luma_shift": 10.153578124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 3182,
+      "time_seconds": 106.173,
+      "ssim": 0.9856155166867844,
+      "max_block_luma_shift": 10.153578124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 3183,
+      "time_seconds": 106.206,
+      "ssim": 0.9856429509052689,
+      "max_block_luma_shift": 10.153578124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 3184,
+      "time_seconds": 106.239,
+      "ssim": 0.9854853148796345,
+      "max_block_luma_shift": 9.667515624999908,
+      "pass": true
+    },
+    {
+      "frame_index": 3185,
+      "time_seconds": 106.273,
+      "ssim": 0.9855534104841955,
+      "max_block_luma_shift": 9.667515624999908,
+      "pass": true
+    },
+    {
+      "frame_index": 3186,
+      "time_seconds": 106.306,
+      "ssim": 0.985511221721241,
+      "max_block_luma_shift": 9.731703124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 3187,
+      "time_seconds": 106.34,
+      "ssim": 0.9855888844849746,
+      "max_block_luma_shift": 9.747328124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 3188,
+      "time_seconds": 106.373,
+      "ssim": 0.9854908834166207,
+      "max_block_luma_shift": 9.794203124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 3189,
+      "time_seconds": 106.406,
+      "ssim": 0.9856553577997511,
+      "max_block_luma_shift": 9.794203124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 3190,
+      "time_seconds": 106.44,
+      "ssim": 0.9856412563635828,
+      "max_block_luma_shift": 9.934828124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 3191,
+      "time_seconds": 106.473,
+      "ssim": 0.9856437482856075,
+      "max_block_luma_shift": 10.231703124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 3192,
+      "time_seconds": 106.506,
+      "ssim": 0.9855670336784371,
+      "max_block_luma_shift": 10.231703124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 3193,
+      "time_seconds": 106.54,
+      "ssim": 0.9857565701124984,
+      "max_block_luma_shift": 9.47834375000005,
+      "pass": true
+    },
+    {
+      "frame_index": 3194,
+      "time_seconds": 106.573,
+      "ssim": 0.9857463761219837,
+      "max_block_luma_shift": 9.47834375000005,
+      "pass": true
+    },
+    {
+      "frame_index": 3195,
+      "time_seconds": 106.606,
+      "ssim": 0.9857412335526314,
+      "max_block_luma_shift": 9.47834375000005,
+      "pass": true
+    },
+    {
+      "frame_index": 3196,
+      "time_seconds": 106.64,
+      "ssim": 0.985670719106012,
+      "max_block_luma_shift": 9.47834375000005,
+      "pass": true
+    },
+    {
+      "frame_index": 3197,
+      "time_seconds": 106.673,
+      "ssim": 0.9859335146714024,
+      "max_block_luma_shift": 9.35334375000005,
+      "pass": true
+    },
+    {
+      "frame_index": 3198,
+      "time_seconds": 106.707,
+      "ssim": 0.9859838920565153,
+      "max_block_luma_shift": 9.40021875000005,
+      "pass": true
+    },
+    {
+      "frame_index": 3199,
+      "time_seconds": 106.74,
+      "ssim": 0.9859396047022456,
+      "max_block_luma_shift": 9.30646875000005,
+      "pass": true
+    },
+    {
+      "frame_index": 3200,
+      "time_seconds": 106.773,
+      "ssim": 0.9857861990842861,
+      "max_block_luma_shift": 9.495640624999936,
+      "pass": true
+    },
+    {
+      "frame_index": 3201,
+      "time_seconds": 106.807,
+      "ssim": 0.9859025186161713,
+      "max_block_luma_shift": 9.47834375000005,
+      "pass": true
+    },
+    {
+      "frame_index": 3202,
+      "time_seconds": 106.84,
+      "ssim": 0.9858914750108229,
+      "max_block_luma_shift": 9.698765624999908,
+      "pass": true
+    },
+    {
+      "frame_index": 3203,
+      "time_seconds": 106.873,
+      "ssim": 0.9859102623139328,
+      "max_block_luma_shift": 9.667515624999908,
+      "pass": true
+    },
+    {
+      "frame_index": 3204,
+      "time_seconds": 106.907,
+      "ssim": 0.9856291726929896,
+      "max_block_luma_shift": 9.995640624999908,
+      "pass": true
+    },
+    {
+      "frame_index": 3205,
+      "time_seconds": 106.94,
+      "ssim": 0.9858089128034577,
+      "max_block_luma_shift": 9.542515624999936,
+      "pass": true
+    },
+    {
+      "frame_index": 3206,
+      "time_seconds": 106.974,
+      "ssim": 0.9857259777406967,
+      "max_block_luma_shift": 9.700312499999882,
+      "pass": true
+    },
+    {
+      "frame_index": 3207,
+      "time_seconds": 107.007,
+      "ssim": 0.9857528020614233,
+      "max_block_luma_shift": 9.684828124999996,
+      "pass": true
+    },
+    {
+      "frame_index": 3208,
+      "time_seconds": 107.04,
+      "ssim": 0.9854865192367739,
+      "max_block_luma_shift": 9.700312499999882,
+      "pass": true
+    },
+    {
+      "frame_index": 3209,
+      "time_seconds": 107.074,
+      "ssim": 0.9856500546779605,
+      "max_block_luma_shift": 9.47834375000005,
+      "pass": true
+    },
+    {
+      "frame_index": 3210,
+      "time_seconds": 107.107,
+      "ssim": 0.9856590156793349,
+      "max_block_luma_shift": 9.47834375000005,
+      "pass": true
+    },
+    {
+      "frame_index": 3211,
+      "time_seconds": 107.14,
+      "ssim": 0.9856151885615699,
+      "max_block_luma_shift": 9.556468750000022,
+      "pass": true
+    },
+    {
+      "frame_index": 3212,
+      "time_seconds": 107.174,
+      "ssim": 0.9854854983862025,
+      "max_block_luma_shift": 9.669062499999896,
+      "pass": true
+    },
+    {
+      "frame_index": 3213,
+      "time_seconds": 107.207,
+      "ssim": 0.9857274903234428,
+      "max_block_luma_shift": 9.556468750000022,
+      "pass": true
+    },
+    {
+      "frame_index": 3214,
+      "time_seconds": 107.24,
+      "ssim": 0.9857529078232954,
+      "max_block_luma_shift": 9.705874999999992,
+      "pass": true
+    },
+    {
+      "frame_index": 3215,
+      "time_seconds": 107.274,
+      "ssim": 0.985709346573494,
+      "max_block_luma_shift": 9.676328124999998,
+      "pass": true
+    },
+    {
+      "frame_index": 3216,
+      "time_seconds": 107.307,
+      "ssim": 0.9856110496380651,
+      "max_block_luma_shift": 9.676328124999998,
+      "pass": true
+    },
+    {
+      "frame_index": 3217,
+      "time_seconds": 107.341,
+      "ssim": 0.985643289328224,
+      "max_block_luma_shift": 9.676328124999998,
+      "pass": true
+    },
+    {
+      "frame_index": 3218,
+      "time_seconds": 107.374,
+      "ssim": 0.9856368107665124,
+      "max_block_luma_shift": 9.676328124999998,
+      "pass": true
+    },
+    {
+      "frame_index": 3219,
+      "time_seconds": 107.407,
+      "ssim": 0.9856425856121943,
+      "max_block_luma_shift": 9.676328124999998,
+      "pass": true
+    },
+    {
+      "frame_index": 3220,
+      "time_seconds": 107.441,
+      "ssim": 0.9855274700392253,
+      "max_block_luma_shift": 9.711265624999811,
+      "pass": true
+    },
+    {
+      "frame_index": 3221,
+      "time_seconds": 107.474,
+      "ssim": 0.9860397465057326,
+      "max_block_luma_shift": 9.392640624999814,
+      "pass": true
+    },
+    {
+      "frame_index": 3222,
+      "time_seconds": 107.507,
+      "ssim": 0.9861454349603482,
+      "max_block_luma_shift": 9.476203124999813,
+      "pass": true
+    },
+    {
+      "frame_index": 3223,
+      "time_seconds": 107.541,
+      "ssim": 0.986369499342452,
+      "max_block_luma_shift": 8.575453124999825,
+      "pass": true
+    },
+    {
+      "frame_index": 3224,
+      "time_seconds": 107.574,
+      "ssim": 0.985913700070072,
+      "max_block_luma_shift": 9.889250000000004,
+      "pass": true
+    },
+    {
+      "frame_index": 3225,
+      "time_seconds": 107.608,
+      "ssim": 0.9860885293650462,
+      "max_block_luma_shift": 9.326750000000004,
+      "pass": true
+    },
+    {
+      "frame_index": 3226,
+      "time_seconds": 107.641,
+      "ssim": 0.9859855409757016,
+      "max_block_luma_shift": 9.295500000000004,
+      "pass": true
+    },
+    {
+      "frame_index": 3227,
+      "time_seconds": 107.674,
+      "ssim": 0.9859909310326858,
+      "max_block_luma_shift": 9.220031250000062,
+      "pass": true
+    },
+    {
+      "frame_index": 3228,
+      "time_seconds": 107.708,
+      "ssim": 0.98572182297105,
+      "max_block_luma_shift": 9.295500000000004,
+      "pass": true
+    },
+    {
+      "frame_index": 3229,
+      "time_seconds": 107.741,
+      "ssim": 0.9857270944449928,
+      "max_block_luma_shift": 10.735374999999976,
+      "pass": true
+    },
+    {
+      "frame_index": 3230,
+      "time_seconds": 107.774,
+      "ssim": 0.9860911598827995,
+      "max_block_luma_shift": 9.011968750000023,
+      "pass": true
+    },
+    {
+      "frame_index": 3231,
+      "time_seconds": 107.808,
+      "ssim": 0.9860428858316787,
+      "max_block_luma_shift": 9.011968750000023,
+      "pass": true
+    },
+    {
+      "frame_index": 3232,
+      "time_seconds": 107.841,
+      "ssim": 0.9857715245283483,
+      "max_block_luma_shift": 9.011968750000023,
+      "pass": true
+    },
+    {
+      "frame_index": 3233,
+      "time_seconds": 107.874,
+      "ssim": 0.9860239635332598,
+      "max_block_luma_shift": 8.813499999999976,
+      "pass": true
+    },
+    {
+      "frame_index": 3234,
+      "time_seconds": 107.908,
+      "ssim": 0.9860300860390151,
+      "max_block_luma_shift": 8.813499999999976,
+      "pass": true
+    },
+    {
+      "frame_index": 3235,
+      "time_seconds": 107.941,
+      "ssim": 0.9860253057202563,
+      "max_block_luma_shift": 8.813499999999976,
+      "pass": true
+    },
+    {
+      "frame_index": 3236,
+      "time_seconds": 107.975,
+      "ssim": 0.9858591993566858,
+      "max_block_luma_shift": 8.839890624999924,
+      "pass": true
+    },
+    {
+      "frame_index": 3237,
+      "time_seconds": 108.008,
+      "ssim": 0.9861404104638551,
+      "max_block_luma_shift": 8.913593750000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3238,
+      "time_seconds": 108.041,
+      "ssim": 0.9859202732095855,
+      "max_block_luma_shift": 9.336390624999979,
+      "pass": true
+    },
+    {
+      "frame_index": 3239,
+      "time_seconds": 108.075,
+      "ssim": 0.9856684301594507,
+      "max_block_luma_shift": 9.789515624999979,
+      "pass": true
+    },
+    {
+      "frame_index": 3240,
+      "time_seconds": 108.108,
+      "ssim": 0.9853799045397962,
+      "max_block_luma_shift": 9.706390624999983,
+      "pass": true
+    },
+    {
+      "frame_index": 3241,
+      "time_seconds": 108.141,
+      "ssim": 0.9855963518679668,
+      "max_block_luma_shift": 11.097312499999987,
+      "pass": true
+    },
+    {
+      "frame_index": 3242,
+      "time_seconds": 108.175,
+      "ssim": 0.9854386608237535,
+      "max_block_luma_shift": 10.59785937499997,
+      "pass": true
+    },
+    {
+      "frame_index": 3243,
+      "time_seconds": 108.208,
+      "ssim": 0.9852289189639057,
+      "max_block_luma_shift": 11.365781249999799,
+      "pass": true
+    },
+    {
+      "frame_index": 3244,
+      "time_seconds": 108.241,
+      "ssim": 0.9848607268980766,
+      "max_block_luma_shift": 11.29223437499985,
+      "pass": true
+    },
+    {
+      "frame_index": 3245,
+      "time_seconds": 108.275,
+      "ssim": 0.9856474282556056,
+      "max_block_luma_shift": 10.64387499999998,
+      "pass": true
+    },
+    {
+      "frame_index": 3246,
+      "time_seconds": 108.308,
+      "ssim": 0.9858364521856862,
+      "max_block_luma_shift": 9.597203125000021,
+      "pass": true
+    },
+    {
+      "frame_index": 3247,
+      "time_seconds": 108.342,
+      "ssim": 0.9859696748750592,
+      "max_block_luma_shift": 9.27907812500004,
+      "pass": true
+    },
+    {
+      "frame_index": 3248,
+      "time_seconds": 108.375,
+      "ssim": 0.9855472361038097,
+      "max_block_luma_shift": 10.876499999999965,
+      "pass": true
+    },
+    {
+      "frame_index": 3249,
+      "time_seconds": 108.408,
+      "ssim": 0.9857876580933902,
+      "max_block_luma_shift": 10.517124999999965,
+      "pass": true
+    },
+    {
+      "frame_index": 3250,
+      "time_seconds": 108.442,
+      "ssim": 0.9855268435972494,
+      "max_block_luma_shift": 10.759375000000063,
+      "pass": true
+    },
+    {
+      "frame_index": 3251,
+      "time_seconds": 108.475,
+      "ssim": 0.9855019203772437,
+      "max_block_luma_shift": 12.35025000000013,
+      "pass": true
+    },
+    {
+      "frame_index": 3252,
+      "time_seconds": 108.508,
+      "ssim": 0.985261426595933,
+      "max_block_luma_shift": 11.069000000000159,
+      "pass": true
+    },
+    {
+      "frame_index": 3253,
+      "time_seconds": 108.542,
+      "ssim": 0.9855536808436924,
+      "max_block_luma_shift": 10.740875000000159,
+      "pass": true
+    },
+    {
+      "frame_index": 3254,
+      "time_seconds": 108.575,
+      "ssim": 0.9856709126322994,
+      "max_block_luma_shift": 10.740875000000159,
+      "pass": true
+    },
+    {
+      "frame_index": 3255,
+      "time_seconds": 108.608,
+      "ssim": 0.9857741008584058,
+      "max_block_luma_shift": 10.428375000000159,
+      "pass": true
+    },
+    {
+      "frame_index": 3256,
+      "time_seconds": 108.642,
+      "ssim": 0.9855954595592503,
+      "max_block_luma_shift": 10.428375000000159,
+      "pass": true
+    },
+    {
+      "frame_index": 3257,
+      "time_seconds": 108.675,
+      "ssim": 0.985963724876996,
+      "max_block_luma_shift": 10.069000000000159,
+      "pass": true
+    },
+    {
+      "frame_index": 3258,
+      "time_seconds": 108.709,
+      "ssim": 0.9859684985917149,
+      "max_block_luma_shift": 10.022125000000159,
+      "pass": true
+    },
+    {
+      "frame_index": 3259,
+      "time_seconds": 108.742,
+      "ssim": 0.9859542142863799,
+      "max_block_luma_shift": 9.345249999999993,
+      "pass": true
+    },
+    {
+      "frame_index": 3260,
+      "time_seconds": 108.775,
+      "ssim": 0.985603095770248,
+      "max_block_luma_shift": 9.449437499999988,
+      "pass": true
+    },
+    {
+      "frame_index": 3261,
+      "time_seconds": 108.809,
+      "ssim": 0.9858472067538516,
+      "max_block_luma_shift": 9.361843749999963,
+      "pass": true
+    },
+    {
+      "frame_index": 3262,
+      "time_seconds": 108.842,
+      "ssim": 0.9857387895516968,
+      "max_block_luma_shift": 9.325843749999905,
+      "pass": true
+    },
+    {
+      "frame_index": 3263,
+      "time_seconds": 108.875,
+      "ssim": 0.9856728614602516,
+      "max_block_luma_shift": 9.568375000000117,
+      "pass": true
+    },
+    {
+      "frame_index": 3264,
+      "time_seconds": 108.909,
+      "ssim": 0.9853276511398238,
+      "max_block_luma_shift": 10.984749999999991,
+      "pass": true
+    },
+    {
+      "frame_index": 3265,
+      "time_seconds": 108.942,
+      "ssim": 0.9853715795104521,
+      "max_block_luma_shift": 10.578499999999991,
+      "pass": true
+    },
+    {
+      "frame_index": 3266,
+      "time_seconds": 108.976,
+      "ssim": 0.9853136343152387,
+      "max_block_luma_shift": 11.314968749999935,
+      "pass": true
+    },
+    {
+      "frame_index": 3267,
+      "time_seconds": 109.009,
+      "ssim": 0.9852657803055761,
+      "max_block_luma_shift": 10.783718749999935,
+      "pass": true
+    },
+    {
+      "frame_index": 3268,
+      "time_seconds": 109.042,
+      "ssim": 0.984917260022184,
+      "max_block_luma_shift": 10.850828125000021,
+      "pass": true
+    },
+    {
+      "frame_index": 3269,
+      "time_seconds": 109.076,
+      "ssim": 0.9850409423802681,
+      "max_block_luma_shift": 10.887953125000024,
+      "pass": true
+    },
+    {
+      "frame_index": 3270,
+      "time_seconds": 109.109,
+      "ssim": 0.985011511049937,
+      "max_block_luma_shift": 11.763343749999905,
+      "pass": true
+    },
+    {
+      "frame_index": 3271,
+      "time_seconds": 109.142,
+      "ssim": 0.9848700805739027,
+      "max_block_luma_shift": 13.304453125000038,
+      "pass": true
+    },
+    {
+      "frame_index": 3272,
+      "time_seconds": 109.176,
+      "ssim": 0.9844206850373479,
+      "max_block_luma_shift": 13.519765625000161,
+      "pass": true
+    },
+    {
+      "frame_index": 3273,
+      "time_seconds": 109.209,
+      "ssim": 0.9848412803504373,
+      "max_block_luma_shift": 14.591468749999905,
+      "pass": true
+    },
+    {
+      "frame_index": 3274,
+      "time_seconds": 109.242,
+      "ssim": 0.9843724025676738,
+      "max_block_luma_shift": 15.928359375000042,
+      "pass": true
+    },
+    {
+      "frame_index": 3275,
+      "time_seconds": 109.276,
+      "ssim": 0.9842349635892985,
+      "max_block_luma_shift": 15.928359375000042,
+      "pass": true
+    },
+    {
+      "frame_index": 3276,
+      "time_seconds": 109.309,
+      "ssim": 0.9838938672828769,
+      "max_block_luma_shift": 15.928359375000042,
+      "pass": true
+    },
+    {
+      "frame_index": 3277,
+      "time_seconds": 109.343,
+      "ssim": 0.9841943306139961,
+      "max_block_luma_shift": 16.611921874999865,
+      "pass": true
+    },
+    {
+      "frame_index": 3278,
+      "time_seconds": 109.376,
+      "ssim": 0.9841237489601129,
+      "max_block_luma_shift": 16.611921874999865,
+      "pass": true
+    },
+    {
+      "frame_index": 3279,
+      "time_seconds": 109.409,
+      "ssim": 0.9841673874596201,
+      "max_block_luma_shift": 16.611921874999865,
+      "pass": true
+    },
+    {
+      "frame_index": 3280,
+      "time_seconds": 109.443,
+      "ssim": 0.9840306440395277,
+      "max_block_luma_shift": 16.611921874999865,
+      "pass": true
+    },
+    {
+      "frame_index": 3281,
+      "time_seconds": 109.476,
+      "ssim": 0.9842643925473185,
+      "max_block_luma_shift": 16.097984374999925,
+      "pass": true
+    },
+    {
+      "frame_index": 3282,
+      "time_seconds": 109.509,
+      "ssim": 0.9842591599523915,
+      "max_block_luma_shift": 16.269546874999946,
+      "pass": true
+    },
+    {
+      "frame_index": 3283,
+      "time_seconds": 109.543,
+      "ssim": 0.9842741278876183,
+      "max_block_luma_shift": 16.035171874999946,
+      "pass": true
+    },
+    {
+      "frame_index": 3284,
+      "time_seconds": 109.576,
+      "ssim": 0.9840900328946824,
+      "max_block_luma_shift": 16.050796874999946,
+      "pass": true
+    },
+    {
+      "frame_index": 3285,
+      "time_seconds": 109.61,
+      "ssim": 0.9842829566196876,
+      "max_block_luma_shift": 15.835421874999952,
+      "pass": true
+    },
+    {
+      "frame_index": 3286,
+      "time_seconds": 109.643,
+      "ssim": 0.984322570845084,
+      "max_block_luma_shift": 15.913546874999952,
+      "pass": true
+    },
+    {
+      "frame_index": 3287,
+      "time_seconds": 109.676,
+      "ssim": 0.98438138383015,
+      "max_block_luma_shift": 15.669546874999781,
+      "pass": true
+    },
+    {
+      "frame_index": 3288,
+      "time_seconds": 109.71,
+      "ssim": 0.9842015230519081,
+      "max_block_luma_shift": 16.194796874999952,
+      "pass": true
+    },
+    {
+      "frame_index": 3289,
+      "time_seconds": 109.743,
+      "ssim": 0.9844478233263386,
+      "max_block_luma_shift": 15.882296874999952,
+      "pass": true
+    },
+    {
+      "frame_index": 3290,
+      "time_seconds": 109.776,
+      "ssim": 0.9843435525437211,
+      "max_block_luma_shift": 15.882296874999952,
+      "pass": true
+    },
+    {
+      "frame_index": 3291,
+      "time_seconds": 109.81,
+      "ssim": 0.9843392569632144,
+      "max_block_luma_shift": 15.882296874999952,
+      "pass": true
+    },
+    {
+      "frame_index": 3292,
+      "time_seconds": 109.843,
+      "ssim": 0.9841435429912845,
+      "max_block_luma_shift": 15.882296874999952,
+      "pass": true
+    },
+    {
+      "frame_index": 3293,
+      "time_seconds": 109.876,
+      "ssim": 0.9843238155890858,
+      "max_block_luma_shift": 15.534359374999866,
+      "pass": true
+    },
+    {
+      "frame_index": 3294,
+      "time_seconds": 109.91,
+      "ssim": 0.9842954962119888,
+      "max_block_luma_shift": 15.51567187499981,
+      "pass": true
+    },
+    {
+      "frame_index": 3295,
+      "time_seconds": 109.943,
+      "ssim": 0.9842647053952734,
+      "max_block_luma_shift": 15.39067187499981,
+      "pass": true
+    },
+    {
+      "frame_index": 3296,
+      "time_seconds": 109.977,
+      "ssim": 0.9841208924420889,
+      "max_block_luma_shift": 15.616859374999791,
+      "pass": true
+    },
+    {
+      "frame_index": 3297,
+      "time_seconds": 110.01,
+      "ssim": 0.9858352788460951,
+      "max_block_luma_shift": 14.87617187500004,
+      "pass": true
+    },
+    {
+      "frame_index": 3298,
+      "time_seconds": 110.043,
+      "ssim": 0.9856784923967062,
+      "max_block_luma_shift": 15.26679687500004,
+      "pass": true
+    },
+    {
+      "frame_index": 3299,
+      "time_seconds": 110.077,
+      "ssim": 0.9854108117935514,
+      "max_block_luma_shift": 15.00117187500004,
+      "pass": true
+    },
+    {
+      "frame_index": 3300,
+      "time_seconds": 110.11,
+      "ssim": 0.9838478860976051,
+      "max_block_luma_shift": 15.169218749999999,
+      "pass": true
+    },
+    {
+      "frame_index": 3301,
+      "time_seconds": 110.143,
+      "ssim": 0.9841791208343061,
+      "max_block_luma_shift": 15.126093750000024,
+      "pass": true
+    },
+    {
+      "frame_index": 3302,
+      "time_seconds": 110.177,
+      "ssim": 0.9842302484270157,
+      "max_block_luma_shift": 15.28403124999997,
+      "pass": true
+    },
+    {
+      "frame_index": 3303,
+      "time_seconds": 110.21,
+      "ssim": 0.9843168761904075,
+      "max_block_luma_shift": 15.28403124999997,
+      "pass": true
+    },
+    {
+      "frame_index": 3304,
+      "time_seconds": 110.243,
+      "ssim": 0.9841281912086552,
+      "max_block_luma_shift": 14.825781249999949,
+      "pass": true
+    },
+    {
+      "frame_index": 3305,
+      "time_seconds": 110.277,
+      "ssim": 0.9842935076390973,
+      "max_block_luma_shift": 13.66271875000021,
+      "pass": true
+    },
+    {
+      "frame_index": 3306,
+      "time_seconds": 110.31,
+      "ssim": 0.9843114816897737,
+      "max_block_luma_shift": 12.990843750000181,
+      "pass": true
+    },
+    {
+      "frame_index": 3307,
+      "time_seconds": 110.344,
+      "ssim": 0.9843239977495132,
+      "max_block_luma_shift": 12.252546874999993,
+      "pass": true
+    },
+    {
+      "frame_index": 3308,
+      "time_seconds": 110.377,
+      "ssim": 0.9842672491124765,
+      "max_block_luma_shift": 12.922703124999998,
+      "pass": true
+    },
+    {
+      "frame_index": 3309,
+      "time_seconds": 110.41,
+      "ssim": 0.9843877625992885,
+      "max_block_luma_shift": 12.679078125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3310,
+      "time_seconds": 110.444,
+      "ssim": 0.9843834092402838,
+      "max_block_luma_shift": 12.679078125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3311,
+      "time_seconds": 110.477,
+      "ssim": 0.9843887622024241,
+      "max_block_luma_shift": 12.679078125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3312,
+      "time_seconds": 110.51,
+      "ssim": 0.9843130590134259,
+      "max_block_luma_shift": 12.679078125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3313,
+      "time_seconds": 110.544,
+      "ssim": 0.9843851086135532,
+      "max_block_luma_shift": 12.679078125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3314,
+      "time_seconds": 110.577,
+      "ssim": 0.9844056904979964,
+      "max_block_luma_shift": 12.922703124999998,
+      "pass": true
+    },
+    {
+      "frame_index": 3315,
+      "time_seconds": 110.61,
+      "ssim": 0.9843701177769556,
+      "max_block_luma_shift": 12.922703124999998,
+      "pass": true
+    },
+    {
+      "frame_index": 3316,
+      "time_seconds": 110.644,
+      "ssim": 0.9842744656986065,
+      "max_block_luma_shift": 12.922703124999998,
+      "pass": true
+    },
+    {
+      "frame_index": 3317,
+      "time_seconds": 110.677,
+      "ssim": 0.9844821108926732,
+      "max_block_luma_shift": 12.679078125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3318,
+      "time_seconds": 110.711,
+      "ssim": 0.9844528256789394,
+      "max_block_luma_shift": 12.679078125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3319,
+      "time_seconds": 110.744,
+      "ssim": 0.9843600690764928,
+      "max_block_luma_shift": 12.97326562500001,
+      "pass": true
+    },
+    {
+      "frame_index": 3320,
+      "time_seconds": 110.777,
+      "ssim": 0.9840888724492859,
+      "max_block_luma_shift": 13.615390624999918,
+      "pass": true
+    },
+    {
+      "frame_index": 3321,
+      "time_seconds": 110.811,
+      "ssim": 0.9842360233189513,
+      "max_block_luma_shift": 13.615390624999918,
+      "pass": true
+    },
+    {
+      "frame_index": 3322,
+      "time_seconds": 110.844,
+      "ssim": 0.9842090751047706,
+      "max_block_luma_shift": 14.673015624999977,
+      "pass": true
+    },
+    {
+      "frame_index": 3323,
+      "time_seconds": 110.877,
+      "ssim": 0.9841390050518727,
+      "max_block_luma_shift": 14.892718750000029,
+      "pass": true
+    },
+    {
+      "frame_index": 3324,
+      "time_seconds": 110.911,
+      "ssim": 0.9839941773413035,
+      "max_block_luma_shift": 15.127093750000029,
+      "pass": true
+    },
+    {
+      "frame_index": 3325,
+      "time_seconds": 110.944,
+      "ssim": 0.9841602480107439,
+      "max_block_luma_shift": 15.002093750000029,
+      "pass": true
+    },
+    {
+      "frame_index": 3326,
+      "time_seconds": 110.978,
+      "ssim": 0.9841996986441368,
+      "max_block_luma_shift": 14.733140624999947,
+      "pass": true
+    },
+    {
+      "frame_index": 3327,
+      "time_seconds": 111.011,
+      "ssim": 0.9841775210339455,
+      "max_block_luma_shift": 14.928343750000181,
+      "pass": true
+    },
+    {
+      "frame_index": 3328,
+      "time_seconds": 111.044,
+      "ssim": 0.9841531711013185,
+      "max_block_luma_shift": 15.209593750000181,
+      "pass": true
+    },
+    {
+      "frame_index": 3329,
+      "time_seconds": 111.078,
+      "ssim": 0.9842503915804208,
+      "max_block_luma_shift": 14.990843750000181,
+      "pass": true
+    },
+    {
+      "frame_index": 3330,
+      "time_seconds": 111.111,
+      "ssim": 0.9842443916220861,
+      "max_block_luma_shift": 15.053343750000181,
+      "pass": true
+    },
+    {
+      "frame_index": 3331,
+      "time_seconds": 111.144,
+      "ssim": 0.9843114672226887,
+      "max_block_luma_shift": 14.803343750000181,
+      "pass": true
+    },
+    {
+      "frame_index": 3332,
+      "time_seconds": 111.178,
+      "ssim": 0.9840678235064669,
+      "max_block_luma_shift": 14.990843750000181,
+      "pass": true
+    },
+    {
+      "frame_index": 3333,
+      "time_seconds": 111.211,
+      "ssim": 0.984340479211865,
+      "max_block_luma_shift": 14.600218750000181,
+      "pass": true
+    },
+    {
+      "frame_index": 3334,
+      "time_seconds": 111.244,
+      "ssim": 0.984289349888624,
+      "max_block_luma_shift": 14.928343750000181,
+      "pass": true
+    },
+    {
+      "frame_index": 3335,
+      "time_seconds": 111.278,
+      "ssim": 0.9843363807351228,
+      "max_block_luma_shift": 12.443968750000181,
+      "pass": true
+    },
+    {
+      "frame_index": 3336,
+      "time_seconds": 111.311,
+      "ssim": 0.9841373159756744,
+      "max_block_luma_shift": 12.43943749999994,
+      "pass": true
+    },
+    {
+      "frame_index": 3337,
+      "time_seconds": 111.345,
+      "ssim": 0.9844708577569333,
+      "max_block_luma_shift": 11.83006249999994,
+      "pass": true
+    },
+    {
+      "frame_index": 3338,
+      "time_seconds": 111.378,
+      "ssim": 0.9844822177983188,
+      "max_block_luma_shift": 11.48631249999994,
+      "pass": true
+    },
+    {
+      "frame_index": 3339,
+      "time_seconds": 111.411,
+      "ssim": 0.9845068561044543,
+      "max_block_luma_shift": 11.33006249999994,
+      "pass": true
+    },
+    {
+      "frame_index": 3340,
+      "time_seconds": 111.445,
+      "ssim": 0.9843215334369966,
+      "max_block_luma_shift": 11.741578125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3341,
+      "time_seconds": 111.478,
+      "ssim": 0.98444629575641,
+      "max_block_luma_shift": 11.741578125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3342,
+      "time_seconds": 111.511,
+      "ssim": 0.984430731490706,
+      "max_block_luma_shift": 11.741578125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3343,
+      "time_seconds": 111.545,
+      "ssim": 0.9844043855669332,
+      "max_block_luma_shift": 11.741578125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3344,
+      "time_seconds": 111.578,
+      "ssim": 0.9842270308834348,
+      "max_block_luma_shift": 11.741578125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3345,
+      "time_seconds": 111.612,
+      "ssim": 0.9844693574810915,
+      "max_block_luma_shift": 11.25193749999994,
+      "pass": true
+    },
+    {
+      "frame_index": 3346,
+      "time_seconds": 111.645,
+      "ssim": 0.9844834212998597,
+      "max_block_luma_shift": 11.25193749999994,
+      "pass": true
+    },
+    {
+      "frame_index": 3347,
+      "time_seconds": 111.678,
+      "ssim": 0.9845125780514196,
+      "max_block_luma_shift": 11.25193749999994,
+      "pass": true
+    },
+    {
+      "frame_index": 3348,
+      "time_seconds": 111.712,
+      "ssim": 0.9844601214194706,
+      "max_block_luma_shift": 11.25193749999994,
+      "pass": true
+    },
+    {
+      "frame_index": 3349,
+      "time_seconds": 111.745,
+      "ssim": 0.9845742311379736,
+      "max_block_luma_shift": 11.22068749999994,
+      "pass": true
+    },
+    {
+      "frame_index": 3350,
+      "time_seconds": 111.778,
+      "ssim": 0.9844998287319674,
+      "max_block_luma_shift": 11.29881249999994,
+      "pass": true
+    },
+    {
+      "frame_index": 3351,
+      "time_seconds": 111.812,
+      "ssim": 0.9844483505857705,
+      "max_block_luma_shift": 11.382203125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3352,
+      "time_seconds": 111.845,
+      "ssim": 0.9843696166909415,
+      "max_block_luma_shift": 12.038453125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3353,
+      "time_seconds": 111.878,
+      "ssim": 0.9844322483588692,
+      "max_block_luma_shift": 12.335328125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3354,
+      "time_seconds": 111.912,
+      "ssim": 0.9843378314012327,
+      "max_block_luma_shift": 12.335328125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3355,
+      "time_seconds": 111.945,
+      "ssim": 0.9843016201449527,
+      "max_block_luma_shift": 12.335328125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3356,
+      "time_seconds": 111.979,
+      "ssim": 0.984187204882127,
+      "max_block_luma_shift": 12.647828125000018,
+      "pass": true
+    },
+    {
+      "frame_index": 3357,
+      "time_seconds": 112.012,
+      "ssim": 0.9859139368570191,
+      "max_block_luma_shift": 11.209812500000027,
+      "pass": true
+    },
+    {
+      "frame_index": 3358,
+      "time_seconds": 112.045,
+      "ssim": 0.9859616137312089,
+      "max_block_luma_shift": 11.209812500000027,
+      "pass": true
+    },
+    {
+      "frame_index": 3359,
+      "time_seconds": 112.079,
+      "ssim": 0.9856944534241325,
+      "max_block_luma_shift": 11.162937499999998,
+      "pass": true
+    },
+    {
+      "frame_index": 3360,
+      "time_seconds": 112.112,
+      "ssim": 0.984389570307287,
+      "max_block_luma_shift": 11.717187499999966,
+      "pass": true
+    },
+    {
+      "frame_index": 3361,
+      "time_seconds": 112.145,
+      "ssim": 0.9848420612150326,
+      "max_block_luma_shift": 11.355812499999956,
+      "pass": true
+    },
+    {
+      "frame_index": 3362,
+      "time_seconds": 112.179,
+      "ssim": 0.98496746899239,
+      "max_block_luma_shift": 11.154687499999937,
+      "pass": true
+    },
+    {
+      "frame_index": 3363,
+      "time_seconds": 112.212,
+      "ssim": 0.9850993355623613,
+      "max_block_luma_shift": 10.80956249999997,
+      "pass": true
+    },
+    {
+      "frame_index": 3364,
+      "time_seconds": 112.245,
+      "ssim": 0.9850263460459968,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3365,
+      "time_seconds": 112.279,
+      "ssim": 0.9852015344339856,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3366,
+      "time_seconds": 112.312,
+      "ssim": 0.9852208127041484,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3367,
+      "time_seconds": 112.346,
+      "ssim": 0.985201447788262,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3368,
+      "time_seconds": 112.379,
+      "ssim": 0.9851284717672424,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3369,
+      "time_seconds": 112.412,
+      "ssim": 0.9852379977277581,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3370,
+      "time_seconds": 112.446,
+      "ssim": 0.9852176121676769,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3371,
+      "time_seconds": 112.479,
+      "ssim": 0.9851970144603465,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3372,
+      "time_seconds": 112.512,
+      "ssim": 0.985106254285403,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3373,
+      "time_seconds": 112.546,
+      "ssim": 0.9853032462168327,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3374,
+      "time_seconds": 112.579,
+      "ssim": 0.9853226893258461,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3375,
+      "time_seconds": 112.612,
+      "ssim": 0.9853407120157157,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3376,
+      "time_seconds": 112.646,
+      "ssim": 0.9852609973731887,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3377,
+      "time_seconds": 112.679,
+      "ssim": 0.9854294138058578,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3378,
+      "time_seconds": 112.713,
+      "ssim": 0.9854815148733006,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3379,
+      "time_seconds": 112.746,
+      "ssim": 0.9855007105595698,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3380,
+      "time_seconds": 112.779,
+      "ssim": 0.9853587092494591,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3381,
+      "time_seconds": 112.813,
+      "ssim": 0.9853917418824135,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3382,
+      "time_seconds": 112.846,
+      "ssim": 0.9853840108331314,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3383,
+      "time_seconds": 112.879,
+      "ssim": 0.9853868188272369,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3384,
+      "time_seconds": 112.913,
+      "ssim": 0.9853289773533108,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3385,
+      "time_seconds": 112.946,
+      "ssim": 0.9853869064697942,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3386,
+      "time_seconds": 112.98,
+      "ssim": 0.9853503840016635,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3387,
+      "time_seconds": 113.013,
+      "ssim": 0.9853495523228287,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3388,
+      "time_seconds": 113.046,
+      "ssim": 0.9852860159943285,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3389,
+      "time_seconds": 113.08,
+      "ssim": 0.985462685897911,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3390,
+      "time_seconds": 113.113,
+      "ssim": 0.9854355365218869,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3391,
+      "time_seconds": 113.146,
+      "ssim": 0.9854128308753772,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3392,
+      "time_seconds": 113.18,
+      "ssim": 0.9853885204871081,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3393,
+      "time_seconds": 113.213,
+      "ssim": 0.9855699746636664,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3394,
+      "time_seconds": 113.246,
+      "ssim": 0.9855987403011157,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3395,
+      "time_seconds": 113.28,
+      "ssim": 0.9855899346185036,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3396,
+      "time_seconds": 113.313,
+      "ssim": 0.9854660648832948,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3397,
+      "time_seconds": 113.347,
+      "ssim": 0.9855495640127694,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3398,
+      "time_seconds": 113.38,
+      "ssim": 0.9855447601281394,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3399,
+      "time_seconds": 113.413,
+      "ssim": 0.9854992056218749,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3400,
+      "time_seconds": 113.447,
+      "ssim": 0.9854412250429104,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3401,
+      "time_seconds": 113.48,
+      "ssim": 0.9855280403666393,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3402,
+      "time_seconds": 113.513,
+      "ssim": 0.985526293789983,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3403,
+      "time_seconds": 113.547,
+      "ssim": 0.9855399225583807,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3404,
+      "time_seconds": 113.58,
+      "ssim": 0.985507527736712,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3405,
+      "time_seconds": 113.614,
+      "ssim": 0.9856118037146488,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3406,
+      "time_seconds": 113.647,
+      "ssim": 0.9855519981885311,
+      "max_block_luma_shift": 11.155375000000078,
+      "pass": true
+    },
+    {
+      "frame_index": 3407,
+      "time_seconds": 113.68,
+      "ssim": 0.9855701177235888,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3408,
+      "time_seconds": 113.714,
+      "ssim": 0.9854103928433917,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3409,
+      "time_seconds": 113.747,
+      "ssim": 0.9856267931604594,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3410,
+      "time_seconds": 113.78,
+      "ssim": 0.9855712857946931,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3411,
+      "time_seconds": 113.814,
+      "ssim": 0.9856011526178186,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3412,
+      "time_seconds": 113.847,
+      "ssim": 0.985440980792692,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3413,
+      "time_seconds": 113.88,
+      "ssim": 0.9854834402213289,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3414,
+      "time_seconds": 113.914,
+      "ssim": 0.9854819192489125,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3415,
+      "time_seconds": 113.947,
+      "ssim": 0.985491896904989,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3416,
+      "time_seconds": 113.981,
+      "ssim": 0.9853737801695334,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3417,
+      "time_seconds": 114.014,
+      "ssim": 0.9854341197010181,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3418,
+      "time_seconds": 114.047,
+      "ssim": 0.9854350967376884,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3419,
+      "time_seconds": 114.081,
+      "ssim": 0.9854014006422883,
+      "max_block_luma_shift": 10.447000000000173,
+      "pass": true
+    },
+    {
+      "frame_index": 3420,
+      "time_seconds": 114.114,
+      "ssim": 0.985150566466066,
+      "max_block_luma_shift": 10.256749999999982,
+      "pass": true
+    },
+    {
+      "frame_index": 3421,
+      "time_seconds": 114.147,
+      "ssim": 0.9852983360463488,
+      "max_block_luma_shift": 10.256749999999982,
+      "pass": true
+    },
+    {
+      "frame_index": 3422,
+      "time_seconds": 114.181,
+      "ssim": 0.9853220779550426,
+      "max_block_luma_shift": 10.256749999999982,
+      "pass": true
+    },
+    {
+      "frame_index": 3423,
+      "time_seconds": 114.214,
+      "ssim": 0.9853588042299857,
+      "max_block_luma_shift": 10.256749999999982,
+      "pass": true
+    },
+    {
+      "frame_index": 3424,
+      "time_seconds": 114.247,
+      "ssim": 0.9851914415468296,
+      "max_block_luma_shift": 10.697687499999944,
+      "pass": true
+    },
+    {
+      "frame_index": 3425,
+      "time_seconds": 114.281,
+      "ssim": 0.9852944760961708,
+      "max_block_luma_shift": 10.147468750000115,
+      "pass": true
+    },
+    {
+      "frame_index": 3426,
+      "time_seconds": 114.314,
+      "ssim": 0.9853061327674725,
+      "max_block_luma_shift": 10.147468750000115,
+      "pass": true
+    },
+    {
+      "frame_index": 3427,
+      "time_seconds": 114.348,
+      "ssim": 0.9853241842330477,
+      "max_block_luma_shift": 10.147468750000115,
+      "pass": true
+    },
+    {
+      "frame_index": 3428,
+      "time_seconds": 114.381,
+      "ssim": 0.9851443820626155,
+      "max_block_luma_shift": 10.311718749999812,
+      "pass": true
+    },
+    {
+      "frame_index": 3429,
+      "time_seconds": 114.414,
+      "ssim": 0.9853393175908397,
+      "max_block_luma_shift": 10.171093749999812,
+      "pass": true
+    },
+    {
+      "frame_index": 3430,
+      "time_seconds": 114.448,
+      "ssim": 0.9853389545356676,
+      "max_block_luma_shift": 10.264843749999812,
+      "pass": true
+    },
+    {
+      "frame_index": 3431,
+      "time_seconds": 114.481,
+      "ssim": 0.9852754607320878,
+      "max_block_luma_shift": 10.14331250000015,
+      "pass": true
+    },
+    {
+      "frame_index": 3432,
+      "time_seconds": 114.514,
+      "ssim": 0.9850849632758681,
+      "max_block_luma_shift": 11.13450000000006,
+      "pass": true
+    },
+    {
+      "frame_index": 3433,
+      "time_seconds": 114.548,
+      "ssim": 0.985246901815741,
+      "max_block_luma_shift": 11.13450000000006,
+      "pass": true
+    },
+    {
+      "frame_index": 3434,
+      "time_seconds": 114.581,
+      "ssim": 0.9852157645572803,
+      "max_block_luma_shift": 11.13450000000006,
+      "pass": true
+    },
+    {
+      "frame_index": 3435,
+      "time_seconds": 114.614,
+      "ssim": 0.9851784296414847,
+      "max_block_luma_shift": 11.13450000000006,
+      "pass": true
+    },
+    {
+      "frame_index": 3436,
+      "time_seconds": 114.648,
+      "ssim": 0.9850731093845513,
+      "max_block_luma_shift": 11.13450000000006,
+      "pass": true
+    },
+    {
+      "frame_index": 3437,
+      "time_seconds": 114.681,
+      "ssim": 0.9853283957585703,
+      "max_block_luma_shift": 10.48237499999999,
+      "pass": true
+    },
+    {
+      "frame_index": 3438,
+      "time_seconds": 114.715,
+      "ssim": 0.9853526645447501,
+      "max_block_luma_shift": 10.48237499999999,
+      "pass": true
+    },
+    {
+      "frame_index": 3439,
+      "time_seconds": 114.748,
+      "ssim": 0.9852083306474327,
+      "max_block_luma_shift": 10.467312500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3440,
+      "time_seconds": 114.781,
+      "ssim": 0.9848375040432374,
+      "max_block_luma_shift": 10.7289375,
+      "pass": true
+    },
+    {
+      "frame_index": 3441,
+      "time_seconds": 114.815,
+      "ssim": 0.9849135996558245,
+      "max_block_luma_shift": 10.861359375000006,
+      "pass": true
+    },
+    {
+      "frame_index": 3442,
+      "time_seconds": 114.848,
+      "ssim": 0.9849366651747178,
+      "max_block_luma_shift": 10.7601875,
+      "pass": true
+    },
+    {
+      "frame_index": 3443,
+      "time_seconds": 114.881,
+      "ssim": 0.9849214867091769,
+      "max_block_luma_shift": 10.686718749999812,
+      "pass": true
+    },
+    {
+      "frame_index": 3444,
+      "time_seconds": 114.915,
+      "ssim": 0.984834895224448,
+      "max_block_luma_shift": 11.194703124999933,
+      "pass": true
+    },
+    {
+      "frame_index": 3445,
+      "time_seconds": 114.948,
+      "ssim": 0.9850559419642606,
+      "max_block_luma_shift": 10.960328124999933,
+      "pass": true
+    },
+    {
+      "frame_index": 3446,
+      "time_seconds": 114.982,
+      "ssim": 0.9850386396797477,
+      "max_block_luma_shift": 10.804078124999933,
+      "pass": true
+    },
+    {
+      "frame_index": 3447,
+      "time_seconds": 115.015,
+      "ssim": 0.9850887164726321,
+      "max_block_luma_shift": 10.6039375,
+      "pass": true
+    },
+    {
+      "frame_index": 3448,
+      "time_seconds": 115.048,
+      "ssim": 0.9849544086017226,
+      "max_block_luma_shift": 10.7601875,
+      "pass": true
+    },
+    {
+      "frame_index": 3449,
+      "time_seconds": 115.082,
+      "ssim": 0.985119421582657,
+      "max_block_luma_shift": 10.4789375,
+      "pass": true
+    },
+    {
+      "frame_index": 3450,
+      "time_seconds": 115.115,
+      "ssim": 0.9851449913271003,
+      "max_block_luma_shift": 10.4789375,
+      "pass": true
+    },
+    {
+      "frame_index": 3451,
+      "time_seconds": 115.148,
+      "ssim": 0.9851448842973397,
+      "max_block_luma_shift": 10.467312500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3452,
+      "time_seconds": 115.182,
+      "ssim": 0.9849003061791333,
+      "max_block_luma_shift": 10.467312500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3453,
+      "time_seconds": 115.215,
+      "ssim": 0.9851702767145891,
+      "max_block_luma_shift": 10.373562500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3454,
+      "time_seconds": 115.248,
+      "ssim": 0.9851850660972955,
+      "max_block_luma_shift": 10.451687500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3455,
+      "time_seconds": 115.282,
+      "ssim": 0.9851347561117916,
+      "max_block_luma_shift": 10.373562500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3456,
+      "time_seconds": 115.315,
+      "ssim": 0.9850375666354375,
+      "max_block_luma_shift": 10.451687500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3457,
+      "time_seconds": 115.349,
+      "ssim": 0.9852423224844084,
+      "max_block_luma_shift": 10.451687500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3458,
+      "time_seconds": 115.382,
+      "ssim": 0.9852276279962208,
+      "max_block_luma_shift": 10.451687500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3459,
+      "time_seconds": 115.415,
+      "ssim": 0.9852331563877041,
+      "max_block_luma_shift": 10.451687500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3460,
+      "time_seconds": 115.449,
+      "ssim": 0.9851352025908104,
+      "max_block_luma_shift": 11.007640625000022,
+      "pass": true
+    },
+    {
+      "frame_index": 3461,
+      "time_seconds": 115.482,
+      "ssim": 0.9852892403900694,
+      "max_block_luma_shift": 10.423187500000154,
+      "pass": true
+    },
+    {
+      "frame_index": 3462,
+      "time_seconds": 115.515,
+      "ssim": 0.9852591122194474,
+      "max_block_luma_shift": 10.657562500000154,
+      "pass": true
+    },
+    {
+      "frame_index": 3463,
+      "time_seconds": 115.549,
+      "ssim": 0.985245413754149,
+      "max_block_luma_shift": 10.423187500000154,
+      "pass": true
+    },
+    {
+      "frame_index": 3464,
+      "time_seconds": 115.582,
+      "ssim": 0.9851720289806868,
+      "max_block_luma_shift": 10.451687500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3465,
+      "time_seconds": 115.616,
+      "ssim": 0.9852803821755205,
+      "max_block_luma_shift": 10.451687500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3466,
+      "time_seconds": 115.649,
+      "ssim": 0.9852601242936195,
+      "max_block_luma_shift": 10.451687500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3467,
+      "time_seconds": 115.682,
+      "ssim": 0.9852575783565073,
+      "max_block_luma_shift": 10.451687500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3468,
+      "time_seconds": 115.716,
+      "ssim": 0.9851516594056228,
+      "max_block_luma_shift": 10.451687500000048,
+      "pass": true
+    },
+    {
+      "frame_index": 3469,
+      "time_seconds": 115.749,
+      "ssim": 0.9853388244720189,
+      "max_block_luma_shift": 11.517937499999874,
+      "pass": true
+    },
+    {
+      "frame_index": 3470,
+      "time_seconds": 115.782,
+      "ssim": 0.9852630602535577,
+      "max_block_luma_shift": 10.300250000000233,
+      "pass": true
+    },
+    {
+      "frame_index": 3471,
+      "time_seconds": 115.816,
+      "ssim": 0.9852774540737811,
+      "max_block_luma_shift": 10.300250000000233,
+      "pass": true
+    },
+    {
+      "frame_index": 3472,
+      "time_seconds": 115.849,
+      "ssim": 0.9851082163520377,
+      "max_block_luma_shift": 10.530000000000285,
+      "pass": true
+    },
+    {
+      "frame_index": 3473,
+      "time_seconds": 115.882,
+      "ssim": 0.9851908180886343,
+      "max_block_luma_shift": 10.530000000000285,
+      "pass": true
+    },
+    {
+      "frame_index": 3474,
+      "time_seconds": 115.916,
+      "ssim": 0.9851424306937108,
+      "max_block_luma_shift": 10.530000000000285,
+      "pass": true
+    },
+    {
+      "frame_index": 3475,
+      "time_seconds": 115.949,
+      "ssim": 0.9851935662433146,
+      "max_block_luma_shift": 10.530000000000285,
+      "pass": true
+    },
+    {
+      "frame_index": 3476,
+      "time_seconds": 115.983,
+      "ssim": 0.9850784320225813,
+      "max_block_luma_shift": 10.530000000000285,
+      "pass": true
+    },
+    {
+      "frame_index": 3477,
+      "time_seconds": 116.016,
+      "ssim": 0.985264840909138,
+      "max_block_luma_shift": 10.300250000000233,
+      "pass": true
+    },
+    {
+      "frame_index": 3478,
+      "time_seconds": 116.049,
+      "ssim": 0.9852123166949918,
+      "max_block_luma_shift": 10.300250000000233,
+      "pass": true
+    },
+    {
+      "frame_index": 3479,
+      "time_seconds": 116.083,
+      "ssim": 0.9852630087475821,
+      "max_block_luma_shift": 10.898453124999975,
+      "pass": true
+    },
+    {
+      "frame_index": 3480,
+      "time_seconds": 116.116,
+      "ssim": 0.9849729208584581,
+      "max_block_luma_shift": 10.884718749999962,
+      "pass": true
+    },
+    {
+      "frame_index": 3481,
+      "time_seconds": 116.149,
+      "ssim": 0.9851139557710881,
+      "max_block_luma_shift": 10.264000000000124,
+      "pass": true
+    }
+  ]
+}

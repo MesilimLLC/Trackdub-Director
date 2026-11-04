@@ -1,0 +1,988 @@
+{
+  "telegraphic_suspect_pairs": [],
+  "excluded_segments": [
+    {
+      "file": "qa-report.json",
+      "segment_id": "seg-001",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "The director checks every line before it reaches the audience."
+    },
+    {
+      "file": "qa-report.json",
+      "segment_id": "seg-002",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "We need one more take."
+    },
+    {
+      "file": "qa-report.json",
+      "segment_id": "seg-003",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Action!"
+    },
+    {
+      "file": "qa-report.json",
+      "segment_id": "seg-004",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "That was perfect. Let us move on."
+    },
+    {
+      "file": "qa-report.json",
+      "segment_id": "seg-005",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Quiet on set, please."
+    },
+    {
+      "file": "qa-report.json",
+      "segment_id": "seg-006",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Where are we shooting tomorrow?"
+    },
+    {
+      "file": "qa-report.json",
+      "segment_id": "seg-007",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Thank you for joining us today."
+    },
+    {
+      "file": "qa-report.json",
+      "segment_id": "seg-008",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "We will see you on the next stage."
+    },
+    {
+      "file": "samples/voa10-scale/qa-report-voa10.json",
+      "segment_id": "voa10-001",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Hi, Ashley."
+    },
+    {
+      "file": "samples/voa10-scale/qa-report-voa10.json",
+      "segment_id": "voa10-002",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Anna, Which coffee shop? There are three coffee shops."
+    },
+    {
+      "file": "samples/voa10-scale/qa-report-voa10.json",
+      "segment_id": "voa10-003",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay, my apartment is across from a big department store."
+    },
+    {
+      "file": "samples/voa10-scale/qa-report-voa10.json",
+      "segment_id": "voa10-004",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "A big department store? Ah, I see it!"
+    },
+    {
+      "file": "samples/voa10-scale/qa-report-voa10.json",
+      "segment_id": "voa10-005",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay! Bye, Ashley. See you soon!"
+    },
+    {
+      "file": "samples/voa10-scale/qa-report-voa10.json",
+      "segment_id": "voa10-006",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay. See you soon."
+    },
+    {
+      "file": "samples/voa10-scale/qa-report-scale.json",
+      "segment_id": "fpc-001",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "blind pack addendum",
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Hi Ashley!"
+    },
+    {
+      "file": "samples/voa10-scale/qa-report-scale.json",
+      "segment_id": "fpc-002",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Hi Anna! I'm coming to your apartment. Where is your apartment?"
+    },
+    {
+      "file": "samples/voa10-scale/qa-report-scale.json",
+      "segment_id": "fpc-003",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "My apartment is near the Columbia Heights Metro."
+    },
+    {
+      "file": "samples/voa10-scale/qa-report-scale.json",
+      "segment_id": "meet-001",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Ashley! Ashley! Ashley! Over here! It's Anna! It's Anna! Hi!"
+    },
+    {
+      "file": "samples/voa10-scale/qa-report-scale.json",
+      "segment_id": "meet-002",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "I love having my friends over. Come on!"
+    },
+    {
+      "file": "samples/voa10-scale/qa-report-scale.json",
+      "segment_id": "meet-003",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Great!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-001a",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Hi! Today, my friend Ashley, is coming over. I am showing her my new apartment!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-001b",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Oh! That's Ashley calling."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-002",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "blind pack addendum",
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Hi Ashley!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-003",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Hi Anna! I'm coming to your apartment. Where is your apartment?"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-004",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "My apartment is near the Columbia Heights Metro."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-005",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "It is near the Columbia Heights Metro?"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-006",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Yes. Exit the Metro and turn right. Then at the bus station turn left. Then walk straight ahead."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-007",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Okay. Exit Metro, turn right, turn left, then go straight ahead?"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-008",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Yes. My apartment is near a coffee shop."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-009",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Okay. See you soon!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-010",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Hi, Ashley."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-011a",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Anna,"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-011b",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Which coffee shop? There are three coffee shops."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-012",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay, my apartment is across from a big department store."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-013",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "A big department store? Ah, I see it!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-014",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay! Bye, Ashley. See you soon!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-015",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay. See you soon."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-016",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Ashley! Ashley! Ashley! Over here! It's Anna! It's Anna! Hi!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass1.json",
+      "segment_id": "voa10f-017",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "I love having my friends over. Come on!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-101a",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Hi! Today, my friend Ashley, is coming over. I am showing her my new apartment!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-101b",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Oh! That's Ashley calling."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-102",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "blind pack addendum",
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Hi Ashley!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-103",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Hi Anna! I'm coming to your apartment. Where is your apartment?"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-104",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "My apartment is near the Columbia Heights Metro."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-105",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "It is near the Columbia Heights Metro?"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-106",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Yes. Exit the Metro and turn right. Then at the bus station turn left. Then walk straight ahead."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-107",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Okay. Exit Metro, turn right, turn left, then go straight ahead?"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-108",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Yes. My apartment is near a coffee shop."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-109",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Okay. See you soon!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-110",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Hi, Ashley."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-111a",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Anna,"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-111b",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Which coffee shop? There are three coffee shops."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-112",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay, my apartment is across from a big department store."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-113",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "A big department store? Ah, I see it!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-114",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay! Bye, Ashley. See you soon!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-115",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay. See you soon."
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-116",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Ashley! Ashley! Ashley! Over here! It's Anna! It's Anna! Hi!"
+    },
+    {
+      "file": "samples/voa10-full/qa-report-pass2.json",
+      "segment_id": "voa10f-117",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "I love having my friends over. Come on!"
+    },
+    {
+      "file": "samples/voa10/pipeline-run/audition-v4-2026-11-02.json",
+      "segment_id": "voa10-001",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Hi, Ashley."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/audition-v4-2026-11-02.json",
+      "segment_id": "voa10-002",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Anna, Which coffee shop? There are three coffee shops."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/audition-v4-2026-11-02.json",
+      "segment_id": "voa10-003",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay, my apartment is across from a big department store."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/audition-v4-2026-11-02.json",
+      "segment_id": "voa10-004",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "A big department store? Ah, I see it!"
+    },
+    {
+      "file": "samples/voa10/pipeline-run/audition-v4-2026-11-02.json",
+      "segment_id": "voa10-005",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay! Bye, Ashley. See you soon!"
+    },
+    {
+      "file": "samples/voa10/pipeline-run/audition-v4-2026-11-02.json",
+      "segment_id": "voa10-006",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay. See you soon."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-v4-2026-11-02.json",
+      "segment_id": "voa10-001",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Hi, Ashley."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-v4-2026-11-02.json",
+      "segment_id": "voa10-002",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Anna, Which coffee shop? There are three coffee shops."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-v4-2026-11-02.json",
+      "segment_id": "voa10-003",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay, my apartment is across from a big department store."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-v4-2026-11-02.json",
+      "segment_id": "voa10-004",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "A big department store? Ah, I see it!"
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-v4-2026-11-02.json",
+      "segment_id": "voa10-005",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay! Bye, Ashley. See you soon!"
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-v4-2026-11-02.json",
+      "segment_id": "voa10-006",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay. See you soon."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-v4-scene-2026-11-02.json",
+      "segment_id": "voa10-001",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Hi, Ashley."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-v4-scene-2026-11-02.json",
+      "segment_id": "voa10-002",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Anna, Which coffee shop? There are three coffee shops."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-v4-scene-2026-11-02.json",
+      "segment_id": "voa10-003",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay, my apartment is across from a big department store."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-v4-scene-2026-11-02.json",
+      "segment_id": "voa10-004",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "A big department store? Ah, I see it!"
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-v4-scene-2026-11-02.json",
+      "segment_id": "voa10-005",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay! Bye, Ashley. See you soon!"
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-v4-scene-2026-11-02.json",
+      "segment_id": "voa10-006",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay. See you soon."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-wall-2026-11-02.json",
+      "segment_id": "voa10-001",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Hi, Ashley."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-wall-2026-11-02.json",
+      "segment_id": "voa10-002",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Anna, Which coffee shop? There are three coffee shops."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-wall-2026-11-02.json",
+      "segment_id": "voa10-003",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay, my apartment is across from a big department store."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-wall-2026-11-02.json",
+      "segment_id": "voa10-004",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "A big department store? Ah, I see it!"
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-wall-2026-11-02.json",
+      "segment_id": "voa10-005",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay! Bye, Ashley. See you soon!"
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-wall-2026-11-02.json",
+      "segment_id": "voa10-006",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay. See you soon."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-wall-report.json",
+      "segment_id": "voa10-001",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Hi, Ashley."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-wall-report.json",
+      "segment_id": "voa10-002",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Anna, Which coffee shop? There are three coffee shops."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-wall-report.json",
+      "segment_id": "voa10-003",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay, my apartment is across from a big department store."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-wall-report.json",
+      "segment_id": "voa10-004",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "A big department store? Ah, I see it!"
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-wall-report.json",
+      "segment_id": "voa10-005",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay! Bye, Ashley. See you soon!"
+    },
+    {
+      "file": "samples/voa10/pipeline-run/e2e-wall-report.json",
+      "segment_id": "voa10-006",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay. See you soon."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/pipeline-report.json",
+      "segment_id": "seg-001",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)"
+      ],
+      "source_text": "Hi, Ashley."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/pipeline-report.json",
+      "segment_id": "seg-002",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Hello, Anna. Which coffee shop? There are three coffee shops."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/pipeline-report.json",
+      "segment_id": "seg-003",
+      "reason": "frozen_eval_source",
+      "frozen_in": [
+        "human-review blind pack",
+        "meaning-eval pressure set",
+        "spark-open judge set (75)",
+        "spark-open translation eval (40)"
+      ],
+      "source_text": "Okay, my apartment is across from a big department store."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/pipeline-report.json",
+      "segment_id": "seg-004",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "A big department store? Ah, I see it. see it."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/pipeline-report.json",
+      "segment_id": "seg-005",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Okay, bye Ashley. See you soon."
+    },
+    {
+      "file": "samples/voa10/pipeline-run/pipeline-report.json",
+      "segment_id": "seg-006",
+      "reason": "first_pass_no_failed_attempt",
+      "source_text": "Okay, see you soon."
+    }
+  ]
+}

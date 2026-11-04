@@ -1,0 +1,49 @@
+{
+  "builder_inputs": [
+    "qa-report.json",
+    "samples/voa10-scale/qa-report-voa10.json",
+    "samples/voa10-scale/qa-report-scale.json",
+    "samples/voa10-full/qa-report-pass1.json",
+    "samples/voa10-full/qa-report-pass2.json",
+    "samples/voa10/pipeline-run/audition-v4-2026-11-02.json",
+    "samples/voa10/pipeline-run/e2e-v4-2026-11-02.json",
+    "samples/voa10/pipeline-run/e2e-v4-scene-2026-11-02.json",
+    "samples/voa10/pipeline-run/e2e-wall-2026-11-02.json",
+    "samples/voa10/pipeline-run/e2e-wall-report.json",
+    "samples/voa10/pipeline-run/pipeline-report.json"
+  ],
+  "frozen_pools_excluded_entirely": [
+    "samples/meaning-eval/**",
+    "samples/spark-open/**",
+    "samples/human-review/**",
+    "samples/glimmer-recovery/**",
+    "audition takes (v1: text-QA attempts only)"
+  ],
+  "segments_seen": 94,
+  "attempts_seen": 108,
+  "distinct_source_lines_seen": 33,
+  "frozen_source_lines": 20,
+  "frozen_distinct_sources_by_pool": {
+    "spark_open_translation_eval": 16,
+    "spark_open_judge_set": 20,
+    "meaning_eval_pressure": 20,
+    "human_review_blind_pack": 20,
+    "union": 20,
+    "intersection_all_pools": 16
+  },
+  "raw_failed_attempts_with_accepted_final_ignoring_freeze": 14,
+  "raw_distinct_sources_those_attempts": 6,
+  "raw_sources_all_frozen": true,
+  "pairs_after_dedupe": 0,
+  "duplicate_pairs_collapsed": 0,
+  "telegraphic_suspect_pairs_excluded": 0,
+  "train_examples": 0,
+  "train_distinct_source_lines": 0,
+  "holdout_examples": 0,
+  "holdout_distinct_source_lines": 0,
+  "excluded_segments_by_reason": {
+    "frozen_eval_source": 72,
+    "first_pass_no_failed_attempt": 22
+  },
+  "split_rule": "sha256(normalized source text) first byte % 5 == 0 -> holdout; split is by source line, never by example"
+}
