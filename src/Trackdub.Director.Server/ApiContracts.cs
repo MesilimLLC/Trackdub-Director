@@ -34,7 +34,9 @@ internal sealed record AdaptationApiRequest(
 internal sealed record AuditionApiRequest(
     IReadOnlyList<AuditionSegmentInput> Segments,
     string? SourceLanguage,
-    string? TargetLanguage);
+    string? TargetLanguage,
+    SpeedRetakeOptions? SpeedRetake = null,
+    EmotionTagOptions? EmotionTags = null);
 
 internal sealed record QaOptionsDto(
     int? MaxAttempts,
@@ -51,4 +53,6 @@ internal sealed record PipelineApiRequest(
     bool? Audition,
     string? SourceLanguage,
     string? TargetLanguage,
-    QaOptionsDto? Options);
+    QaOptionsDto? Options,
+    SpeedRetakeOptions? SpeedRetake = null,
+    EmotionTagOptions? EmotionTags = null);

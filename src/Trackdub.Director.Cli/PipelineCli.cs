@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Trackdub.Director.Core;
 
@@ -10,283 +11,259 @@ internal static class PipelineCli
 
     public static async Task<int> RunAsync(string[] args)
     {
-        string? audio = null;
-        string? input = null;
-        string? sceneInput = null;
-        string? output = null;
-        string from = "en";
-        string to = "es";
-        bool scene = true;
-        bool audition = false;
-        int maxAttempts = 3;
-        double tolerance = 0.10;
-        double cps = DurationEstimator.DefaultCharactersPerSecond;
-        bool hasMaxAttempts = false;
-        bool hasTolerance = false;
-        bool hasCps = false;
-
-        for (int i = 0; i < args.Length; i++)
+        var parser = new PipelineArgumentParser(args);
+        if (!parser.TryParse())
         {
-            switch (args[i])
+            return parser.ExitCode;
+        }
+
+        PipelineOptions options = parser.Options;
+        (string? error, bool showHelp) = ValidateOptions(options);
+        if (error is not null)
+        {
+            Console.Error.WriteLine($"error: {error}");
+            if (showHelp)
             {
-                case "--audio" when i + 1 < args.Length:
-                    audio = args[i + 1];
-                    i++;
-                    break;
-                case "--input" when i + 1 < args.Length:
-                    input = args[i + 1];
-                    i++;
-                    break;
-                case "--scene-input" when i + 1 < args.Length:
-                    sceneInput = args[i + 1];
-                    i++;
-                    break;
-                case "--output" when i + 1 < args.Length:
-                    output = args[i + 1];
-                    i++;
-                    break;
-                case "--from" when i + 1 < args.Length:
-                    from = args[i + 1];
-                    i++;
-                    break;
-                case "--to" when i + 1 < args.Length:
-                    to = args[i + 1];
-                    i++;
-                    break;
-                case "--no-scene":
-                    scene = false;
-                    break;
-                case "--audition":
-                    audition = true;
-                    break;
-                case "--max-attempts" when i + 1 < args.Length:
-                    if (!int.TryParse(args[i + 1], out maxAttempts) || maxAttempts < 0)
-                    {
-                        Console.Error.WriteLine("error: --max-attempts must be a non-negative integer.");
-                        return 1;
-                    }
-
-                    hasMaxAttempts = true;
-                    i++;
-                    break;
-                case "--tolerance" when i + 1 < args.Length:
-                    if (!double.TryParse(args[i + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out tolerance) || tolerance < 0)
-                    {
-                        Console.Error.WriteLine("error: --tolerance must be a non-negative number (fraction, e.g. 0.10 for 10%).");
-                        return 1;
-                    }
-
-                    hasTolerance = true;
-                    i++;
-                    break;
-                case "--cps" when i + 1 < args.Length:
-                    if (!double.TryParse(args[i + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out cps) || cps <= 0)
-                    {
-                        Console.Error.WriteLine("error: --cps must be a positive number (characters per second).");
-                        return 1;
-                    }
-
-                    hasCps = true;
-                    i++;
-                    break;
-                case "-h":
-                case "--help":
-                    PrintHelp();
-                    return 0;
-                default:
-                    Console.Error.WriteLine($"Unknown option '{args[i]}' for 'pipeline'.");
-                    PrintHelp();
-                    return 1;
+                PrintHelp();
             }
-        }
 
-        if (string.IsNullOrWhiteSpace(audio) && string.IsNullOrWhiteSpace(input))
-        {
-            Console.Error.WriteLine("error: --audio <file.wav> or --input <segments.json> is required.");
-            PrintHelp();
-            return 1;
-        }
-
-        if (!string.IsNullOrWhiteSpace(audio) && !string.IsNullOrWhiteSpace(input))
-        {
-            Console.Error.WriteLine("error: pass either --audio or --input, not both.");
-            return 1;
-        }
-
-        if (string.IsNullOrWhiteSpace(output))
-        {
-            Console.Error.WriteLine("error: --output <pipeline-report.json> is required.");
-            PrintHelp();
-            return 1;
-        }
-
-        string? pathClash = ValidateOutputPath(output, audio, input, sceneInput);
-        if (pathClash is not null)
-        {
-            Console.Error.WriteLine($"error: {pathClash}");
             return 1;
         }
 
         try
         {
-            // Pre-flight auth: a missing hosted key is a configuration error, not a QA stage that
-            // reports every segment as failed with a generic "translation generation failed upstream".
-            _ = MetaAuth.GetApiKey();
-
-            PipelineRequest? request = await BuildRequestAsync(audio, input, sceneInput, scene, audition, from, to).ConfigureAwait(false);
-            if (request is null)
-            {
-                return 1;
-            }
-
-            QaOptions envOptions = QaOptions.FromEnvironment();
-            var cpsOverrides = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
-            foreach (var kv in envOptions.CharactersPerSecondByLanguage)
-            {
-                cpsOverrides[kv.Key] = kv.Value;
-            }
-
-            if (hasCps)
-            {
-                cpsOverrides[to.Trim().ToLowerInvariant()] = cps;
-            }
-
-            var options = new QaOptions
-            {
-                MaxAttempts = hasMaxAttempts ? maxAttempts : envOptions.MaxAttempts,
-                ToleranceFraction = hasTolerance ? tolerance : envOptions.ToleranceFraction,
-                CharactersPerSecondByLanguage = cpsOverrides,
-                ReasoningEffort = envOptions.ReasoningEffort,
-            };
-
-            using var client = new MetaClient();
-            var service = new PipelineService(client, new MuseTranscribeClient(), new ElevenLabsTtsProvider(), options);
-            Console.WriteLine($"Pipeline: {(audio is not null ? $"audio {Path.GetFullPath(audio)}" : $"{request.Segments!.Count} segment(s)")} {from}->{to} | scene {(scene ? "on" : "off")} | audition {(audition ? "on" : "off")}");
-            PipelineReport report = await service.RunAsync(request).ConfigureAwait(false);
-
-            if (report.Audition is not null)
-            {
-                await TryWriteAuditionOutputsAsync(report.Audition).ConfigureAwait(false);
-            }
-
-            string resolvedOutput = Path.GetFullPath(output);
-            string? dir = Path.GetDirectoryName(resolvedOutput);
-            if (!string.IsNullOrEmpty(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
-
-            await File.WriteAllTextAsync(resolvedOutput, JsonSerializer.Serialize(report, JsonOptions)).ConfigureAwait(false);
-
-            foreach (PipelineStageReport stage in report.Stages)
-            {
-                string detail = stage.Error is not null ? $" | error: {stage.Error}" : stage.Note is not null ? $" | {stage.Note}" : string.Empty;
-                Console.WriteLine($"  {stage.Stage}: {stage.Status}{detail}");
-            }
-
-            if (report.Qa is not null)
-            {
-                QaCli.PrintSummary(report.Qa);
-            }
-
-            Console.WriteLine($"Report written to {resolvedOutput}");
-            return report.Stages.Any(s => s.Status == PipelineStageStatus.Failed) ? 1 : 0;
+            return await ExecutePipelineAsync(options).ConfigureAwait(false);
         }
-        catch (MetaApiException ex)
-        {
-            Console.Error.WriteLine($"error: {ex.Message}");
-            return 1;
-        }
-        catch (InvalidOperationException ex)
-        {
-            Console.Error.WriteLine($"error: {ex.Message}");
-            return 1;
-        }
-        catch (ArgumentException ex)
+        catch (Exception ex) when (ex is MetaApiException or InvalidOperationException or ArgumentException)
         {
             Console.Error.WriteLine($"error: {ex.Message}");
             return 1;
         }
     }
 
-    private static async Task<PipelineRequest?> BuildRequestAsync(string? audio, string? input, string? sceneInput, bool scene, bool audition, string from, string to)
+    private static async Task<int> ExecutePipelineAsync(PipelineOptions options)
     {
-        byte[]? audioBytes = null;
-        string? audioFileName = null;
-        TranscribeSegment[]? segments = null;
+        // Pre-flight auth: a missing hosted key is a configuration error, not a QA stage that
+        // reports every segment as failed with a generic "translation generation failed upstream".
+        _ = MetaAuth.GetApiKey();
 
-        if (!string.IsNullOrWhiteSpace(audio))
+        PipelineRequest? request = await BuildRequestAsync(options).ConfigureAwait(false);
+        if (request is null)
         {
-            string resolvedAudio = Path.GetFullPath(audio);
+            return 1;
+        }
+
+        request = ApplyRequestOptions(request, options);
+
+        QaOptions qaOptions = BuildQaOptions(options);
+        using var client = new MetaClient();
+        var service = new PipelineService(client, new MuseTranscribeClient(), new ElevenLabsTtsProvider(), qaOptions);
+        Console.WriteLine($"Pipeline: {DescribeRequest(request, options)}");
+        PipelineReport report = await service.RunAsync(request).ConfigureAwait(false);
+
+        if (report.Audition is not null)
+        {
+            await TryWriteAuditionOutputsAsync(report.Audition).ConfigureAwait(false);
+        }
+
+        await WriteAndPrintReportAsync(report, options).ConfigureAwait(false);
+        return report.Stages.Any(s => s.Status == PipelineStageStatus.Failed) ? 1 : 0;
+    }
+
+    private static PipelineRequest ApplyRequestOptions(PipelineRequest request, PipelineOptions options)
+    {
+        return request with
+        {
+            SpeedRetake = options.SpeedRetake ? new SpeedRetakeOptions(Enabled: true, Cap: options.SpeedRetakeCap) : null,
+            EmotionTags = options.EmotionTags ? null : EmotionTagOptions.Disabled,
+        };
+    }
+
+    private static string DescribeRequest(PipelineRequest request, PipelineOptions options)
+    {
+        string source = options.Audio is not null ? $"audio {Path.GetFullPath(options.Audio)}" : $"{request.Segments!.Count} segment(s)";
+        string scene = options.Scene ? "on" : "off";
+        string audition = options.Audition ? "on" : "off";
+        return $"{source} {options.From}->{options.To} | scene {scene} | audition {audition}";
+    }
+
+    private static QaOptions BuildQaOptions(PipelineOptions options)
+    {
+        QaOptions envOptions = QaOptions.FromEnvironment();
+        return new QaOptions
+        {
+            MaxAttempts = options.HasMaxAttempts ? options.MaxAttempts : envOptions.MaxAttempts,
+            ToleranceFraction = options.HasTolerance ? options.Tolerance : envOptions.ToleranceFraction,
+            CharactersPerSecondByLanguage = BuildCpsOverrides(options, envOptions),
+            ReasoningEffort = envOptions.ReasoningEffort,
+        };
+    }
+
+    private static Dictionary<string, double> BuildCpsOverrides(PipelineOptions options, QaOptions envOptions)
+    {
+        var cpsOverrides = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in envOptions.CharactersPerSecondByLanguage)
+        {
+            cpsOverrides[kv.Key] = kv.Value;
+        }
+
+        if (options.HasCps)
+        {
+            cpsOverrides[options.To.Trim().ToLowerInvariant()] = options.Cps;
+        }
+
+        return cpsOverrides;
+    }
+
+    private static async Task WriteAndPrintReportAsync(PipelineReport report, PipelineOptions options)
+    {
+        string resolvedOutput = Path.GetFullPath(options.Output!);
+        string? dir = Path.GetDirectoryName(resolvedOutput);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        await File.WriteAllTextAsync(resolvedOutput, JsonSerializer.Serialize(report, JsonOptions)).ConfigureAwait(false);
+
+        foreach (PipelineStageReport stage in report.Stages)
+        {
+            PrintStage(stage);
+        }
+
+        if (report.Qa is not null)
+        {
+            QaCli.PrintSummary(report.Qa);
+        }
+
+        Console.WriteLine($"Report written to {resolvedOutput}");
+    }
+
+    private static void PrintStage(PipelineStageReport stage)
+    {
+        string detail = stage.Error is not null ? $" | error: {stage.Error}" : stage.Note is not null ? $" | {stage.Note}" : string.Empty;
+        Console.WriteLine($"  {stage.Stage}: {stage.Status}{detail}");
+    }
+
+    private static (string? Error, bool ShowHelp) ValidateOptions(PipelineOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.Audio) && string.IsNullOrWhiteSpace(options.Input))
+        {
+            return ("--audio <file.wav> or --input <segments.json> is required.", true);
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.Audio) && !string.IsNullOrWhiteSpace(options.Input))
+        {
+            return ("pass either --audio or --input, not both.", false);
+        }
+
+        if (string.IsNullOrWhiteSpace(options.Output))
+        {
+            return ("--output <pipeline-report.json> is required.", true);
+        }
+
+        return (ValidateOutputPath(options), false);
+    }
+
+    private static async Task<PipelineRequest?> BuildRequestAsync(PipelineOptions options)
+    {
+        InputData? input = await LoadInputAsync(options).ConfigureAwait(false);
+        if (input is null)
+        {
+            return null;
+        }
+
+        SceneSegmentInput[]? sceneSegments = null;
+        if (!string.IsNullOrWhiteSpace(options.SceneInput))
+        {
+            (SceneSegmentInput[]? segments, bool ok) = await LoadSceneAsync(options).ConfigureAwait(false);
+            if (!ok)
+            {
+                return null;
+            }
+
+            sceneSegments = segments;
+        }
+
+        return new PipelineRequest(input.AudioBytes, input.Segments, sceneSegments, options.Scene, options.Audition, options.From, options.To, input.AudioFileName);
+    }
+
+    private static async Task<InputData?> LoadInputAsync(PipelineOptions options)
+    {
+        if (!string.IsNullOrWhiteSpace(options.Audio))
+        {
+            string resolvedAudio = Path.GetFullPath(options.Audio);
             if (!File.Exists(resolvedAudio))
             {
                 Console.Error.WriteLine($"error: audio file not found: {resolvedAudio}");
                 return null;
             }
 
-            audioBytes = await File.ReadAllBytesAsync(resolvedAudio).ConfigureAwait(false);
-            audioFileName = Path.GetFileName(resolvedAudio);
-        }
-        else
-        {
-            string resolvedInput = Path.GetFullPath(input!);
-            if (!File.Exists(resolvedInput))
+            byte[] audioBytes = await File.ReadAllBytesAsync(resolvedAudio).ConfigureAwait(false);
+            return new InputData
             {
-                Console.Error.WriteLine($"error: input file not found: {resolvedInput}");
-                return null;
-            }
-
-            string json = await File.ReadAllTextAsync(resolvedInput).ConfigureAwait(false);
-            try
-            {
-                segments = JsonSerializer.Deserialize<TranscribeSegment[]?>(json, JsonOptions);
-            }
-            catch (JsonException ex)
-            {
-                Console.Error.WriteLine($"error: invalid segments JSON in '{resolvedInput}': {ex.Message}");
-                return null;
-            }
-
-            if (segments is null || segments.Length == 0)
-            {
-                Console.Error.WriteLine($"error: empty or null JSON in '{resolvedInput}'. Expected an array of {{id, text, duration_seconds}}.");
-                return null;
-            }
+                AudioBytes = audioBytes,
+                AudioFileName = Path.GetFileName(resolvedAudio),
+            };
         }
 
-        SceneSegmentInput[]? sceneSegments = null;
-        if (!string.IsNullOrWhiteSpace(sceneInput))
-        {
-            string resolvedScene = Path.GetFullPath(sceneInput);
-            if (!File.Exists(resolvedScene))
-            {
-                Console.Error.WriteLine($"error: scene input file not found: {resolvedScene}");
-                return null;
-            }
-
-            string json = await File.ReadAllTextAsync(resolvedScene).ConfigureAwait(false);
-            try
-            {
-                sceneSegments = JsonSerializer.Deserialize<SceneSegmentInput[]>(json, JsonOptions);
-            }
-            catch (JsonException ex)
-            {
-                Console.Error.WriteLine($"error: invalid scene JSON in '{resolvedScene}': {ex.Message}");
-                return null;
-            }
-        }
-
-        return new PipelineRequest(audioBytes, segments, sceneSegments, scene, audition, from, to, audioFileName);
+        return await LoadSegmentsAsync(options).ConfigureAwait(false);
     }
 
-    private static string? ValidateOutputPath(string output, string? audio, string? input, string? sceneInput)
+    private static async Task<InputData?> LoadSegmentsAsync(PipelineOptions options)
     {
-        string resolvedOutput;
+        string resolvedInput = Path.GetFullPath(options.Input!);
+        if (!File.Exists(resolvedInput))
+        {
+            Console.Error.WriteLine($"error: input file not found: {resolvedInput}");
+            return null;
+        }
+
+        string json = await File.ReadAllTextAsync(resolvedInput).ConfigureAwait(false);
+        TranscribeSegment[]? segments;
         try
         {
-            resolvedOutput = Path.GetFullPath(output);
+            segments = JsonSerializer.Deserialize<TranscribeSegment[]?>(json, JsonOptions);
         }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        catch (JsonException ex)
+        {
+            Console.Error.WriteLine($"error: invalid segments JSON in '{resolvedInput}': {ex.Message}");
+            return null;
+        }
+
+        if (segments is null || segments.Length == 0)
+        {
+            Console.Error.WriteLine($"error: empty or null JSON in '{resolvedInput}'. Expected an array of {{id, text, duration_seconds}}.");
+            return null;
+        }
+
+        return new InputData { Segments = segments };
+    }
+
+    private static async Task<(SceneSegmentInput[]? Segments, bool Ok)> LoadSceneAsync(PipelineOptions options)
+    {
+        string resolvedScene = Path.GetFullPath(options.SceneInput!);
+        if (!File.Exists(resolvedScene))
+        {
+            Console.Error.WriteLine($"error: scene input file not found: {resolvedScene}");
+            return (null, false);
+        }
+
+        string json = await File.ReadAllTextAsync(resolvedScene).ConfigureAwait(false);
+        try
+        {
+            return (JsonSerializer.Deserialize<SceneSegmentInput[]>(json, JsonOptions), true);
+        }
+        catch (JsonException ex)
+        {
+            Console.Error.WriteLine($"error: invalid scene JSON in '{resolvedScene}': {ex.Message}");
+            return (null, false);
+        }
+    }
+
+    private static string? ValidateOutputPath(PipelineOptions options)
+    {
+        if (!TryResolvePath(options.Output!, out string resolvedOutput))
         {
             return "--output must be a valid file path.";
         }
@@ -294,9 +271,9 @@ internal static class PipelineCli
         StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         foreach ((string label, string? path) in new (string, string?)[]
         {
-            ("--audio", audio),
-            ("--input", input),
-            ("--scene-input", sceneInput),
+            ("--audio", options.Audio),
+            ("--input", options.Input),
+            ("--scene-input", options.SceneInput),
         })
         {
             if (string.IsNullOrWhiteSpace(path))
@@ -304,12 +281,7 @@ internal static class PipelineCli
                 continue;
             }
 
-            string resolved;
-            try
-            {
-                resolved = Path.GetFullPath(path);
-            }
-            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            if (!TryResolvePath(path, out string resolved))
             {
                 return $"{label} must be a valid file path.";
             }
@@ -321,6 +293,20 @@ internal static class PipelineCli
         }
 
         return null;
+    }
+
+    private static bool TryResolvePath(string path, out string resolved)
+    {
+        try
+        {
+            resolved = Path.GetFullPath(path);
+            return true;
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            resolved = string.Empty;
+            return false;
+        }
     }
 
     /// <summary>
@@ -357,6 +343,8 @@ internal static class PipelineCli
         Console.WriteLine("  --output <path>       Pipeline report JSON to write (required).");
         Console.WriteLine("  --no-scene            Skip the scene stage (recorded as SkippedByFlag).");
         Console.WriteLine("  --audition            Run the audition stage (off by default; needs ELEVENLABS_API_KEY).");
+        Console.WriteLine("  --speed-retake [--speed-retake-cap <1.0-1.2>]  Enable the computed-speed retake in audition (default cap 1.10).");
+        Console.WriteLine("  --no-emotion-tags  Opt out of emotion/pacing audio tags in audition (on by default on tag-honoring models).");
         Console.WriteLine("  --from <code>         Source language code. Default: en");
         Console.WriteLine("  --to <code>           Target language code. Default: es");
         Console.WriteLine("  --max-attempts <n>    QA max revision attempts after initial. Default: 3");
@@ -370,5 +358,299 @@ internal static class PipelineCli
         Console.WriteLine("  AUDITION_OUTPUT_DIR                     When set with --audition, write every synthesized take (winners and losers) + manifest.");
         Console.WriteLine("  META_TRANSCRIBE_MODEL                   Default: muse-voice-transcribe-1.0");
         Console.WriteLine("  META_MODEL_API_BASE_URL                 Default: https://api.meta.ai/v1");
+    }
+
+    private enum ArgumentResult
+    {
+        NotHandled,
+        Handled,
+        Failed,
+    }
+
+    private sealed class PipelineOptions
+    {
+        public string? Audio;
+        public string? Input;
+        public string? SceneInput;
+        public string? Output;
+        public string From = "en";
+        public string To = "es";
+        public bool Scene = true;
+        public bool Audition;
+        public bool SpeedRetake;
+        public double SpeedRetakeCap = SpeedRetakeMath.DefaultCap;
+        public bool EmotionTags = true;
+        public int MaxAttempts = 3;
+        public double Tolerance = 0.10;
+        public double Cps = DurationEstimator.DefaultCharactersPerSecond;
+        public bool HasMaxAttempts;
+        public bool HasTolerance;
+        public bool HasCps;
+    }
+
+    private sealed class InputData
+    {
+        public byte[]? AudioBytes;
+        public string? AudioFileName;
+        public TranscribeSegment[]? Segments;
+    }
+
+    private sealed class PipelineArgumentParser
+    {
+        private readonly string[] _args;
+        private int _index;
+
+        public PipelineArgumentParser(string[] args)
+        {
+            _args = args;
+        }
+
+        public PipelineOptions Options = new();
+
+        public int ExitCode;
+
+        private bool HasValue => _index + 1 < _args.Length;
+
+        public bool TryParse()
+        {
+            for (_index = 0; _index < _args.Length; _index++)
+            {
+                if (IsHelp())
+                {
+                    PrintHelp();
+                    return false;
+                }
+
+                ArgumentResult result = TryApplyArgument();
+                if (result == ArgumentResult.Failed)
+                {
+                    return false;
+                }
+
+                if (result == ArgumentResult.Handled)
+                {
+                    continue;
+                }
+
+                ReportUnknownOption();
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool IsHelp()
+        {
+            return _args[_index] is "-h" or "--help";
+        }
+
+        private void ReportUnknownOption()
+        {
+            Console.Error.WriteLine($"Unknown option '{_args[_index]}' for 'pipeline'.");
+            PrintHelp();
+            ExitCode = 1;
+        }
+
+        private ArgumentResult TryApplyArgument()
+        {
+            ArgumentResult result = TryApplyPathArgument();
+            if (result != ArgumentResult.NotHandled)
+            {
+                return result;
+            }
+
+            result = TryApplyLanguageArgument();
+            if (result != ArgumentResult.NotHandled)
+            {
+                return result;
+            }
+
+            result = TryApplyFlagArgument();
+            if (result != ArgumentResult.NotHandled)
+            {
+                return result;
+            }
+
+            return TryApplyNumericArgument();
+        }
+
+        private ArgumentResult TryApplyPathArgument()
+        {
+            if (!HasValue)
+            {
+                return ArgumentResult.NotHandled;
+            }
+
+            switch (_args[_index])
+            {
+                case "--audio":
+                    Options.Audio = NextValue();
+                    break;
+                case "--input":
+                    Options.Input = NextValue();
+                    break;
+                case "--scene-input":
+                    Options.SceneInput = NextValue();
+                    break;
+                case "--output":
+                    Options.Output = NextValue();
+                    break;
+                default:
+                    return ArgumentResult.NotHandled;
+            }
+
+            _index++;
+            return ArgumentResult.Handled;
+        }
+
+        private ArgumentResult TryApplyLanguageArgument()
+        {
+            if (!HasValue)
+            {
+                return ArgumentResult.NotHandled;
+            }
+
+            switch (_args[_index])
+            {
+                case "--from":
+                    Options.From = NextValue();
+                    break;
+                case "--to":
+                    Options.To = NextValue();
+                    break;
+                default:
+                    return ArgumentResult.NotHandled;
+            }
+
+            _index++;
+            return ArgumentResult.Handled;
+        }
+
+        private ArgumentResult TryApplyFlagArgument()
+        {
+            switch (_args[_index])
+            {
+                case "--no-scene":
+                    Options.Scene = false;
+                    return ArgumentResult.Handled;
+                case "--audition":
+                    Options.Audition = true;
+                    return ArgumentResult.Handled;
+                case "--speed-retake":
+                    Options.SpeedRetake = true;
+                    return ArgumentResult.Handled;
+                case "--no-emotion-tags":
+                    Options.EmotionTags = false;
+                    return ArgumentResult.Handled;
+                default:
+                    return ArgumentResult.NotHandled;
+            }
+        }
+
+        private ArgumentResult TryApplyNumericArgument()
+        {
+            if (!HasValue)
+            {
+                return ArgumentResult.NotHandled;
+            }
+
+            string option = _args[_index];
+            if (option == "--speed-retake-cap")
+            {
+                return ApplySpeedRetakeCap();
+            }
+
+            if (option == "--max-attempts")
+            {
+                return ApplyMaxAttempts();
+            }
+
+            if (option == "--tolerance")
+            {
+                return ApplyTolerance();
+            }
+
+            if (option == "--cps")
+            {
+                return ApplyCps();
+            }
+
+            return ArgumentResult.NotHandled;
+        }
+
+        private ArgumentResult ApplySpeedRetakeCap()
+        {
+            if (TryParseSpeedRetakeCap() is not double cap)
+            {
+                Console.Error.WriteLine($"error: --speed-retake-cap must be between 1.0 and {SpeedRetakeMath.HardCeiling}.");
+                ExitCode = 1;
+                return ArgumentResult.Failed;
+            }
+
+            Options.SpeedRetakeCap = cap;
+            Options.SpeedRetake = true;
+            _index++;
+            return ArgumentResult.Handled;
+        }
+
+        private double? TryParseSpeedRetakeCap()
+        {
+            if (!double.TryParse(NextValue(), NumberStyles.Float, CultureInfo.InvariantCulture, out double cap))
+            {
+                return null;
+            }
+
+            return cap >= 1.0 && cap <= SpeedRetakeMath.HardCeiling ? cap : null;
+        }
+
+        private ArgumentResult ApplyMaxAttempts()
+        {
+            if (!int.TryParse(NextValue(), out int maxAttempts) || maxAttempts < 0)
+            {
+                Console.Error.WriteLine("error: --max-attempts must be a non-negative integer.");
+                ExitCode = 1;
+                return ArgumentResult.Failed;
+            }
+
+            Options.MaxAttempts = maxAttempts;
+            Options.HasMaxAttempts = true;
+            _index++;
+            return ArgumentResult.Handled;
+        }
+
+        private ArgumentResult ApplyTolerance()
+        {
+            if (!double.TryParse(NextValue(), NumberStyles.Float, CultureInfo.InvariantCulture, out double tolerance) || tolerance < 0)
+            {
+                Console.Error.WriteLine("error: --tolerance must be a non-negative number (fraction, e.g. 0.10 for 10%).");
+                ExitCode = 1;
+                return ArgumentResult.Failed;
+            }
+
+            Options.Tolerance = tolerance;
+            Options.HasTolerance = true;
+            _index++;
+            return ArgumentResult.Handled;
+        }
+
+        private ArgumentResult ApplyCps()
+        {
+            if (!double.TryParse(NextValue(), NumberStyles.Float, CultureInfo.InvariantCulture, out double cps) || cps <= 0)
+            {
+                Console.Error.WriteLine("error: --cps must be a positive number (characters per second).");
+                ExitCode = 1;
+                return ArgumentResult.Failed;
+            }
+
+            Options.Cps = cps;
+            Options.HasCps = true;
+            _index++;
+            return ArgumentResult.Handled;
+        }
+
+        private string NextValue()
+        {
+            return _args[_index + 1];
+        }
     }
 }

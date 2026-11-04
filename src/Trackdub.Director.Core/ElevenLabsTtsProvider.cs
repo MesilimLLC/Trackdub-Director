@@ -14,7 +14,7 @@ namespace Trackdub.Director.Core;
 public sealed class ElevenLabsTtsProvider : ITtsProvider, IDisposable
 {
     /// <summary>Multilingual model used for Spanish synthesis.</summary>
-    public const string DefaultModelId = "eleven_multilingual_v2";
+    public const string DefaultModelId = "eleven_v4";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -51,6 +51,25 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider, IDisposable
 
     public string ModelId => _modelId;
 
+    // Older ElevenLabs models accept voice_settings without a speed control;
+    // speed is feature-detected per model, never assumed.
+    private static readonly string[] SpeedUnsupportedModelIds = ["eleven_monolingual_v1", "eleven_multilingual_v1"];
+
+    public bool SupportsSpeedSetting(string modelId)
+    {
+        return !SpeedUnsupportedModelIds.Contains(modelId, StringComparer.OrdinalIgnoreCase);
+    }
+
+    // Measured 2026-11-02: eleven_v3 honors bracket audio tags as delivery
+    // control; eleven_multilingual_v2 speaks them aloud. eleven_v4 was probed
+    // on the same terms. Tags go only to the measured models, never to a
+    // prefix guess: eleven_v4* variants get no tag until individually probed.
+    public bool SupportsEmotionTags(string modelId)
+    {
+        return modelId.StartsWith("eleven_v3", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(modelId, "eleven_v4", StringComparison.OrdinalIgnoreCase);
+    }
+
     public void EnsureConfigured()
     {
         _ = ElevenLabsAuth.GetApiKey();
@@ -64,25 +83,30 @@ public sealed class ElevenLabsTtsProvider : ITtsProvider, IDisposable
         return ParseVoices(body);
     }
 
-    public async Task<TtsSynthesisResult> SynthesizeAsync(string voiceId, string text, string languageCode, double? speed = null, CancellationToken cancellationToken = default)
+    public async Task<TtsSynthesisResult> SynthesizeAsync(TtsSynthesisRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(voiceId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(text);
-        ArgumentException.ThrowIfNullOrWhiteSpace(languageCode);
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.VoiceId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Text);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.LanguageCode);
 
-        string url = $"{ElevenLabsAuth.GetBaseUrl()}/text-to-speech/{Uri.EscapeDataString(voiceId.Trim())}?output_format=pcm_16000";
-        var payload = new SynthRequest(text, _modelId, languageCode.Trim(), speed is null ? null : new VoiceSettings(speed.Value));
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        AddAuth(request);
-        request.Content = new StringContent(JsonSerializer.Serialize(payload, JsonOptions), Encoding.UTF8, "application/json");
+        string url = $"{ElevenLabsAuth.GetBaseUrl()}/text-to-speech/{Uri.EscapeDataString(request.VoiceId.Trim())}?output_format=pcm_16000";
+        var payload = new SynthRequest(
+            request.Text,
+            _modelId,
+            request.LanguageCode.Trim(),
+            request.Speed is null ? null : new VoiceSettings(request.Speed.Value));
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url);
+        AddAuth(httpRequest);
+        httpRequest.Content = new StringContent(JsonSerializer.Serialize(payload, JsonOptions), Encoding.UTF8, "application/json");
 
-        byte[] audio = await SendForBytesAsync(request, cancellationToken).ConfigureAwait(false);
+        byte[] audio = await SendForBytesAsync(httpRequest, cancellationToken).ConfigureAwait(false);
         if (audio.Length == 0)
         {
             throw new TtsApiException("ElevenLabs synthesis returned no audio bytes.");
         }
 
-        return new TtsSynthesisResult(audio, text.Length);
+        return new TtsSynthesisResult(audio, request.Text.Length);
     }
 
     public void Dispose()

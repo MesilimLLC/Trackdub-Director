@@ -52,7 +52,8 @@ public static class VerifyOnlyService
             verified,
             report.Cast ?? [],
             sidecarHash is null ? [manifestHash] : [manifestHash, sidecarHash],
-            segments);
+            segments,
+            segments.Count(s => s.SpeedAdjustedWinner));
     }
 
     private static (AuditionReport Report, InputHash Hash) ReadManifest(string path, string label)
@@ -190,7 +191,8 @@ public static class VerifyOnlyService
             media,
             refusals,
             reasons.Length == 0 ? SegmentVerdict.Verified : SegmentVerdict.HumanReviewRequired,
-            reasons);
+            reasons,
+            SpeedAdjustedWinner: winner?.ComputedFactor is not null);
     }
 
     // Reuses the QA lane duration check (DurationEstimator.Fits), the same call the audition lane made when it

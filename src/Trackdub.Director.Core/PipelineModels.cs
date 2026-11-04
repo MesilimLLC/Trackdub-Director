@@ -40,7 +40,12 @@ public sealed record PipelineRequest(
     bool Audition = false,
     string SourceLanguage = "en",
     string TargetLanguage = "es",
-    string? AudioFileName = null);
+    string? AudioFileName = null,
+    // Audition lane options, exposed so the normal interfaces (CLI, HTTP) can
+    // enable the computed-speed retake or opt out of emotion tags. Null keeps
+    // each lane's shipped default (speed retake off, emotion tags on).
+    SpeedRetakeOptions? SpeedRetake = null,
+    EmotionTagOptions? EmotionTags = null);
 
 /// <summary>
 /// One orchestrated run. Each lane's report keeps its existing shape and

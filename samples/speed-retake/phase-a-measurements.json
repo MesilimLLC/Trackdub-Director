@@ -1,0 +1,602 @@
+[
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-001",
+    "Text": "Hola, Ashley.",
+    "RequestedSpeed": 1,
+    "MeasuredSeconds": 1.253875,
+    "Chars": 13
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-001",
+    "Text": "Hola, Ashley.",
+    "RequestedSpeed": 1.05,
+    "MeasuredSeconds": 1.2074375,
+    "Chars": 13
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-001",
+    "Text": "Hola, Ashley.",
+    "RequestedSpeed": 1.1,
+    "MeasuredSeconds": 0.9288125,
+    "Chars": 13
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-001",
+    "Text": "Hola, Ashley.",
+    "RequestedSpeed": 1.15,
+    "MeasuredSeconds": 0.97525,
+    "Chars": 13
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-001",
+    "Text": "Hola, Ashley.",
+    "RequestedSpeed": 1.2,
+    "MeasuredSeconds": 0.9288125,
+    "Chars": 13
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-002",
+    "Text": "Anna, \u00BFcu\u00E1l cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+    "RequestedSpeed": 1,
+    "MeasuredSeconds": 2.8328125,
+    "Chars": 43
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-002",
+    "Text": "Anna, \u00BFcu\u00E1l cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+    "RequestedSpeed": 1.05,
+    "MeasuredSeconds": 2.87925,
+    "Chars": 43
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-002",
+    "Text": "Anna, \u00BFcu\u00E1l cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+    "RequestedSpeed": 1.1,
+    "MeasuredSeconds": 2.50775,
+    "Chars": 43
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-002",
+    "Text": "Anna, \u00BFcu\u00E1l cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+    "RequestedSpeed": 1.15,
+    "MeasuredSeconds": 2.6935,
+    "Chars": 43
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-002",
+    "Text": "Anna, \u00BFcu\u00E1l cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+    "RequestedSpeed": 1.2,
+    "MeasuredSeconds": 2.13625,
+    "Chars": 43
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-003",
+    "Text": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+    "RequestedSpeed": 1,
+    "MeasuredSeconds": 4.04025,
+    "Chars": 61
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-003",
+    "Text": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+    "RequestedSpeed": 1.05,
+    "MeasuredSeconds": 3.8080625,
+    "Chars": 61
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-003",
+    "Text": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+    "RequestedSpeed": 1.1,
+    "MeasuredSeconds": 3.390125,
+    "Chars": 61
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-003",
+    "Text": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+    "RequestedSpeed": 1.15,
+    "MeasuredSeconds": 3.1579375,
+    "Chars": 61
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-003",
+    "Text": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+    "RequestedSpeed": 1.2,
+    "MeasuredSeconds": 2.786375,
+    "Chars": 61
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-004",
+    "Text": "\u00BFUna tienda departamental grande? \u00A1Ah, la veo!",
+    "RequestedSpeed": 1,
+    "MeasuredSeconds": 3.1115,
+    "Chars": 46
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-004",
+    "Text": "\u00BFUna tienda departamental grande? \u00A1Ah, la veo!",
+    "RequestedSpeed": 1.05,
+    "MeasuredSeconds": 2.8328125,
+    "Chars": 46
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-004",
+    "Text": "\u00BFUna tienda departamental grande? \u00A1Ah, la veo!",
+    "RequestedSpeed": 1.1,
+    "MeasuredSeconds": 2.87925,
+    "Chars": 46
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-004",
+    "Text": "\u00BFUna tienda departamental grande? \u00A1Ah, la veo!",
+    "RequestedSpeed": 1.15,
+    "MeasuredSeconds": 2.50775,
+    "Chars": 46
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-004",
+    "Text": "\u00BFUna tienda departamental grande? \u00A1Ah, la veo!",
+    "RequestedSpeed": 1.2,
+    "MeasuredSeconds": 2.322,
+    "Chars": 46
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-005",
+    "Text": "\u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+    "RequestedSpeed": 1,
+    "MeasuredSeconds": 2.1826875,
+    "Chars": 34
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-005",
+    "Text": "\u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+    "RequestedSpeed": 1.05,
+    "MeasuredSeconds": 2.0898125,
+    "Chars": 34
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-005",
+    "Text": "\u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+    "RequestedSpeed": 1.1,
+    "MeasuredSeconds": 2.0898125,
+    "Chars": 34
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-005",
+    "Text": "\u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+    "RequestedSpeed": 1.15,
+    "MeasuredSeconds": 2.043375,
+    "Chars": 34
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-005",
+    "Text": "\u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+    "RequestedSpeed": 1.2,
+    "MeasuredSeconds": 1.9969375,
+    "Chars": 34
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-006",
+    "Text": "Vale. Nos vemos pronto.",
+    "RequestedSpeed": 1,
+    "MeasuredSeconds": 1.857625,
+    "Chars": 23
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-006",
+    "Text": "Vale. Nos vemos pronto.",
+    "RequestedSpeed": 1.05,
+    "MeasuredSeconds": 1.6718125,
+    "Chars": 23
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-006",
+    "Text": "Vale. Nos vemos pronto.",
+    "RequestedSpeed": 1.1,
+    "MeasuredSeconds": 1.5789375,
+    "Chars": 23
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-006",
+    "Text": "Vale. Nos vemos pronto.",
+    "RequestedSpeed": 1.15,
+    "MeasuredSeconds": 1.34675,
+    "Chars": 23
+  },
+  {
+    "Voice": "Alice",
+    "VoiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-006",
+    "Text": "Vale. Nos vemos pronto.",
+    "RequestedSpeed": 1.2,
+    "MeasuredSeconds": 1.253875,
+    "Chars": 23
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-001",
+    "Text": "Hola, Ashley.",
+    "RequestedSpeed": 1,
+    "MeasuredSeconds": 1.0216875,
+    "Chars": 13
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-001",
+    "Text": "Hola, Ashley.",
+    "RequestedSpeed": 1.05,
+    "MeasuredSeconds": 0.97525,
+    "Chars": 13
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-001",
+    "Text": "Hola, Ashley.",
+    "RequestedSpeed": 1.1,
+    "MeasuredSeconds": 0.97525,
+    "Chars": 13
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-001",
+    "Text": "Hola, Ashley.",
+    "RequestedSpeed": 1.15,
+    "MeasuredSeconds": 0.9288125,
+    "Chars": 13
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-001",
+    "Text": "Hola, Ashley.",
+    "RequestedSpeed": 1.2,
+    "MeasuredSeconds": 0.8359375,
+    "Chars": 13
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-002",
+    "Text": "Anna, \u00BFcu\u00E1l cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+    "RequestedSpeed": 1,
+    "MeasuredSeconds": 2.9256875,
+    "Chars": 43
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-002",
+    "Text": "Anna, \u00BFcu\u00E1l cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+    "RequestedSpeed": 1.05,
+    "MeasuredSeconds": 2.600625,
+    "Chars": 43
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-002",
+    "Text": "Anna, \u00BFcu\u00E1l cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+    "RequestedSpeed": 1.1,
+    "MeasuredSeconds": 2.2755625,
+    "Chars": 43
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-002",
+    "Text": "Anna, \u00BFcu\u00E1l cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+    "RequestedSpeed": 1.15,
+    "MeasuredSeconds": 2.229125,
+    "Chars": 43
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-002",
+    "Text": "Anna, \u00BFcu\u00E1l cafeter\u00EDa? Hay tres cafeter\u00EDas.",
+    "RequestedSpeed": 1.2,
+    "MeasuredSeconds": 2.3684375,
+    "Chars": 43
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-003",
+    "Text": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+    "RequestedSpeed": 1,
+    "MeasuredSeconds": 3.761625,
+    "Chars": 61
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-003",
+    "Text": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+    "RequestedSpeed": 1.05,
+    "MeasuredSeconds": 3.6223125,
+    "Chars": 61
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-003",
+    "Text": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+    "RequestedSpeed": 1.1,
+    "MeasuredSeconds": 3.4365625,
+    "Chars": 61
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-003",
+    "Text": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+    "RequestedSpeed": 1.15,
+    "MeasuredSeconds": 2.786375,
+    "Chars": 61
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-003",
+    "Text": "Vale, mi apartamento est\u00E1 enfrente de unos grandes almacenes.",
+    "RequestedSpeed": 1.2,
+    "MeasuredSeconds": 2.9256875,
+    "Chars": 61
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-004",
+    "Text": "\u00BFUna tienda departamental grande? \u00A1Ah, la veo!",
+    "RequestedSpeed": 1,
+    "MeasuredSeconds": 2.7399375,
+    "Chars": 46
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-004",
+    "Text": "\u00BFUna tienda departamental grande? \u00A1Ah, la veo!",
+    "RequestedSpeed": 1.05,
+    "MeasuredSeconds": 2.786375,
+    "Chars": 46
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-004",
+    "Text": "\u00BFUna tienda departamental grande? \u00A1Ah, la veo!",
+    "RequestedSpeed": 1.1,
+    "MeasuredSeconds": 2.6935,
+    "Chars": 46
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-004",
+    "Text": "\u00BFUna tienda departamental grande? \u00A1Ah, la veo!",
+    "RequestedSpeed": 1.15,
+    "MeasuredSeconds": 2.414875,
+    "Chars": 46
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-004",
+    "Text": "\u00BFUna tienda departamental grande? \u00A1Ah, la veo!",
+    "RequestedSpeed": 1.2,
+    "MeasuredSeconds": 2.2755625,
+    "Chars": 46
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-005",
+    "Text": "\u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+    "RequestedSpeed": 1,
+    "MeasuredSeconds": 1.857625,
+    "Chars": 34
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-005",
+    "Text": "\u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+    "RequestedSpeed": 1.05,
+    "MeasuredSeconds": 2.13625,
+    "Chars": 34
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-005",
+    "Text": "\u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+    "RequestedSpeed": 1.1,
+    "MeasuredSeconds": 2.043375,
+    "Chars": 34
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-005",
+    "Text": "\u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+    "RequestedSpeed": 1.15,
+    "MeasuredSeconds": 1.7646875,
+    "Chars": 34
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-005",
+    "Text": "\u00A1Adi\u00F3s, Ashley! \u00A1Nos vemos pronto!",
+    "RequestedSpeed": 1.2,
+    "MeasuredSeconds": 1.71825,
+    "Chars": 34
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-006",
+    "Text": "Vale. Nos vemos pronto.",
+    "RequestedSpeed": 1,
+    "MeasuredSeconds": 1.5789375,
+    "Chars": 23
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-006",
+    "Text": "Vale. Nos vemos pronto.",
+    "RequestedSpeed": 1.05,
+    "MeasuredSeconds": 1.34675,
+    "Chars": 23
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-006",
+    "Text": "Vale. Nos vemos pronto.",
+    "RequestedSpeed": 1.1,
+    "MeasuredSeconds": 1.34675,
+    "Chars": 23
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-006",
+    "Text": "Vale. Nos vemos pronto.",
+    "RequestedSpeed": 1.15,
+    "MeasuredSeconds": 1.34675,
+    "Chars": 23
+  },
+  {
+    "Voice": "Bella",
+    "VoiceId": "hpp4J3VqNfWAUOO0d1Us",
+    "ModelId": "eleven_multilingual_v2",
+    "LineId": "voa10-006",
+    "Text": "Vale. Nos vemos pronto.",
+    "RequestedSpeed": 1.2,
+    "MeasuredSeconds": 1.253875,
+    "Chars": 23
+  }
+]

@@ -115,15 +115,15 @@ public sealed class AuditionServiceTests
             return Task.FromResult<IReadOnlyList<TtsVoice>>(Voices.ToArray());
         }
 
-        public Task<TtsSynthesisResult> SynthesizeAsync(string voiceId, string text, string languageCode, double? speed = null, CancellationToken cancellationToken = default)
+        public Task<TtsSynthesisResult> SynthesizeAsync(TtsSynthesisRequest request, CancellationToken cancellationToken = default)
         {
-            SynthCalls.Add((voiceId, text));
-            SynthSpeeds.Add(speed);
+            SynthCalls.Add((request.VoiceId, request.Text));
+            SynthSpeeds.Add(request.Speed);
             double seconds = _durations.Count > 0 ? _durations.Dequeue() : 1.0;
             int frames = (int)Math.Round(seconds * PcmSampleRate);
             byte[] pcm = new byte[frames * 2];
             byte[] wav = AudioDuration.ToWav(pcm, Format);
-            return Task.FromResult(new TtsSynthesisResult(wav, text.Length));
+            return Task.FromResult(new TtsSynthesisResult(wav, request.Text.Length));
         }
 
         public static TtsVoice[] DefaultVoices()
@@ -150,44 +150,61 @@ public sealed class AuditionServiceTests
 
         public MetaClient BuildClient()
         {
-            var handler = new DelegatingHandlerStub(async (request, cancellationToken) =>
-            {
-                Calls++;
-                string body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                if (body.Contains(MeaningGate.MeaningMarker, StringComparison.Ordinal))
-                {
-                    if (MeaningJsons.Count == 0)
-                    {
-                        throw new InvalidOperationException("No more canned meaning JSON queued.");
-                    }
-
-                    return ChatResponse(new ChatReply
-                    {
-                        Content = MeaningJsons.Dequeue(),
-                        PromptTokens = 7,
-                        CompletionTokens = 4,
-                    });
-                }
-
-                if (body.Contains("Alternates wanted", StringComparison.Ordinal))
-                {
-                    VariantsCalls++;
-                    if (VariantsJsons.Count == 0)
-                    {
-                        throw new InvalidOperationException("No more canned variants JSON queued.");
-                    }
-
-                    return ChatResponse(new ChatReply { Content = VariantsJsons.Dequeue() });
-                }
-
-                if (Translations.Count == 0)
-                {
-                    throw new InvalidOperationException("No more canned translations queued.");
-                }
-
-                return ChatResponse(new ChatReply { Content = Translations.Dequeue() });
-            });
+            var handler = new DelegatingHandlerStub(HandleAsync);
             return new MetaClient(new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(60) });
+        }
+
+        private async Task<HttpResponseMessage> HandleAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Calls++;
+            string body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (body.Contains(MeaningGate.MeaningMarker, StringComparison.Ordinal))
+            {
+                return MeaningResponse();
+            }
+
+            if (body.Contains("Alternates wanted", StringComparison.Ordinal))
+            {
+                return VariantsResponse();
+            }
+
+            return TranslationResponse();
+        }
+
+        private HttpResponseMessage MeaningResponse()
+        {
+            if (MeaningJsons.Count == 0)
+            {
+                throw new InvalidOperationException("No more canned meaning JSON queued.");
+            }
+
+            return ChatResponse(new ChatReply
+            {
+                Content = MeaningJsons.Dequeue(),
+                PromptTokens = 7,
+                CompletionTokens = 4,
+            });
+        }
+
+        private HttpResponseMessage VariantsResponse()
+        {
+            VariantsCalls++;
+            if (VariantsJsons.Count == 0)
+            {
+                throw new InvalidOperationException("No more canned variants JSON queued.");
+            }
+
+            return ChatResponse(new ChatReply { Content = VariantsJsons.Dequeue() });
+        }
+
+        private HttpResponseMessage TranslationResponse()
+        {
+            if (Translations.Count == 0)
+            {
+                throw new InvalidOperationException("No more canned translations queued.");
+            }
+
+            return ChatResponse(new ChatReply { Content = Translations.Dequeue() });
         }
     }
 
@@ -212,26 +229,23 @@ public sealed class AuditionServiceTests
             [new AuditionSegmentInput("seg-1", "We need one more take.", 2.0, "anna")], "en", "es");
 
         // Casting picks the two eligible stock voices in name order.
-        Assert.Equal("Alba", report.Cast.Single(c => c.SpeakerId == "anna").VoiceName);
-        Assert.Equal("Zoe", report.Cast.Single(c => c.SpeakerId == "ashley").VoiceName);
+        Assert.Equal(
+            ("Alba", "Zoe"),
+            (report.Cast.Single(c => c.SpeakerId == "anna").VoiceName, report.Cast.Single(c => c.SpeakerId == "ashley").VoiceName));
 
         // Only the meaning-passing revision was synthesized (call counts prove the gate).
         AuditionSegmentReport line = Assert.Single(report.Segments);
         Assert.Equal(2, line.Takes.Length);
 
         AuditionTakeReport failed = line.Takes[0];
-        Assert.Equal(MeaningVerdict.Fail, failed.MeaningVerdict);
-        Assert.False(failed.Synthesized);
+        Assert.Equal((MeaningVerdict.Fail, false), (failed.MeaningVerdict, failed.Synthesized));
 
         AuditionTakeReport passed = line.Takes[1];
-        Assert.Equal(MeaningVerdict.Pass, passed.MeaningVerdict);
-        Assert.True(passed.Synthesized);
+        Assert.Equal((MeaningVerdict.Pass, true), (passed.MeaningVerdict, passed.Synthesized));
 
-        List<(string VoiceId, string Text)> calls = tts.SynthCalls;
-        Assert.Single(calls);
-        Assert.Equal("Necesitamos una toma mas.", calls[0].Text);
-        Assert.Equal("voice-alba", calls[0].VoiceId);
-
+        Assert.Equal(
+            (1, "Necesitamos una toma mas.", "voice-alba"),
+            (tts.SynthCalls.Count, tts.SynthCalls[0].Text, tts.SynthCalls[0].VoiceId));
         Assert.True(line.Cast);
     }
 
@@ -386,29 +400,19 @@ public sealed class AuditionServiceTests
         AuditionReport report = await BuildService(meta, tts).RunAsync(
             [new AuditionSegmentInput("seg-1", "A long line that runs over.", 4.0, "anna")], "en", "es");
 
-        AuditionSegmentReport line = Assert.Single(report.Segments);
-        Assert.False(line.Cast);
-        Assert.Null(line.WinnerTakeNumber);
-        Assert.Null(line.WinnerFileName);
+        AuditionSegmentReport line = report.Segments[0];
+        Assert.Equal(
+            (1, false, (int?)null, (string?)null),
+            (report.Segments.Length, line.Cast, line.WinnerTakeNumber, line.WinnerFileName));
 
         AuditionTotals totals = report.Totals;
-        Assert.Equal(0, totals.LinesCast);
-        Assert.Equal(5, line.Takes.Length);
-        Assert.Equal(5, totals.TakesSynthesized);
-        Assert.Equal(QaAttemptKind.Alternate, line.Takes[3].Kind);
-        Assert.Equal(QaAttemptKind.SpeedVariant, line.Takes[4].Kind);
-        Assert.Equal(AuditionService.SpeedVariantFactor, line.Takes[4].SpeedFactor);
-        Assert.All(line.Takes, t =>
-        {
-            Assert.Equal(MeaningVerdict.Pass, t.MeaningVerdict);
-            Assert.True(t.Synthesized);
-            AuditionTimingVerdict timing = t.TimingVerdict;
-            Assert.Equal(AuditionTimingVerdict.Fail, timing);
-            Assert.False(t.IsWinner);
-        });
+        Assert.Equal(
+            (0, 5, 5, QaAttemptKind.Alternate, QaAttemptKind.SpeedVariant, AuditionService.SpeedVariantFactor, 9),
+            (totals.LinesCast, line.Takes.Length, totals.TakesSynthesized, line.Takes[3].Kind, line.Takes[4].Kind, line.Takes[4].SpeedFactor!.Value, totals.MetaCalls));
 
-        // 4 QA translations + 3 candidate meaning checks + 1 variants call + 1 alternate meaning check.
-        Assert.Equal(9, totals.MetaCalls);
+        Assert.All(line.Takes, t => Assert.Equal(
+            (MeaningVerdict.Pass, true, AuditionTimingVerdict.Fail, false),
+            (t.MeaningVerdict, t.Synthesized, t.TimingVerdict, t.IsWinner)));
     }
 
     [Fact]
@@ -429,21 +433,14 @@ public sealed class AuditionServiceTests
 
         // Five 600-char takes reach exactly 3000; the sixth would exceed it.
         AuditionTotals totals = report.Totals;
-        Assert.True(totals.ElevenLabsCapHit);
-        Assert.False(totals.MetaCapHit);
-        Assert.Equal(3000, totals.ElevenLabsCharacters);
-
-        int synthesized = totals.TakesSynthesized;
-        Assert.Equal(5, synthesized);
-        Assert.Equal(5, tts.SynthCalls.Count);
+        Assert.Equal(
+            (true, false, 3000, 5, 5, 5),
+            (totals.ElevenLabsCapHit, totals.MetaCapHit, totals.ElevenLabsCharacters, totals.TakesSynthesized, tts.SynthCalls.Count, totals.LinesCast));
 
         AuditionSegmentReport last = report.Segments[^1];
         AuditionTakeReport lastTake = last.Takes[0];
-        Assert.False(lastTake.Synthesized);
+        Assert.Equal((false, false), (lastTake.Synthesized, last.Cast));
         Assert.Contains("cap", lastTake.SynthesisNote ?? string.Empty, StringComparison.OrdinalIgnoreCase);
-        Assert.False(last.Cast);
-
-        Assert.Equal(5, totals.LinesCast);
     }
 
     [Fact]
@@ -482,27 +479,18 @@ public sealed class AuditionServiceTests
         AuditionReport report = await BuildService(meta, tts).RunAsync(
             [new AuditionSegmentInput("seg-1", "Hi, Ashley.", 2.0, "anna")], "en", "es");
 
-        AuditionSegmentReport line = Assert.Single(report.Segments);
-        Assert.Equal(3, line.Takes.Length);
-        Assert.Equal(QaAttemptKind.Initial, line.Takes[0].Kind);
-        Assert.Equal(QaAttemptKind.Alternate, line.Takes[1].Kind);
-        Assert.Equal(QaAttemptKind.Alternate, line.Takes[2].Kind);
-        Assert.All(line.Takes, t => Assert.Equal(MeaningVerdict.Pass, t.MeaningVerdict));
-        Assert.All(line.Takes, t => Assert.True(t.Synthesized));
-
-        Assert.True(line.Cast);
-        Assert.Equal(3, line.WinnerTakeNumber);
-        Assert.Equal("seg-1-take3.wav", line.WinnerFileName);
-        Assert.Equal("Saludos, Ashley.", line.Takes[2].Text);
+        AuditionSegmentReport line = report.Segments[0];
+        Assert.Equal(
+            (1, 3, QaAttemptKind.Initial, QaAttemptKind.Alternate, QaAttemptKind.Alternate, true, 3, "seg-1-take3.wav", "Saludos, Ashley."),
+            (report.Segments.Length, line.Takes.Length, line.Takes[0].Kind, line.Takes[1].Kind, line.Takes[2].Kind, line.Cast, line.WinnerTakeNumber!.Value, line.WinnerFileName!, line.Takes[2].Text));
+        Assert.All(line.Takes, t => Assert.Equal(
+            (MeaningVerdict.Pass, true),
+            (t.MeaningVerdict, t.Synthesized)));
 
         // 1 translation + 1 QA meaning + 1 variants + 2 alternate meaning checks.
-        Assert.Equal(5, report.Totals.MetaCalls);
-        Assert.Equal(5, meta.Calls);
-        Assert.Equal(1, meta.VariantsCalls);
-        Assert.Equal(3, report.Totals.TakesSynthesized);
-        // A winner was found among the alternates, so no speed variant was synthesized.
-        Assert.DoesNotContain(line.Takes, t => t.Kind == QaAttemptKind.SpeedVariant);
-        Assert.All(tts.SynthSpeeds, s => Assert.Null(s));
+        Assert.Equal(
+            (5, 5, 1, 3, false, true),
+            (report.Totals.MetaCalls, meta.Calls, meta.VariantsCalls, report.Totals.TakesSynthesized, line.Takes.Any(t => t.Kind == QaAttemptKind.SpeedVariant), tts.SynthSpeeds.All(s => s is null)));
     }
 
     [Fact]
@@ -520,22 +508,16 @@ public sealed class AuditionServiceTests
         AuditionReport report = await BuildService(meta, tts).RunAsync(
             [new AuditionSegmentInput("seg-1", "Hi, Ashley.", 2.0, "anna")], "en", "es");
 
-        AuditionSegmentReport line = Assert.Single(report.Segments);
-        Assert.Equal(3, line.Takes.Length);
-
-        AuditionTakeReport failedAlternate = line.Takes[1];
-        Assert.Equal(QaAttemptKind.Alternate, failedAlternate.Kind);
-        Assert.Equal(MeaningVerdict.Fail, failedAlternate.MeaningVerdict);
-        Assert.False(failedAlternate.Synthesized);
-        Assert.Contains("Meaning gate", failedAlternate.SynthesisNote);
+        AuditionSegmentReport line = report.Segments[0];
+        Assert.Equal(
+            (1, 3, QaAttemptKind.Alternate, MeaningVerdict.Fail, false),
+            (report.Segments.Length, line.Takes.Length, line.Takes[1].Kind, line.Takes[1].MeaningVerdict, line.Takes[1].Synthesized));
+        Assert.Contains("Meaning gate", line.Takes[1].SynthesisNote);
 
         // Only the initial candidate and the meaning-passing alternate reached TTS.
-        Assert.Equal(2, tts.SynthCalls.Count);
-        Assert.Equal("Hola, Ashley.", tts.SynthCalls[0].Text);
-        Assert.Equal("Saludos, Ashley.", tts.SynthCalls[1].Text);
-        Assert.Equal(2, report.Totals.TakesSynthesized);
-        Assert.True(line.Cast);
-        Assert.Equal(3, line.WinnerTakeNumber);
+        Assert.Equal(
+            (2, "Hola, Ashley.", "Saludos, Ashley.", 2, true, 3),
+            (tts.SynthCalls.Count, tts.SynthCalls[0].Text, tts.SynthCalls[1].Text, report.Totals.TakesSynthesized, line.Cast, line.WinnerTakeNumber!.Value));
     }
 
     [Fact]
@@ -554,22 +536,11 @@ public sealed class AuditionServiceTests
         AuditionReport report = await BuildService(meta, tts).RunAsync(
             [new AuditionSegmentInput("seg-1", "Hi, Ashley.", 2.0, "anna")], "en", "es");
 
-        AuditionSegmentReport line = Assert.Single(report.Segments);
-        Assert.Equal(3, line.Takes.Length);
-
+        AuditionSegmentReport line = report.Segments[0];
         AuditionTakeReport speed = line.Takes[2];
-        Assert.Equal(QaAttemptKind.SpeedVariant, speed.Kind);
-        Assert.Equal(AuditionService.SpeedVariantFactor, speed.SpeedFactor);
-        Assert.Equal("Saludos, Ashley.", speed.Text);
-        Assert.Equal(MeaningVerdict.Pass, speed.MeaningVerdict);
-        Assert.Equal(0, speed.MeaningTokens);
-        Assert.True(speed.Synthesized);
-        Assert.NotNull(speed.MeasuredSeconds);
-        Assert.Equal(2.1, speed.MeasuredSeconds!.Value, 3);
-        Assert.Equal(AuditionTimingVerdict.Pass, speed.TimingVerdict);
-        Assert.True(speed.IsWinner);
-        Assert.True(line.Cast);
-        Assert.Equal(3, line.WinnerTakeNumber);
+        Assert.Equal(
+            (1, 3, QaAttemptKind.SpeedVariant, AuditionService.SpeedVariantFactor, "Saludos, Ashley.", MeaningVerdict.Pass, 0, true, 2.1, AuditionTimingVerdict.Pass, true, 3, "seg-1-take3.wav"),
+            (report.Segments.Length, line.Takes.Length, speed.Kind, speed.SpeedFactor!.Value, speed.Text, speed.MeaningVerdict, speed.MeaningTokens, speed.Synthesized, speed.MeasuredSeconds!.Value, speed.TimingVerdict, speed.IsWinner, line.WinnerTakeNumber!.Value, line.WinnerFileName!));
 
         Assert.Equal([null, null, AuditionService.SpeedVariantFactor], tts.SynthSpeeds);
         // No Meta call for the speed variant: 1 translation + 1 QA meaning + 1 variants + 1 alternate meaning.
@@ -589,19 +560,12 @@ public sealed class AuditionServiceTests
         AuditionReport report = await BuildService(meta, tts).RunAsync(
             [new AuditionSegmentInput("seg-1", "A long line that runs over.", 4.0, "anna")], "en", "es");
 
-        AuditionSegmentReport line = Assert.Single(report.Segments);
+        AuditionSegmentReport line = report.Segments[0];
         // 3 candidates + 2 alternates synthesized = the all-in cap of 5; the speed
         // variant is listed but not synthesized, with the cap note preserved.
-        Assert.Equal(6, line.Takes.Length);
-        Assert.Equal(5, line.Takes.Count(t => t.Synthesized));
-        Assert.Equal(5, report.Totals.TakesSynthesized);
-        Assert.Equal(5, tts.SynthCalls.Count);
-
-        AuditionTakeReport speed = line.Takes[5];
-        Assert.Equal(QaAttemptKind.SpeedVariant, speed.Kind);
-        Assert.False(speed.Synthesized);
-        Assert.Contains("cap", speed.SynthesisNote ?? string.Empty, StringComparison.OrdinalIgnoreCase);
-        Assert.False(line.Cast);
-        Assert.Null(line.WinnerTakeNumber);
+        Assert.Equal(
+            (1, 6, 5, 5, 5, QaAttemptKind.SpeedVariant, false, false, (int?)null),
+            (report.Segments.Length, line.Takes.Length, line.Takes.Count(t => t.Synthesized), report.Totals.TakesSynthesized, tts.SynthCalls.Count, line.Takes[5].Kind, line.Takes[5].Synthesized, line.Cast, line.WinnerTakeNumber));
+        Assert.Contains("cap", line.Takes[5].SynthesisNote ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 }

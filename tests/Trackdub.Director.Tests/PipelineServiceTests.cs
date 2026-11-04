@@ -56,12 +56,12 @@ public sealed class PipelineServiceTests
             ]);
         }
 
-        public Task<TtsSynthesisResult> SynthesizeAsync(string voiceId, string text, string languageCode, double? speed = null, CancellationToken cancellationToken = default)
+        public Task<TtsSynthesisResult> SynthesizeAsync(TtsSynthesisRequest request, CancellationToken cancellationToken = default)
         {
             SynthCalls++;
             byte[] pcm = new byte[16000 * 2];
             byte[] wav = AudioDuration.ToWav(pcm, new PcmFormat { SampleRate = 16000, Channels = 1, BitsPerSample = 16 });
-            return Task.FromResult(new TtsSynthesisResult(wav, text.Length));
+            return Task.FromResult(new TtsSynthesisResult(wav, request.Text.Length));
         }
     }
 
@@ -190,6 +190,69 @@ public sealed class PipelineServiceTests
         return report.Stages.Single(s => s.Stage == stage);
     }
 
+    private static void AssertAllStagesRan(PipelineReport report)
+    {
+        string[] stages = ["transcribe", "qa", "scene", "audition"];
+        Assert.All(stages, stage => Assert.Equal(PipelineStageStatus.Ran, Stage(report, stage).Status));
+    }
+
+    private static void AssertAllLaneReportsPresent(PipelineReport report)
+    {
+        object?[] reports = [report.Transcribe, report.Qa, report.Scene, report.Audition];
+        Assert.All(reports, item => Assert.NotNull(item));
+    }
+
+    private static void AssertAuditionSkippedOffByDefault(PipelineReport report, FakeTts tts)
+    {
+        Assert.Equal(PipelineStageStatus.NotRun, Stage(report, "transcribe").Status);
+        Assert.Equal(PipelineStageStatus.Ran, Stage(report, "qa").Status);
+        Assert.Equal(PipelineStageStatus.SkippedByFlag, Stage(report, "audition").Status);
+        AssertNoAudition(report, tts);
+    }
+
+    private static void AssertAuditionSkippedWithoutKey(PipelineReport report, FakeTts tts)
+    {
+        PipelineStageReport stage = Stage(report, "audition");
+        Assert.Equal(PipelineStageStatus.SkippedByFlag, stage.Status);
+        Assert.Contains("ELEVENLABS_API_KEY", stage.Note, StringComparison.Ordinal);
+        AssertNoAudition(report, tts);
+    }
+
+    private static void AssertNoAudition(PipelineReport report, FakeTts tts)
+    {
+        Assert.Null(report.Audition);
+        Assert.Equal(0, tts.SynthCalls);
+    }
+
+    private static void AssertQaFailureStopsDownstream(PipelineReport report, FakeTts tts)
+    {
+        Assert.Equal(PipelineStageStatus.Failed, Stage(report, "qa").Status);
+        Assert.Equal(PipelineStageStatus.NotRun, Stage(report, "scene").Status);
+        Assert.Equal(PipelineStageStatus.NotRun, Stage(report, "audition").Status);
+        AssertNoSceneOrAudition(report, tts);
+    }
+
+    private static void AssertNoSceneOrAudition(PipelineReport report, FakeTts tts)
+    {
+        Assert.Null(report.Scene);
+        Assert.Null(report.Audition);
+        Assert.Equal(0, tts.SynthCalls);
+    }
+
+    private static void AssertTranscribeFailureStopsRun(PipelineReport report, MetaFake meta)
+    {
+        Assert.Equal(PipelineStageStatus.Failed, Stage(report, "transcribe").Status);
+        Assert.Equal(PipelineStageStatus.NotRun, Stage(report, "qa").Status);
+        AssertDownstreamNotRun(report);
+        Assert.Empty(meta.CallOrder);
+    }
+
+    private static void AssertDownstreamNotRun(PipelineReport report)
+    {
+        Assert.Equal(PipelineStageStatus.NotRun, Stage(report, "scene").Status);
+        Assert.Equal(PipelineStageStatus.NotRun, Stage(report, "audition").Status);
+    }
+
     [Fact]
     public async Task Full_run_executes_stages_in_order_and_keeps_lane_report_shapes()
     {
@@ -211,14 +274,8 @@ public sealed class PipelineServiceTests
             AudioFileName: "clip.wav");
         PipelineReport report = await service.RunAsync(request);
 
-        Assert.Equal(PipelineStageStatus.Ran, Stage(report, "transcribe").Status);
-        Assert.Equal(PipelineStageStatus.Ran, Stage(report, "qa").Status);
-        Assert.Equal(PipelineStageStatus.Ran, Stage(report, "scene").Status);
-        Assert.Equal(PipelineStageStatus.Ran, Stage(report, "audition").Status);
-        Assert.NotNull(report.Transcribe);
-        Assert.NotNull(report.Qa);
-        Assert.NotNull(report.Scene);
-        Assert.NotNull(report.Audition);
+        AssertAllStagesRan(report);
+        AssertAllLaneReportsPresent(report);
         Assert.Equal("seg-001", report.Segments[0].Id);
         Assert.Equal("A", report.Segments[0].Speaker);
 
@@ -239,11 +296,7 @@ public sealed class PipelineServiceTests
             Segments: [new TranscribeSegment("seg-001", "Hi, Ashley.", 1.2, "A")]);
         PipelineReport report = await service.RunAsync(request);
 
-        Assert.Equal(PipelineStageStatus.NotRun, Stage(report, "transcribe").Status);
-        Assert.Equal(PipelineStageStatus.Ran, Stage(report, "qa").Status);
-        Assert.Equal(PipelineStageStatus.SkippedByFlag, Stage(report, "audition").Status);
-        Assert.Null(report.Audition);
-        Assert.Equal(0, tts.SynthCalls);
+        AssertAuditionSkippedOffByDefault(report, tts);
     }
 
     [Fact]
@@ -261,11 +314,7 @@ public sealed class PipelineServiceTests
             Audition: true);
         PipelineReport report = await service.RunAsync(request);
 
-        PipelineStageReport stage = Stage(report, "audition");
-        Assert.Equal(PipelineStageStatus.SkippedByFlag, stage.Status);
-        Assert.Contains("ELEVENLABS_API_KEY", stage.Note, StringComparison.Ordinal);
-        Assert.Null(report.Audition);
-        Assert.Equal(0, tts.SynthCalls);
+        AssertAuditionSkippedWithoutKey(report, tts);
         // Only the QA lane's calls happened; the audition lane never ran.
         Assert.Equal(["translate", "meaning"], meta.CallOrder);
     }
@@ -325,12 +374,7 @@ public sealed class PipelineServiceTests
             Audition: true);
         PipelineReport report = await service.RunAsync(request);
 
-        Assert.Equal(PipelineStageStatus.Failed, Stage(report, "qa").Status);
-        Assert.Equal(PipelineStageStatus.NotRun, Stage(report, "scene").Status);
-        Assert.Equal(PipelineStageStatus.NotRun, Stage(report, "audition").Status);
-        Assert.Null(report.Scene);
-        Assert.Null(report.Audition);
-        Assert.Equal(0, tts.SynthCalls);
+        AssertQaFailureStopsDownstream(report, tts);
         Assert.All(meta.CallOrder, c => Assert.StartsWith("chat:", c, StringComparison.Ordinal));
     }
 
@@ -345,11 +389,7 @@ public sealed class PipelineServiceTests
         var request = new PipelineRequest([1, 2, 3], Segments: null, Audition: false);
         PipelineReport report = await service.RunAsync(request);
 
-        Assert.Equal(PipelineStageStatus.Failed, Stage(report, "transcribe").Status);
-        Assert.Equal(PipelineStageStatus.NotRun, Stage(report, "qa").Status);
-        Assert.Equal(PipelineStageStatus.NotRun, Stage(report, "scene").Status);
-        Assert.Equal(PipelineStageStatus.NotRun, Stage(report, "audition").Status);
-        Assert.Empty(meta.CallOrder);
+        AssertTranscribeFailureStopsRun(report, meta);
     }
 
     [Fact]

@@ -28,7 +28,7 @@ public sealed class SceneContextServiceTests
     // Independently restated scene-vision-v1 ask: the service constant must equal
     // this text character for character (the live prompt-token count is the
     // second oracle for the same property).
-    private const string ExpectedVisionPrompt = "Look at this video frame. Return strict JSON only, with no markdown fences and no commentary, using exactly these keys: scene_summary (one sentence describing the scene), emotion_tone_label (short label for the visible speaker's emotion or tone, or null if no speaker is visible), speaker_description (short phrase describing the visible speaker, or null if no speaker is visible), on_screen_text (array of exact text strings physically present in the scene only, such as signs and posters; do not include burned-in subtitles or captions, and do not include watermarks or logos), burned_in_text (array of exact text strings overlaid on the video only, namely burned-in subtitles or captions and watermarks or logos; do not include text physically present in the scene). Use an empty array when no text of that kind is visible. Transcribe text exactly as shown. Do not guess.";
+    private const string ExpectedVisionPrompt = "Look at this video frame. Return strict JSON only, with no markdown fences and no commentary, using exactly these keys: scene_summary (one sentence describing the scene), emotion_tone_label (short label for the visible speaker's emotion or tone, or null if no speaker is visible), pacing_label (short label for the visible speaker's delivery pacing and pausing, e.g. brisk, unhurried, halting with pauses, or null if no speaker is visible or pacing cannot be judged), speaker_description (short phrase describing the visible speaker, or null if no speaker is visible), on_screen_text (array of exact text strings physically present in the scene only, such as signs and posters; do not include burned-in subtitles or captions, and do not include watermarks or logos), burned_in_text (array of exact text strings overlaid on the video only, namely burned-in subtitles or captions and watermarks or logos; do not include text physically present in the scene). Use an empty array when no text of that kind is visible. Transcribe text exactly as shown. Do not guess.";
 
     private static HttpResponseMessage RawJson(string body)
     {
@@ -274,7 +274,7 @@ public sealed class SceneContextServiceTests
     private static void AssertVisionTemplateVerbatim()
     {
         Assert.Equal(ExpectedVisionPrompt, SceneContextService.VisionPromptText);
-        Assert.Equal("scene-vision-v1", SceneContextService.VisionPromptTemplateVersion);
+        Assert.Equal("scene-vision-v2", SceneContextService.VisionPromptTemplateVersion);
     }
 
     private static void AssertVisionRequest(HttpRequestMessage request)

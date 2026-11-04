@@ -243,7 +243,15 @@ internal static class ApiEndpoints
             return Results.BadRequest(new { error = optionsError });
         }
 
-        var pipelineRequest = new PipelineRequest(
+        var pipelineRequest = ToPipelineRequest(req, audio, from, to);
+
+        return await ApiHandlers.RunSerializedAsync(
+            () => ApiHandlers.RunPipelineWithReasoningAsync(client, transcribeClient, tts, options, pipelineRequest, ct), ct).ConfigureAwait(false);
+    }
+
+    private static PipelineRequest ToPipelineRequest(PipelineApiRequest req, byte[]? audio, string from, string to)
+    {
+        return new PipelineRequest(
             audio,
             audio is null ? req.Segments : null,
             req.SceneSegments,
@@ -251,10 +259,9 @@ internal static class ApiEndpoints
             Audition: req.Audition ?? false,
             SourceLanguage: from,
             TargetLanguage: to,
-            AudioFileName: req.AudioFileName);
-
-        return await ApiHandlers.RunSerializedAsync(
-            () => ApiHandlers.RunPipelineWithReasoningAsync(client, transcribeClient, tts, options, pipelineRequest, ct), ct).ConfigureAwait(false);
+            AudioFileName: req.AudioFileName,
+            SpeedRetake: req.SpeedRetake,
+            EmotionTags: req.EmotionTags);
     }
 
     // Validates audio/segments/scene input; decodes audio when present. Returns an error message or null.

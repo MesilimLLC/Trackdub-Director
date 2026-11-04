@@ -45,7 +45,7 @@ public sealed class SceneEndpointTests
         JsonElement visionProvenance = seg.GetProperty("vision_provenance");
         Assert.Equal("muse-spark-1.1", visionProvenance.GetProperty("requested_model_id").GetString());
         Assert.Equal("muse-spark-1.1", visionProvenance.GetProperty("model_id").GetString());
-        Assert.Equal("scene-vision-v1", visionProvenance.GetProperty("prompt_template_version").GetString());
+        Assert.Equal("scene-vision-v2", visionProvenance.GetProperty("prompt_template_version").GetString());
         JsonElement visionUsage = seg.GetProperty("vision_usage");
         Assert.Equal(3634, visionUsage.GetProperty("total_tokens").GetInt32());
         Assert.Equal(611, visionUsage.GetProperty("reasoning_tokens").GetInt32());
