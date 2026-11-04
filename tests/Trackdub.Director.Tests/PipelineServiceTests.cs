@@ -293,9 +293,10 @@ public sealed class PipelineServiceTests
 
         var request = new PipelineRequest(
             AudioWav: null,
-            Segments: [new TranscribeSegment("seg-001", "Hi, Ashley.", 1.2, "A")]);
+            Segments: [new TranscribeSegment("seg-001", "Hi, Ashley.", 1.2, "A", 0.25)]);
         PipelineReport report = await service.RunAsync(request);
 
+        Assert.Equal(0.25, report.Segments[0].StartSeconds);
         AssertAuditionSkippedOffByDefault(report, tts);
     }
 

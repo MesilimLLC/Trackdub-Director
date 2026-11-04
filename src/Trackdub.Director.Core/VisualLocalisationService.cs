@@ -19,6 +19,14 @@ public sealed class VisualLocalisationService : IDisposable
     /// <summary>Context padding (pixels) around the box sent to the model; only the box interior is composited back.</summary>
     public const int CropPaddingPixels = 20;
 
+    public const int MaxFrameBytes = 10 * 1024 * 1024;
+
+    public const int MaxFrameDimension = 4096;
+
+    public const int MaxFramePixels = 16_777_216;
+
+    public const int MinBoxPixels = 8;
+
     private readonly IMuseImageClient _client;
     private readonly bool _ownsClient;
 
@@ -199,6 +207,11 @@ public sealed class VisualLocalisationService : IDisposable
             return Failure(decodeError!);
         }
 
+        if (frameBytes!.Length > MaxFrameBytes)
+        {
+            return Failure($"Frame image exceeds the {MaxFrameBytes} byte limit.");
+        }
+
         RasterImage frame;
         try
         {
@@ -209,6 +222,16 @@ public sealed class VisualLocalisationService : IDisposable
             return Failure(ex.Message);
         }
 
+        if (frame.Width > MaxFrameDimension || frame.Height > MaxFrameDimension)
+        {
+            return Failure($"Frame dimensions {frame.Width}x{frame.Height} exceed the {MaxFrameDimension} pixel limit.");
+        }
+
+        if ((long)frame.Width * frame.Height > MaxFramePixels)
+        {
+            return Failure($"Frame dimensions {frame.Width}x{frame.Height} exceed the {MaxFramePixels} total pixel limit.");
+        }
+
         return await LocaliseRasterAsync(segment.Id, frame, segment.Box, segment.SourceText!, segment.TargetText!, cancellationToken).ConfigureAwait(false);
     }
 
@@ -217,6 +240,11 @@ public sealed class VisualLocalisationService : IDisposable
         if (box.X1 < 0 || box.Y1 < 0 || box.X2 <= box.X1 || box.Y2 <= box.Y1 || box.X2 > frame.Width || box.Y2 > frame.Height)
         {
             return $"Box ({box.X1},{box.Y1})-({box.X2},{box.Y2}) does not lie inside the {frame.Width}x{frame.Height} frame.";
+        }
+
+        if (box.X2 - box.X1 < MinBoxPixels || box.Y2 - box.Y1 < MinBoxPixels)
+        {
+            return $"Box must be at least {MinBoxPixels}x{MinBoxPixels} pixels.";
         }
 
         return null;
@@ -234,9 +262,9 @@ public sealed class VisualLocalisationService : IDisposable
 
         string trimmed = dataUrl.Trim();
         int marker = trimmed.IndexOf(";base64,", StringComparison.OrdinalIgnoreCase);
-        if (!trimmed.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) || marker < 0)
+        if (!trimmed.StartsWith("data:image/png;", StringComparison.OrdinalIgnoreCase) && !trimmed.StartsWith("data:image/jpeg;", StringComparison.OrdinalIgnoreCase) && !trimmed.StartsWith("data:image/webp;", StringComparison.OrdinalIgnoreCase) || marker < 0)
         {
-            error = "Frame image must be a base64 data:image data URL.";
+            error = "Frame image must be a base64 PNG, JPEG, or WebP data URL.";
             return false;
         }
 

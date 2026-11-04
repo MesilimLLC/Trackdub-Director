@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type AuditionReport,
   type DirectorAdaptationBatch,
+  type CopilotProposal,
+  type CopilotRequest,
   type PipelineReport,
   type QaReport,
   type QaSegmentReport,
@@ -14,21 +16,33 @@ import {
   fetchStatus,
   postAudition,
   postDirectorAdaptation,
+  postCopilotProposal,
+  postDubExport,
   postPipeline,
   postQa,
   postSceneContext,
+  postTranscribe,
   postTranslate,
   postVisualLocalisation,
 } from "./api";
 import sampleSegments from "./sampleSegments.json";
-import { prepareDirectorInput } from "./directorInput";
+import { prepareDirectorInput, resolveScene } from "./directorInput";
 import { errorMessage, parseSegments } from "./format";
+import {
+  type ReportKind,
+  type RunSettings,
+  buildDubExportPlacements,
+  downloadBlob,
+  emotionTagsFromSettings,
+  qaOptionsFromSettings,
+  speedRetakeFromSettings,
+  wavDataUrlToBlob,
+} from "./workbench";
 
 export const DEFAULT_FROM = "en";
-
 export const DEFAULT_TO = "es";
 
-export type BusyState = "translate" | "qa" | "scene" | "director" | "audition" | "visual" | "pipeline" | null;
+export type BusyState = "translate" | "qa" | "scene" | "director" | "audition" | "visual" | "pipeline" | "transcribe" | "copilot" | "export" | null;
 
 export function useStatus() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
@@ -72,32 +86,41 @@ export function useReports() {
   const [visual, setVisual] = useState<VisualLocalisationBatch | null>(null);
   const [pipeline, setPipeline] = useState<PipelineReport | null>(null);
 
-  const reset = useCallback(() => {
-    setQa(null);
-    setBatch(null);
-    setScene(null);
-    setDirector(null);
-    setAudition(null);
-    setVisual(null);
-    setPipeline(null);
+  const clearKinds = useCallback((kinds: Iterable<ReportKind>) => {
+    for (const kind of new Set(kinds)) {
+      if (kind === "qa") setQa(null);
+      if (kind === "batch") setBatch(null);
+      if (kind === "scene") setScene(null);
+      if (kind === "director") setDirector(null);
+      if (kind === "audition") setAudition(null);
+      if (kind === "visual") setVisual(null);
+      if (kind === "pipeline") setPipeline(null);
+    }
   }, []);
+
+  const reset = useCallback(() => {
+    clearKinds(["batch", "qa", "scene", "director", "audition", "visual", "pipeline"]);
+  }, [clearKinds]);
+
   const sceneById = useMemo(() => (scene ? new Map(scene.segments.map((s, i) => [i, s] as const)) : null), [scene]);
   const sceneBySegId = useMemo(() => (scene ? new Map(scene.segments.map((s) => [s.id, s] as const)) : null), [scene]);
   const qaById = useMemo(() => (qa ? new Map(qa.segments.map((s) => [s.id, s] as const)) : null), [qa]);
   const batchById = useMemo(() => (batch ? new Map(batch.segments.map((s) => [s.id, s.translation] as const)) : null), [batch]);
-
   const directorById = useMemo(() => (director ? new Map(director.segments.map((s) => [s.id, s] as const)) : null), [director]);
   const auditionById = useMemo(() => (audition ? new Map(audition.segments.map((s) => [s.id, s] as const)) : null), [audition]);
   const visualById = useMemo(() => (visual ? new Map(visual.segments.map((s, i) => [i, s] as const)) : null), [visual]);
 
-  return { qa, setQa, batch, setBatch, scene, setScene, director, setDirector, audition, setAudition, visual, setVisual, pipeline, setPipeline, reset, qaById, sceneById, sceneBySegId, batchById, directorById, auditionById, visualById };
+  return {
+    qa, setQa, batch, setBatch, scene, setScene, director, setDirector,
+    audition, setAudition, visual, setVisual, pipeline, setPipeline,
+    reset, clearKinds, qaById, sceneById, sceneBySegId, batchById, directorById, auditionById, visualById,
+  };
 }
 
 export function useSegments(onReset: () => void, setError: React.Dispatch<React.SetStateAction<string | null>>) {
   const [segments, setSegments] = useState<SegmentInput[]>(() => sampleSegments as SegmentInput[]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Bumped on every load so a slow file read cannot overwrite a newer load.
   const segmentsRequestRef = useRef(0);
 
   const loadSegments = useCallback((next: SegmentInput[]) => {
@@ -106,6 +129,12 @@ export function useSegments(onReset: () => void, setError: React.Dispatch<React.
     setError(null);
     onReset();
   }, [onReset, setError]);
+
+  const replaceSegments = useCallback((next: SegmentInput[]) => {
+    segmentsRequestRef.current++;
+    setSegments(next);
+    setError(null);
+  }, [setError]);
 
   const handleLoadSample = useCallback(() => {
     segmentsRequestRef.current++;
@@ -141,13 +170,14 @@ export function useSegments(onReset: () => void, setError: React.Dispatch<React.
     setExpanded((m) => ({ ...m, [id]: !m[id] }));
   }, []);
 
-  return { segments, expanded, fileInputRef, handleLoadSample, onFileChange, toggle, loadSegments };
+  return { segments, expanded, fileInputRef, handleLoadSample, onFileChange, toggle, loadSegments, replaceSegments };
 }
 
 export interface ActionsContext {
   segments: SegmentInput[];
   from: string;
   to: string;
+  settings: RunSettings;
   refreshStatus: () => Promise<void>;
   setBatch: (batch: TranslateBatch) => void;
   setQa: (qa: QaReport) => void;
@@ -157,22 +187,34 @@ export interface ActionsContext {
   setVisual: (visual: VisualLocalisationBatch) => void;
   setPipeline: (report: PipelineReport) => void;
   loadSegments: (segments: SegmentInput[]) => void;
+  audition: AuditionReport | null;
   qaById: Map<string, QaSegmentReport> | null;
   batchById: Map<string, string> | null;
   sceneById: Map<number, SceneSegmentResult> | null;
   sceneBySegId: Map<string, SceneSegmentResult> | null;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
+  translateRequestRef: React.MutableRefObject<number>;
+  qaRequestRef: React.MutableRefObject<number>;
   sceneRequestRef: React.MutableRefObject<number>;
   directorRequestRef: React.MutableRefObject<number>;
   auditionRequestRef: React.MutableRefObject<number>;
   visualRequestRef: React.MutableRefObject<number>;
   pipelineRequestRef: React.MutableRefObject<number>;
+  transcribeRequestRef: React.MutableRefObject<number>;
+  copilotRequestRef: React.MutableRefObject<number>;
 }
 
-export function useActions({ segments, from, to, refreshStatus, setBatch, setQa, setScene, setDirector, setAudition, setVisual, setPipeline, loadSegments, qaById, batchById, sceneById, sceneBySegId, setError, sceneRequestRef, directorRequestRef, auditionRequestRef, visualRequestRef, pipelineRequestRef }: ActionsContext) {
+export function useActions(context: ActionsContext) {
+  const {
+    segments, from, to, settings, refreshStatus, setBatch, setQa, setScene, setDirector, setAudition,
+    setVisual, setPipeline, loadSegments, audition, qaById, batchById, sceneById, sceneBySegId, setError,
+  } = context;
   const [busy, setBusy] = useState<BusyState>(null);
+  const busyRef = useRef<BusyState>(null);
 
   const run = useCallback(async (kind: Exclude<BusyState, null>, action: () => Promise<void>) => {
+    if (busyRef.current !== null) return;
+    busyRef.current = kind;
     setBusy(kind);
     setError(null);
     try {
@@ -180,68 +222,111 @@ export function useActions({ segments, from, to, refreshStatus, setBatch, setQa,
     } catch (e) {
       setError(errorMessage(e));
     } finally {
+      busyRef.current = null;
       setBusy(null);
       void refreshStatus();
     }
   }, [refreshStatus, setError]);
 
-  const runTranslate = useCallback(
-    () => run("translate", async () => setBatch(await postTranslate(segments, from, to))),
-    [run, segments, from, to, setBatch],
-  );
-  const runQa = useCallback(
-    () => run("qa", async () => setQa(await postQa(segments, from, to))),
-    [run, segments, from, to, setQa],
-  );
+  const qaOptions = qaOptionsFromSettings(settings);
+  const auditionOptions = {
+    qaOptions,
+    speedRetake: speedRetakeFromSettings(settings),
+    emotionTags: emotionTagsFromSettings(settings),
+  };
+
+  const runTranslate = useCallback(async () => {
+    const requestId = ++context.translateRequestRef.current;
+    await run("translate", async () => {
+      const res = await postTranslate(segments, from, to);
+      if (requestId === context.translateRequestRef.current) setBatch(res);
+    });
+  }, [context.translateRequestRef, run, segments, from, to, setBatch]);
+
+  const runQa = useCallback(async () => {
+    const requestId = ++context.qaRequestRef.current;
+    await run("qa", async () => {
+      const res = await postQa(segments, from, to, qaOptions);
+      if (requestId === context.qaRequestRef.current) setQa(res);
+    });
+  }, [context.qaRequestRef, run, segments, from, to, qaOptions.maxAttempts, qaOptions.toleranceFraction, qaOptions.targetCharactersPerSecond, setQa]);
+
   const runScene = useCallback(async () => {
-    const requestId = ++sceneRequestRef.current;
+    const requestId = ++context.sceneRequestRef.current;
     await run("scene", async () => {
       const res = await postSceneContext(segments);
-      if (requestId === sceneRequestRef.current) setScene(res);
+      if (requestId === context.sceneRequestRef.current) setScene(res);
     });
-  }, [run, segments, setScene, sceneRequestRef]);
+  }, [context.sceneRequestRef, run, segments, setScene]);
 
   const runDirector = useCallback(async () => {
-    const requestId = ++directorRequestRef.current;
+    const requestId = ++context.directorRequestRef.current;
     await run("director", async () => {
       const lookups = { qaById, batchById, sceneById, sceneBySegId };
       const prepared = segments.map((seg, idx) => prepareDirectorInput(seg, idx, segments.length, lookups));
-      const res = await postDirectorAdaptation(prepared, from, to);
-      if (requestId === directorRequestRef.current) setDirector(res);
+      const res = await postDirectorAdaptation(prepared, from, to, qaOptions);
+      if (requestId === context.directorRequestRef.current) setDirector(res);
     });
-  }, [run, segments, from, to, setDirector, qaById, batchById, sceneById, sceneBySegId, directorRequestRef]);
+  }, [context.directorRequestRef, run, segments, from, to, qaOptions.maxAttempts, qaOptions.toleranceFraction, qaOptions.targetCharactersPerSecond, setDirector, qaById, batchById, sceneById, sceneBySegId]);
 
   const runAudition = useCallback(async () => {
-    const requestId = ++auditionRequestRef.current;
+    const requestId = ++context.auditionRequestRef.current;
     await run("audition", async () => {
-      const res = await postAudition(segments, from, to);
-      if (requestId === auditionRequestRef.current) setAudition(res);
+      const labelsById = new Map<string, { emotion_tone_label?: string | null; pacing_label?: string | null }>();
+      segments.forEach((seg, idx) => {
+        const scene = resolveScene(seg, idx, { sceneById, sceneBySegId }, segments.length);
+        labelsById.set(seg.id, {
+          emotion_tone_label: scene?.context?.emotion_tone_label ?? seg.context?.emotion_tone_label ?? null,
+          pacing_label: scene?.context?.pacing_label ?? seg.context?.pacing_label ?? null,
+        });
+      });
+      const res = await postAudition(segments, from, to, { ...auditionOptions, labelsById });
+      if (requestId === context.auditionRequestRef.current) setAudition(res);
     });
-  }, [run, segments, from, to, setAudition, auditionRequestRef]);
+  }, [context.auditionRequestRef, run, segments, from, to, settings, setAudition, sceneById, sceneBySegId]);
 
   const runVisual = useCallback(async () => {
-    const requestId = ++visualRequestRef.current;
+    const requestId = ++context.visualRequestRef.current;
     await run("visual", async () => {
       try {
         const res = await postVisualLocalisation(segments);
-        if (requestId === visualRequestRef.current) setVisual(res);
+        if (requestId === context.visualRequestRef.current) setVisual(res);
       } catch (error) {
-        if (requestId === visualRequestRef.current) throw error;
+        if (requestId === context.visualRequestRef.current) throw error;
       }
     });
-  }, [run, segments, setVisual, visualRequestRef]);
+  }, [context.visualRequestRef, run, segments, setVisual]);
+
+  const runTranscribe = useCallback(async (audio: File) => {
+    const requestId = ++context.transcribeRequestRef.current;
+    await run("transcribe", async () => {
+      const res = await postTranscribe(audio);
+      if (requestId !== context.transcribeRequestRef.current) return;
+      loadSegments(res.segments.map((segment) => ({
+        id: segment.id,
+        text: segment.text,
+        duration_seconds: segment.duration_seconds,
+        speaker_id: segment.speaker ?? null,
+        start_seconds: segment.start_seconds ?? null,
+      })));
+    });
+  }, [context.transcribeRequestRef, run, loadSegments]);
+
+  const runCopilot = useCallback(async (request: CopilotRequest, onProposal: (proposal: CopilotProposal) => void) => {
+    const requestId = ++context.copilotRequestRef.current;
+    await run("copilot", async () => {
+      const proposal = await postCopilotProposal(request);
+      if (requestId === context.copilotRequestRef.current) onProposal(proposal);
+    });
+  }, [context.copilotRequestRef, run]);
 
   const runPipeline = useCallback(
     (audio: File | null, flags: { scene: boolean; audition: boolean }) =>
       run("pipeline", async () => {
-        const requestId = ++pipelineRequestRef.current;
+        const requestId = ++context.pipelineRequestRef.current;
         const priorById = new Map(segments.map((s) => [s.id, s] as const));
-        const report = await postPipeline(audio, segments, segments, flags, from, to);
-        if (requestId !== pipelineRequestRef.current) {
-          return;
-        }
-        // Audio runs replace the working set with ASR output. Segment-only runs
-        // keep frames / concepts / director opt-ins and only refresh transcript fields.
+        const report = await postPipeline(audio, segments, segments, flags, from, to, auditionOptions);
+        if (requestId !== context.pipelineRequestRef.current) return;
         loadSegments(
           report.segments.map((s) => {
             const prior = audio ? undefined : priorById.get(s.id);
@@ -251,6 +336,7 @@ export function useActions({ segments, from, to, refreshStatus, setBatch, setQa,
               text: s.text,
               duration_seconds: s.duration_seconds,
               speaker_id: s.speaker ?? prior?.speaker_id ?? null,
+              start_seconds: s.start_seconds ?? prior?.start_seconds ?? null,
             };
           }),
         );
@@ -259,8 +345,25 @@ export function useActions({ segments, from, to, refreshStatus, setBatch, setQa,
         if (report.scene) setScene(report.scene);
         if (report.audition) setAudition(report.audition);
       }),
-    [run, segments, from, to, setPipeline, loadSegments, setQa, setScene, setAudition, pipelineRequestRef],
+    [context.pipelineRequestRef, run, segments, from, to, settings, setPipeline, loadSegments, setQa, setScene, setAudition],
   );
 
-  return { busy, runTranslate, runQa, runScene, runDirector, runAudition, runVisual, runPipeline };
+  const runExportDub = useCallback(async (video: File) => {
+    await run("export", async () => {
+      const built = buildDubExportPlacements(segments, audition);
+      if (built.problems.length > 0) {
+        throw new Error(`Cannot export dubbed MP4: ${built.problems.join(" ")}`);
+      }
+      const placements = built.placements.map((placement) => ({
+        id: placement.id,
+        start_seconds: placement.start_seconds,
+        audio: wavDataUrlToBlob(placement.audio_data_url),
+        file_name: placement.file_name,
+      }));
+      const blob = await postDubExport(video, segments.map((segment) => segment.id), placements);
+      downloadBlob("trackdub-dub.mp4", blob);
+    });
+  }, [run, segments, audition]);
+
+  return { busy, runTranslate, runQa, runScene, runDirector, runAudition, runVisual, runPipeline, runTranscribe, runCopilot, runExportDub };
 }

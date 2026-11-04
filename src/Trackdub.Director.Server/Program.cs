@@ -24,6 +24,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton(_ => new HttpClient(new HttpClientHandler()) { Timeout = TimeSpan.FromSeconds(300) });
 builder.Services.AddTransient(sp => new MetaClient(sp.GetRequiredService<HttpClient>()));
 builder.Services.AddTransient<TranslationService>(sp => new TranslationService(sp.GetRequiredService<MetaClient>()));
+builder.Services.AddTransient<CopilotService>(sp => new CopilotService(sp.GetRequiredService<MetaClient>()));
 builder.Services.AddTransient<SceneContextService>(sp => new SceneContextService(sp.GetRequiredService<MetaClient>()));
 // One provider for the process: it owns a 120-second client sized for audio synthesis.
 builder.Services.AddSingleton<ITtsProvider>(_ => new ElevenLabsTtsProvider());
@@ -31,6 +32,11 @@ builder.Services.AddSingleton<MetaMuseImageClient>(sp => new MetaMuseImageClient
 builder.Services.AddTransient<VisualLocalisationService>(sp => new VisualLocalisationService(sp.GetRequiredService<MetaMuseImageClient>()));
 builder.Services.AddSingleton<IMuseTranscribeClient>(sp => new MuseTranscribeClient(sp.GetRequiredService<HttpClient>()));
 builder.Services.AddTransient<TranscribeService>(sp => new TranscribeService(sp.GetRequiredService<IMuseTranscribeClient>()));
+builder.Services.AddSingleton<IDubExportService>(_ => new FfmpegDubExportService());
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 272L * 1024 * 1024;
+});
 
 // JSON: keep defaults but ensure case-insensitive reads and respect JsonPropertyName attributes
 builder.Services.ConfigureHttpJsonOptions(opts =>
@@ -65,6 +71,8 @@ app.MapPost("/api/visual-localisation", ApiEndpoints.VisualLocalisationAsync);
 app.MapPost("/api/transcribe", ApiEndpoints.TranscribeAsync);
 app.MapPost("/api/pipeline", ApiEndpoints.PipelineAsync);
 app.MapPost("/api/verify-only", VerifyOnlyEndpoint.HandleAsync);
+app.MapPost("/api/copilot/propose", ApiEndpoints.CopilotProposeAsync);
+app.MapPost("/api/export-dub", ApiEndpoints.ExportDubAsync);
 app.MapFallback(ApiEndpoints.FallbackAsync);
 
 app.Run();

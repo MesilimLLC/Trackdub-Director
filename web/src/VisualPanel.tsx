@@ -32,7 +32,10 @@ export function VisualPanel({ seg, visual }: { seg: SegmentInput; visual: Visual
           <div>
             <div className="director-label">After · {visual.target_text ?? "—"}</div>
             {visual.localised_image_data_url ? (
-              <img className="visual-frame" src={visual.localised_image_data_url} alt={`Localised frame for ${seg.id}`} />
+              <>
+                <img className="visual-frame" src={visual.localised_image_data_url} alt={`Localised frame for ${seg.id}`} />
+                <a className="btn small" href={visual.localised_image_data_url} download={`${seg.id}-localised.png`}>Download PNG</a>
+              </>
             ) : (
               <div className="token-usage">No localised frame</div>
             )}

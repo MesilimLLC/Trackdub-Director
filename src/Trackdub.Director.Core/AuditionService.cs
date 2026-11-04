@@ -129,7 +129,13 @@ public sealed class AuditionService
         SpeedCalibrationSample[] newSamples = run.Calibration.Skip(_priorCalibration.Count).ToArray();
         return new AuditionReport(
             sourceLanguage, targetLanguage, cast, segmentReports.ToArray(), totals,
-            SpeedRetake: _speedRetake, SpeedCalibration: newSamples);
+            SpeedRetake: _speedRetake, SpeedCalibration: newSamples,
+            QaOptions: new QaReportOptions(
+                _options.MaxAttempts,
+                _options.ToleranceFraction,
+                _options.GetCharactersPerSecond(targetLanguage),
+                _options.GetCharactersPerSecond(sourceLanguage),
+                _options.ReasoningEffort));
     }
 
     private static void ValidateSegments(IReadOnlyList<AuditionSegmentInput> segments)

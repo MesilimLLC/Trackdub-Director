@@ -105,4 +105,5 @@ public sealed record DirectorAdaptationBatch(
     [property: JsonPropertyName("target_language")] string TargetLanguage,
     [property: JsonPropertyName("segments")] DirectorAdaptationSegmentResult[] Segments,
     [property: JsonPropertyName("usage_total")] DirectorAdaptationUsage UsageTotal,
-    [property: JsonPropertyName("meaning_usage_total")] TranslationUsageSummary MeaningUsageTotal);
+    [property: JsonPropertyName("meaning_usage_total")] TranslationUsageSummary MeaningUsageTotal,
+    [property: JsonPropertyName("qa_options")] QaReportOptions? QaOptions = null);

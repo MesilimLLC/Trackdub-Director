@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  type PipelineReport,
-} from "./api";
-import { type BusyState } from "./hooks";
+import type { PipelineReport } from "./api";
+import type { BusyState } from "./hooks";
 
 export function PipelineStagePill({ stage }: { stage: PipelineReport["stages"][number] }) {
   const cls =
@@ -16,19 +14,19 @@ export function PipelineStagePill({ stage }: { stage: PipelineReport["stages"][n
   );
 }
 
-export function PipelinePanel({ busy, pipeline, resetGeneration, onRun }: {
+export function PipelinePanel({ busy, pipeline, resetGeneration, onRun, onTranscribe, onAudioChange }: {
   busy: BusyState;
   pipeline: PipelineReport | null;
   resetGeneration: number;
   onRun: (audio: File | null, flags: { scene: boolean; audition: boolean }) => Promise<void>;
+  onTranscribe: (audio: File) => Promise<void>;
+  onAudioChange: () => void;
 }) {
   const [audio, setAudio] = useState<File | null>(null);
   const [sceneOn, setSceneOn] = useState(true);
   const [auditionOn, setAuditionOn] = useState(false);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset the chosen file when the parent bumps resetGeneration: adjust state
-  // during render, and clear the uncontrolled input element in an effect.
   const [seenGeneration, setSeenGeneration] = useState(resetGeneration);
   if (seenGeneration !== resetGeneration) {
     setSeenGeneration(resetGeneration);
@@ -38,6 +36,12 @@ export function PipelinePanel({ busy, pipeline, resetGeneration, onRun }: {
   useEffect(() => {
     if (audioInputRef.current) audioInputRef.current.value = "";
   }, [resetGeneration]);
+
+  const chooseAudio = (next: File | null) => {
+    setAudio(next);
+    onAudioChange();
+    if (audioInputRef.current) audioInputRef.current.value = "";
+  };
 
   return (
     <section className="pipeline-panel" aria-label="Pipeline">
@@ -49,30 +53,24 @@ export function PipelinePanel({ busy, pipeline, resetGeneration, onRun }: {
             type="file"
             accept=".wav,audio/wav,audio/x-wav"
             hidden
-            onChange={(e) => {
-              setAudio(e.target.files?.[0] ?? null);
-              if (audioInputRef.current) audioInputRef.current.value = "";
-            }}
+            onChange={(e) => chooseAudio(e.target.files?.[0] ?? null)}
           />
         </label>
         {audio && (
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              setAudio(null);
-              if (audioInputRef.current) audioInputRef.current.value = "";
-            }}
-          >
+          <button type="button" className="btn" disabled={busy !== null} onClick={() => chooseAudio(null)}>
             Clear WAV
           </button>
         )}
+        <button type="button" className="btn" disabled={busy !== null || !audio}
+          onClick={() => audio && void onTranscribe(audio)}>
+          {busy === "transcribe" ? "Transcribing…" : "Transcribe WAV"}
+        </button>
         <label className="pipeline-flag">
-          <input type="checkbox" checked={sceneOn} onChange={(e) => setSceneOn(e.target.checked)} />
+          <input type="checkbox" checked={sceneOn} disabled={busy !== null} onChange={(e) => setSceneOn(e.target.checked)} />
           Scene
         </label>
         <label className="pipeline-flag">
-          <input type="checkbox" checked={auditionOn} onChange={(e) => setAuditionOn(e.target.checked)} />
+          <input type="checkbox" checked={auditionOn} disabled={busy !== null} onChange={(e) => setAuditionOn(e.target.checked)} />
           Audition
         </label>
         <button

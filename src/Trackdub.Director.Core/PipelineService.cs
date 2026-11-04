@@ -71,7 +71,7 @@ public sealed class PipelineService
         if (request.AudioWav is null)
         {
             state.Stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.NotRun, Note: "no audio supplied"));
-            state.Segments = request.Segments!.Select(s => new TranscribeSegment(s.Id, s.Text, s.DurationSeconds, s.Speaker)).ToArray();
+            state.Segments = request.Segments!.Select(s => new TranscribeSegment(s.Id, s.Text, s.DurationSeconds, s.Speaker, s.StartSeconds)).ToArray();
             if (state.Segments.Length == 0)
             {
                 throw new ArgumentException("Pipeline produced no segments to process.", nameof(request));

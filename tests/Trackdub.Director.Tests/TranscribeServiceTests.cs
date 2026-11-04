@@ -66,11 +66,13 @@ public sealed class TranscribeServiceTests
         Assert.Equal("seg-001", first.Id);
         Assert.Equal("Hi, Ashley.", first.Text);
         Assert.Equal(1.2, first.DurationSeconds);
+        Assert.Equal(0.06, first.StartSeconds);
         Assert.Equal("A", first.Speaker);
 
         TranscribeSegment second = result.Segments[1];
         Assert.Equal("seg-002", second.Id);
         Assert.Equal(4.4, second.DurationSeconds);
+        Assert.Equal(1.66, second.StartSeconds);
         Assert.Equal("B", second.Speaker);
     }
 

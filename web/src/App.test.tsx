@@ -178,7 +178,7 @@ describe("App smoke", () => {
     const file = new File([], "segments.json", { type: "application/json" });
     Object.defineProperty(file, "text", { value: async () => JSON.stringify([{ id: "same", text: "First" }, { id: "same", text: "Second" }]) });
     fireEvent.change(container.querySelector('input[accept=".json,application/json"]')!, { target: { files: [file] } });
-    await screen.findByText("First");
+    expect(await screen.findAllByText("First")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Run Visual" }));
     await screen.findByText(/first result/);
     const cards = screen.getAllByRole("listitem");
@@ -208,7 +208,7 @@ describe("App smoke", () => {
 
     // Lines from sample
     expect(await screen.findByText("seg-001")).toBeInTheDocument();
-    expect(screen.getByText("Hello")).toBeInTheDocument();
+    expect(screen.getAllByText("Hello")).toHaveLength(2);
 
     // Header shows model from status
     expect(await screen.findByText("muse-spark-1.1")).toBeInTheDocument();
@@ -504,6 +504,8 @@ describe("App smoke", () => {
               timing_verdict: "Pass",
               is_winner: true,
               audio_file_name: "seg-001-take2.wav",
+              audio_data_url: "data:audio/wav;base64,UklGRg==",
+              emotion_tag: "[cheerful]",
               translation_tokens: 15,
               meaning_tokens: 11,
               elevenlabs_characters: 5,
@@ -563,12 +565,89 @@ describe("App smoke", () => {
     expect(within(seg1).getByText(/Meaning gate did not pass/)).toBeInTheDocument();
     expect(within(seg1).getByText("Hola.")).toBeInTheDocument();
     expect(within(seg1).getByText(/0\.92s \/ 1\.00s/)).toBeInTheDocument();
+    expect(within(seg1).getByLabelText("Audition take 2 audio")).toHaveAttribute("src", "data:audio/wav;base64,UklGRg==");
+    expect(within(seg1).getByRole("link", { name: "Download WAV" })).toHaveAttribute("download", "seg-001-take2.wav");
+    expect(within(seg1).getByText("Tag: [cheerful]")).toBeInTheDocument();
     expect(within(seg1).getAllByText("Winner").length).toBeGreaterThanOrEqual(2);
 
     const seg2 = getCard("seg-002");
     expect(within(seg2).getByText(/Audition: Uncast/)).toBeInTheDocument();
     // Only the column header matches "Winner"; no take is marked.
     expect(within(seg2).getAllByText("Winner")).toHaveLength(1);
+  });
+
+  it("exports a dubbed MP4 from explicit starts and winning takes", async () => {
+    const winnerTake = (id: string) => ({
+      take_number: 1,
+      kind: "Initial",
+      text: "Hola",
+      meaning_verdict: "Pass",
+      meaning_issues: [],
+      meaning_explanation: "ok",
+      synthesized: true,
+      measured_seconds: 0.8,
+      window_seconds: 1,
+      timing_verdict: "Pass",
+      is_winner: true,
+      audio_file_name: `${id}-take1.wav`,
+      translation_tokens: 1,
+      meaning_tokens: 1,
+      elevenlabs_characters: 4,
+      audio_data_url: "data:audio/wav;base64,UklGRg==",
+    });
+    const auditionMock = {
+      source_language: "en",
+      target_language: "es",
+      cast: [],
+      totals: { total_segments: 2, lines_cast: 2, takes_synthesized: 2, meta_calls: 4, translation_tokens: 2, meaning_tokens: 2, elevenlabs_characters: 8, elevenlabs_cap_hit: false, meta_cap_hit: false },
+      segments: ["seg-001", "seg-002"].map((id) => ({
+        id,
+        text: id === "seg-001" ? "Hello" : "Action!",
+        window_seconds: 1,
+        cast: true,
+        winner_take_number: 1,
+        winner_file_name: `${id}-take1.wav`,
+        takes: [winnerTake(id)],
+      })),
+    };
+    let exportBody: FormData | null = null;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString();
+      if (url.includes("/api/status")) return new Response(JSON.stringify(statusOk), { status: 200 });
+      if (url.includes("/api/audition")) return new Response(JSON.stringify(auditionMock), { status: 200 });
+      if (url.includes("/api/export-dub")) {
+        exportBody = init?.body as FormData;
+        return new Response(new Blob(["mp4"], { type: "video/mp4" }), { status: 200, headers: { "Content-Type": "video/mp4" } });
+      }
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const createObjectURL = vi.fn(() => "blob:mock-mp4");
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    render(<App />);
+    fireEvent.change(screen.getByLabelText("Start seconds 1"), { target: { value: "0" } });
+    fireEvent.change(screen.getByLabelText("Start seconds 2"), { target: { value: "1.2" } });
+    screen.getByRole("button", { name: "Run Audition" }).click();
+    expect(await screen.findByText(/Choose the original video/)).toBeInTheDocument();
+
+    const video = new File([new Uint8Array([0, 0, 0, 24])], "original.mp4", { type: "video/mp4" });
+    fireEvent.change(screen.getByLabelText("Original video"), { target: { files: [video] } });
+    expect(screen.getByText(/2 winning takes ready/)).toBeInTheDocument();
+    screen.getByRole("button", { name: "Export dubbed MP4" }).click();
+
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalled());
+    const body = exportBody as unknown as FormData;
+    expect(body.get("segment_ids")).toBe(JSON.stringify(["seg-001", "seg-002"]));
+    expect(JSON.parse(String(body.get("placements")))).toEqual([
+      { id: "seg-001", start_seconds: 0, audio_field: "audio_0" },
+      { id: "seg-002", start_seconds: 1.2, audio_field: "audio_1" },
+    ]);
+    expect(body.get("video")).toBeInstanceOf(File);
+    expect(body.get("audio_0")).toBeInstanceOf(Blob);
+    anchorClick.mockRestore();
   });
 
   it("shows before/after frames with usage and outside_box_diff after Run Visual", async () => {
@@ -623,6 +702,7 @@ describe("App smoke", () => {
     expect(within(seg1).getByText(/After · CAFETERÍA/)).toBeInTheDocument();
     expect(within(seg1).getByAltText("Localised frame for seg-001")).toHaveAttribute("src", "data:image/png;base64,bG9jYWxpc2Vk");
     // Usage and the machine-checked diff are shown.
+    expect(within(seg1).getByRole("link", { name: "Download PNG" })).toHaveAttribute("download", "seg-001-localised.png");
     expect(within(seg1).getByText(/Visual gate: model muse-image-1\.0 · template image-edit-v1/)).toBeInTheDocument();
     expect(within(seg1).getByText(/tokens 12505 · image calls 1 · outside_box_diff 0/)).toBeInTheDocument();
 
@@ -679,7 +759,7 @@ describe("App smoke", () => {
 
     // The resulting segments replace the working set and reuse the QA lane view.
     expect(await screen.findByText("seg-100")).toBeInTheDocument();
-    expect(screen.getByText("Transcribed line.")).toBeInTheDocument();
+    expect(screen.getAllByText("Transcribed line.")).toHaveLength(2);
     expect(screen.getByText("First-pass")).toBeInTheDocument();
   });
 
@@ -752,5 +832,81 @@ describe("App smoke", () => {
     // Un-evidenced fields still render as unknown, never as invented values.
     expect(within(seg2).getByText(/Scene summary: —/)).toBeInTheDocument();
     expect(within(seg2).getByText(/Burned-in text: —/)).toBeInTheDocument();
+  });
+
+  it("edits dialogue in the browser, preserves QA on a register change, and clears it on a text edit", async () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText("Source text 1"), { target: { value: "Edited hello" } });
+    fireEvent.change(screen.getByLabelText("Maximum revisions"), { target: { value: "2" } });
+    screen.getByRole("button", { name: "Run QA" }).click();
+    expect(await screen.findByText("First-pass")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Director register"), { target: { value: "formal" } });
+    expect(screen.getByText("First-pass")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Source text 1"), { target: { value: "Edited again" } });
+    expect(screen.queryByText("First-pass")).not.toBeInTheDocument();
+    expect(screen.getByText("Run QA to see pass rates")).toBeInTheDocument();
+  });
+
+  it("prepares and applies a revision-bound Copilot proposal without running a stage", async () => {
+    const copilotRequests: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString();
+      if (url.includes("/api/status")) return new Response(JSON.stringify(statusOk), { status: 200 });
+      if (url.includes("/api/copilot/propose")) {
+        copilotRequests.push(JSON.parse(String(init?.body)));
+        return new Response(JSON.stringify({
+          template: "qa",
+          explanation: "Use a tighter revision budget and formal register.",
+          settings: { max_revisions: 2, tolerance_percent: 10, target_cps: null, speed_retake_enabled: false, speed_cap: 1.1, emotion_tags_enabled: true },
+          segment_updates: [{ id: "seg-001", concepts: ["sign"], vision_enrichment: true, director_register: "formal" }],
+          missing_inputs: [],
+          warnings: [],
+          model: "muse-spark-1.1",
+          usage: { total_tokens: 30 },
+          prompt_template_version: "copilot-proposal-v1",
+        }), { status: 200 });
+      }
+      return new Response("unexpected stage call", { status: 500 });
+    }));
+    render(<App />);
+    fireEvent.change(screen.getByLabelText("Copilot goal"), { target: { value: "Prepare a formal Spanish dub" } });
+    screen.getByRole("button", { name: "Prepare with Copilot — 1 Meta call" }).click();
+    expect(await screen.findByText("Use a tighter revision budget and formal register.")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Source text 1"), { target: { value: "Changed after proposal" } });
+    expect(screen.queryByText("Use a tighter revision budget and formal register.")).not.toBeInTheDocument();
+
+    screen.getByRole("button", { name: "Prepare with Copilot — 1 Meta call" }).click();
+    expect(await screen.findByText("Use a tighter revision budget and formal register.")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Prepare with Copilot — 1 Meta call" })).toBeEnabled());
+    screen.getByRole("button", { name: "Apply settings" }).click();
+    await waitFor(() => {
+      expect(screen.queryByText("Use a tighter revision budget and formal register.")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Director register")).toHaveValue("formal");
+      expect(screen.getByLabelText("Maximum revisions")).toHaveValue(2);
+    });
+    expect(screen.queryByText(/Copilot proposal is stale/)).not.toBeInTheDocument();
+    expect(copilotRequests).toHaveLength(2);
+  });
+
+  it("transcribes a selected WAV into editable segments", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+      if (url.includes("/api/status")) return new Response(JSON.stringify(statusOk), { status: 200 });
+      if (url.includes("/api/transcribe")) {
+        return new Response(JSON.stringify({
+          segments: [{ id: "seg-001", text: "Transcribed in browser.", duration_seconds: 1.4, speaker: "A" }],
+          usage_reported: false,
+        }), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    }));
+    const { container } = render(<App />);
+    const wav = new File([new Uint8Array([82, 73, 70, 70])], "line.wav", { type: "audio/wav" });
+    fireEvent.change(container.querySelector('input[accept=".wav,audio/wav,audio/x-wav"]')!, { target: { files: [wav] } });
+    screen.getByRole("button", { name: "Transcribe WAV" }).click();
+    expect(await screen.findByDisplayValue("Transcribed in browser.")).toBeInTheDocument();
   });
 });

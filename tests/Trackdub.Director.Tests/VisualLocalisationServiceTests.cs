@@ -199,6 +199,48 @@ public sealed class VisualLocalisationServiceTests
     }
 
     [Fact]
+    public async Task Unsupported_frame_media_types_are_rejected_before_any_call()
+    {
+        foreach (string mediaType in new[] { "image/gif", "image/bmp" })
+        {
+            var fake = new FakeImageClient(crop => new MuseImageEditResult(crop, "muse-image-1.0", null, null));
+            var service = new VisualLocalisationService(fake);
+            var input = new VisualLocalisationSegmentInput(
+                "seg-1",
+                $"data:{mediaType};base64,AA==",
+                new LocalisationBox(10, 10, 40, 40),
+                "COFFEE SHOP",
+                "CAFETERÍA");
+
+            VisualLocalisationBatch result = await service.RunAsync([input]);
+
+            Assert.Equal(0, fake.Calls);
+            Assert.Equal(VisualLocalisationStatus.Failed, result.Segments[0].Status);
+            Assert.Contains("PNG, JPEG, or WebP", result.Segments[0].Error ?? string.Empty);
+        }
+    }
+
+    [Fact]
+    public async Task Oversized_frame_payload_is_rejected_before_any_call()
+    {
+        var fake = new FakeImageClient(crop => new MuseImageEditResult(crop, "muse-image-1.0", null, null));
+        var service = new VisualLocalisationService(fake);
+        string dataUrl = "data:image/png;base64," + Convert.ToBase64String(new byte[VisualLocalisationService.MaxFrameBytes + 1]);
+        var input = new VisualLocalisationSegmentInput(
+            "seg-1",
+            dataUrl,
+            new LocalisationBox(10, 10, 40, 40),
+            "COFFEE SHOP",
+            "CAFETERÍA");
+
+        VisualLocalisationBatch result = await service.RunAsync([input]);
+
+        Assert.Equal(0, fake.Calls);
+        Assert.Equal(VisualLocalisationStatus.Failed, result.Segments[0].Status);
+        Assert.Contains("byte limit", result.Segments[0].Error ?? string.Empty);
+    }
+
+    [Fact]
     public void Dispose_does_not_dispose_an_injected_client()
     {
         var fake = new DisposableFakeImageClient();

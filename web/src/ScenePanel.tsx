@@ -34,7 +34,7 @@ export function SceneHeader({ context }: { context: DirectorContext | undefined 
   return (
     <>
       <div className="token-usage">
-        Speaker: {orDash(fields.speaker_label ?? fields.speaker_id)} · Emotion/tone: {orDash(fields.emotion_tone_label)}
+        Speaker: {orDash(fields.speaker_label ?? fields.speaker_id)} · Emotion/tone: {orDash(fields.emotion_tone_label)} · Pacing: {orDash(fields.pacing_label)}
       </div>
       <div className="token-usage">Speaker description: {orDash(fields.speaker_description)}</div>
       <div className="token-usage">On-screen text: {listOrDash(fields.on_screen_text)}</div>

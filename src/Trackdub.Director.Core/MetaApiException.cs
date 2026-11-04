@@ -12,6 +12,12 @@ public class MetaApiException : Exception
     {
     }
 
+    public MetaApiException(string message, Exception innerException, MetaClient.TokenUsage? usage)
+        : base(message, innerException)
+    {
+        Usage = usage;
+    }
+
     public MetaApiException(string message, MetaClient.TokenUsage? usage)
         : base(message)
     {

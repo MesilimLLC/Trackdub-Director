@@ -1,0 +1,259 @@
+import type { AuditionReport, LocalisationBox, SegmentInput } from "./api";
+
+export type ReportKind = "batch" | "qa" | "scene" | "director" | "audition" | "visual" | "pipeline";
+export type ChangeKind =
+  | "structure" | "text" | "duration" | "speaker" | "language" | "qaOptions"
+  | "frame" | "sceneConfig" | "director" | "auditionOptions" | "visual" | "audio" | "start";
+
+export interface RunSettings {
+  maxRevisions: number;
+  tolerancePercent: number;
+  targetCps: string;
+  speedRetakeEnabled: boolean;
+  speedCap: number;
+  emotionTagsEnabled: boolean;
+}
+
+export const DEFAULT_RUN_SETTINGS: RunSettings = {
+  maxRevisions: 3,
+  tolerancePercent: 10,
+  targetCps: "",
+  speedRetakeEnabled: false,
+  speedCap: 1.1,
+  emotionTagsEnabled: true,
+};
+
+const ALL_REPORTS: ReportKind[] = ["batch", "qa", "scene", "director", "audition", "visual", "pipeline"];
+
+const INVALIDATION: Record<ChangeKind, ReportKind[]> = {
+  structure: ALL_REPORTS,
+  text: ["batch", "qa", "director", "audition", "pipeline"],
+  duration: ["qa", "director", "audition", "pipeline"],
+  speaker: ["scene", "director", "audition", "pipeline"],
+  language: ["batch", "qa", "director", "audition", "pipeline"],
+  qaOptions: ["qa", "director", "audition", "pipeline"],
+  frame: ["scene", "director", "audition", "pipeline", "visual"],
+  sceneConfig: ["scene", "director", "audition", "pipeline"],
+  director: ["director"],
+  auditionOptions: ["audition", "pipeline"],
+  visual: ["visual"],
+  audio: ["pipeline"],
+  start: [],
+};
+
+export function reportsForChanges(changes: Iterable<ChangeKind>): ReportKind[] {
+  const kinds = new Set<ReportKind>();
+  for (const change of changes) {
+    for (const kind of INVALIDATION[change]) kinds.add(kind);
+  }
+  return [...kinds];
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
+export function classifySegmentChanges(before: SegmentInput[], after: SegmentInput[]): ChangeKind[] {
+  if (before.length !== after.length || before.some((segment, i) => segment.id !== after[i]?.id)) {
+    return ["structure"];
+  }
+  const changes = new Set<ChangeKind>();
+  for (let i = 0; i < before.length; i++) {
+    const a = before[i];
+    const b = after[i];
+    if (a.text !== b.text) changes.add("text");
+    if (!sameValue(a.duration_seconds, b.duration_seconds)) changes.add("duration");
+    if (!sameValue(a.start_seconds, b.start_seconds)) changes.add("start");
+    if (!sameValue(a.speaker_id, b.speaker_id) || !sameValue(a.speaker_label, b.speaker_label)) changes.add("speaker");
+    if (!sameValue(a.frame_image_data_url, b.frame_image_data_url)) changes.add("frame");
+    if (!sameValue(a.concepts, b.concepts) || !sameValue(a.vision_enrichment, b.vision_enrichment) ||
+        !sameValue(a.frame_id, b.frame_id) || !sameValue(a.timecode_seconds, b.timecode_seconds) ||
+        !sameValue(a.frame_sha256, b.frame_sha256)) changes.add("sceneConfig");
+    if (!sameValue(a.director_adaptation, b.director_adaptation) || !sameValue(a.context, b.context) ||
+        !sameValue(a.translation, b.translation)) changes.add("director");
+    if (!sameValue(a.box, b.box) || !sameValue(a.source_text, b.source_text) || !sameValue(a.target_text, b.target_text)) changes.add("visual");
+  }
+  return [...changes];
+}
+
+export function qaOptionsFromSettings(settings: RunSettings): {
+  maxAttempts: number;
+  toleranceFraction: number;
+  targetCharactersPerSecond?: number;
+} {
+  const parsedCps = Number.parseFloat(settings.targetCps);
+  return {
+    maxAttempts: Math.max(0, Math.trunc(settings.maxRevisions) || 0),
+    toleranceFraction: Math.max(0, settings.tolerancePercent || 0) / 100,
+    ...(Number.isFinite(parsedCps) && parsedCps > 0 ? { targetCharactersPerSecond: parsedCps } : {}),
+  };
+}
+
+export function speedRetakeFromSettings(settings: RunSettings): {
+  enabled: boolean;
+  cap: number;
+  max_retakes_per_segment: number;
+} {
+  return {
+    enabled: settings.speedRetakeEnabled,
+    cap: Math.min(1.2, Math.max(1, settings.speedCap || 1.1)),
+    max_retakes_per_segment: 1,
+  };
+}
+
+export function emotionTagsFromSettings(settings: RunSettings): { enabled: boolean } {
+  return { enabled: settings.emotionTagsEnabled };
+}
+
+export function callEstimates(segments: SegmentInput[], settings: RunSettings): Record<string, string> {
+  const count = segments.length;
+  const revisions = Math.max(0, Math.trunc(settings.maxRevisions) || 0);
+  const framed = segments.filter((s) => Boolean(s.frame_image_data_url));
+  const concepts = framed.reduce((sum, s) => sum + (s.concepts?.filter(Boolean).length ?? 0), 0);
+  const vision = framed.filter((s) => s.vision_enrichment).length;
+  const directed = segments.filter((s) => Boolean(s.director_adaptation?.target_register)).length;
+  const visual = segments.filter((s) => Boolean(s.frame_image_data_url && s.box && s.source_text && s.target_text)).length;
+  return {
+    translate: `${count} Meta call${count === 1 ? "" : "s"}`,
+    qa: `≤ ${2 * (revisions + 1) * count} Meta calls`,
+    scene: `${concepts} segmentation + ${vision} vision call${vision === 1 ? "" : "s"}`,
+    director: `≤ ${2 * directed} Meta calls`,
+    audition: "≤ 40 Meta calls · ≤ 3,000 ElevenLabs chars",
+    visual: `${visual} image call${visual === 1 ? "" : "s"}`,
+    pipeline: "Transcribe + QA, plus selected Scene/Audition bounds",
+  };
+}
+
+export interface DubExportPlacementDraft {
+  id: string;
+  start_seconds: number;
+  audio_data_url: string;
+  file_name: string;
+}
+
+export function buildDubExportPlacements(
+  segments: SegmentInput[],
+  audition: AuditionReport | null,
+): { placements: DubExportPlacementDraft[]; problems: string[] } {
+  const problems: string[] = [];
+  const placements: DubExportPlacementDraft[] = [];
+  if (segments.length === 0) problems.push("Add at least one segment.");
+  const seen = new Set<string>();
+  for (const segment of segments) {
+    if (seen.has(segment.id)) problems.push(`Duplicate segment id '${segment.id}'.`);
+    seen.add(segment.id);
+  }
+
+  const reportsById = new Map<string, AuditionReport["segments"][number]>();
+  for (const report of audition?.segments ?? []) {
+    if (!reportsById.has(report.id)) reportsById.set(report.id, report);
+  }
+
+  for (const segment of segments) {
+    const start = segment.start_seconds;
+    if (start == null || !Number.isFinite(start) || start < 0) {
+      problems.push(`${segment.id} needs a start time.`);
+      continue;
+    }
+    const report = reportsById.get(segment.id);
+    const winner = report?.takes.find((take) => take.is_winner);
+    if (!report?.cast || !winner || report.winner_take_number !== winner.take_number) {
+      problems.push(`${segment.id} has no winning audition take.`);
+      continue;
+    }
+    if (!winner.audio_data_url) {
+      problems.push(`${segment.id} winner audio was omitted from browser transport.`);
+      continue;
+    }
+    placements.push({
+      id: segment.id,
+      start_seconds: start,
+      audio_data_url: winner.audio_data_url,
+      file_name: winner.audio_file_name ?? report.winner_file_name ?? `${segment.id}-take${winner.take_number}.wav`,
+    });
+  }
+
+  return { placements: problems.length === 0 ? placements : [], problems };
+}
+
+export function wavDataUrlToBlob(dataUrl: string): Blob {
+  const match = /^data:audio\/wav;base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
+  if (!match) throw new Error("Winner audio is not a WAV data URL.");
+  const binary = atob(match[1]);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: "audio/wav" });
+}
+
+export function stripAudioTransport<T>(value: T): T {
+  if (Array.isArray(value)) return value.map((item) => stripAudioTransport(item)) as T;
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      if (key !== "audio_data_url") out[key] = stripAudioTransport(child);
+    }
+    return out as T;
+  }
+  return value;
+}
+
+export function downloadBlob(fileName: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+export function downloadText(fileName: string, text: string, type = "application/json"): void {
+  downloadBlob(fileName, new Blob([text], { type }));
+}
+
+export function downloadJson(fileName: string, value: unknown): void {
+  downloadText(fileName, JSON.stringify(value, null, 2));
+}
+
+export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+export const MAX_IMAGE_DIMENSION = 4096;
+export const MAX_IMAGE_PIXELS = 16_777_216;
+export const MIN_BOX_PIXELS = 8;
+
+export function validateImageMetadata(file: { size: number; type: string }, width: number, height: number): string | null {
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) return "Frame must be PNG, JPEG, or WebP.";
+  if (file.size > MAX_IMAGE_BYTES) return "Frame exceeds the 10 MiB limit.";
+  if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION || width * height > MAX_IMAGE_PIXELS) {
+    return "Frame dimensions exceed 4096×4096 or 16 megapixels.";
+  }
+  return null;
+}
+
+export interface PointerPoint { x: number; y: number }
+
+export function pointerToOriginal(
+  clientX: number,
+  clientY: number,
+  rect: { left: number; top: number; width: number; height: number },
+  natural: { width: number; height: number },
+): PointerPoint {
+  const x = ((clientX - rect.left) / Math.max(1, rect.width)) * natural.width;
+  const y = ((clientY - rect.top) / Math.max(1, rect.height)) * natural.height;
+  return {
+    x: Math.min(natural.width, Math.max(0, Math.floor(x))),
+    y: Math.min(natural.height, Math.max(0, Math.floor(y))),
+  };
+}
+
+export function normalizeBox(a: PointerPoint, b: PointerPoint, natural: { width: number; height: number }): LocalisationBox | null {
+  const box = {
+    x1: Math.min(a.x, b.x),
+    y1: Math.min(a.y, b.y),
+    x2: Math.max(a.x, b.x),
+    y2: Math.max(a.y, b.y),
+  };
+  box.x1 = Math.max(0, Math.min(natural.width, box.x1));
+  box.y1 = Math.max(0, Math.min(natural.height, box.y1));
+  box.x2 = Math.max(0, Math.min(natural.width, box.x2));
+  box.y2 = Math.max(0, Math.min(natural.height, box.y2));
+  return box.x2 - box.x1 >= MIN_BOX_PIXELS && box.y2 - box.y1 >= MIN_BOX_PIXELS ? box : null;
+}

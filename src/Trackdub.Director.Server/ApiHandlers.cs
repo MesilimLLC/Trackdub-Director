@@ -62,17 +62,17 @@ internal static class ApiHandlers
         }
     }
 
-    internal static async Task<IResult> RunAuditionAsync(MetaClient client, ITtsProvider tts, AuditionApiRequest req, CancellationToken ct)
+    internal static async Task<IResult> RunAuditionAsync(MetaClient client, ITtsProvider tts, QaOptions options, AuditionApiRequest req, CancellationToken ct)
     {
         string from = ResolveLanguage(req.SourceLanguage, "en");
         string to = ResolveLanguage(req.TargetLanguage, "es");
 
         try
         {
-            var service = new AuditionService(client, tts, QaOptions.FromEnvironment(), new AuditionRuntimeOptions(req.SpeedRetake, EmotionTags: req.EmotionTags));
+            var service = new AuditionService(client, tts, options, new AuditionRuntimeOptions(req.SpeedRetake, EmotionTags: req.EmotionTags));
             AuditionReport report = await service.RunAsync(req.Segments, from, to, ct).ConfigureAwait(false);
             await TryWriteAuditionOutputsAsync(report, ct).ConfigureAwait(false);
-            return Results.Json(report);
+            return Results.Json(AuditionTransport.Enrich(report));
         }
         catch (TtsApiException ex)
         {
@@ -130,6 +130,7 @@ internal static class ApiHandlers
             if (report.Audition is not null)
             {
                 await TryWriteAuditionOutputsAsync(report.Audition, ct).ConfigureAwait(false);
+                report = report with { Audition = AuditionTransport.Enrich(report.Audition) };
             }
 
             return Results.Json(report);

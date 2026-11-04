@@ -77,7 +77,8 @@ public sealed class TranscribeService
                 $"seg-{segments.Count + 1:000}",
                 text,
                 durationSeconds,
-                turn.Speaker));
+                turn.Speaker,
+                Math.Round(turn.StartMs / 1000.0, 3, MidpointRounding.AwayFromZero)));
         }
 
         return new TranscribeResult(

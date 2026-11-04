@@ -395,7 +395,7 @@ public sealed class DirectorAdaptationService
             RawContent: details?.RawContent);
     }
 
-    private static DirectorAdaptationBatch BuildBatch(AdaptationRunContext run, List<DirectorAdaptationSegmentResult> results)
+    private DirectorAdaptationBatch BuildBatch(AdaptationRunContext run, List<DirectorAdaptationSegmentResult> results)
     {
         int prompt = 0;
         int completion = 0;
@@ -441,7 +441,13 @@ public sealed class DirectorAdaptationService
             run.TargetLanguage,
             results.ToArray(),
             new DirectorAdaptationUsage(prompt, completion, tokens, anyReasoning ? reasoning : null, anyCached ? cached : null),
-            new TranslationUsageSummary(meaningPrompt, meaningCompletion, meaningTokens));
+            new TranslationUsageSummary(meaningPrompt, meaningCompletion, meaningTokens),
+            new QaReportOptions(
+                _options.MaxAttempts,
+                _options.ToleranceFraction,
+                _options.GetCharactersPerSecond(run.TargetLanguage),
+                _options.GetCharactersPerSecond(run.SourceLanguage),
+                _options.ReasoningEffort));
     }
 
     public async Task WriteBatchAsync(
