@@ -166,7 +166,7 @@ a { color: #8ab4ff; }
 .audio-controls audio { width: 170px; max-width: 100%; height: 32px; }
 .copilot-textarea { min-height: 72px; resize: vertical; }
 .attempt-row { grid-template-columns: 40px 80px 1fr 160px 70px 70px 70px 70px minmax(180px, 260px); }
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   .segment-editor-head { display: none; }
   .segment-editor-row { grid-template-columns: 1fr; }
   .attempt-row { grid-template-columns: 36px 70px 1fr; }
