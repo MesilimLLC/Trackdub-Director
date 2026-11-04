@@ -73,6 +73,37 @@ public sealed class VerifyOnlyTests : IDisposable
         return new AuditionReport("en", "es", [Voice], segments, new AuditionTotals(segments.Length, 0, 0, 0, 0, 0, 0, false, false));
     }
 
+    [Fact]
+    public void A_computed_speed_retake_winner_is_labeled_speed_adjusted()
+    {
+        string dir = RunFolder();
+        AuditionTakeReport winner = Take(1, measured: 2.0) with { ComputedFactor = 1.1, SpeedRequested = 1.1 };
+        WriteManifest(dir, Report(Segment("seg", 2.0, winner)));
+        WriteMedia(dir, winner);
+
+        VerifyReceipt receipt = VerifyOnlyService.Verify(dir);
+
+        Assert.True(Assert.Single(receipt.Segments).SpeedAdjustedWinner);
+        Assert.Equal(1, receipt.SpeedAdjustedCount);
+    }
+
+    [Fact]
+    public void A_fixed_factor_speed_variant_winner_is_not_labeled_speed_adjusted()
+    {
+        // The label is intentionally retake-only: the computed path is the one
+        // whose label carries the measured factor. A blind fixed-factor variant
+        // does not claim it.
+        string dir = RunFolder();
+        AuditionTakeReport winner = Take(1, measured: 2.0) with { SpeedFactor = 1.15 };
+        WriteManifest(dir, Report(Segment("seg", 2.0, winner)));
+        WriteMedia(dir, winner);
+
+        VerifyReceipt receipt = VerifyOnlyService.Verify(dir);
+
+        Assert.False(Assert.Single(receipt.Segments).SpeedAdjustedWinner);
+        Assert.Equal(0, receipt.SpeedAdjustedCount);
+    }
+
     private string RunFolder(string name = "run")
     {
         string dir = Path.Combine(_root, name);

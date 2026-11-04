@@ -9,7 +9,7 @@ namespace Trackdub.Director.Core;
 /// the caller-supplied concept phrases in the segment's frame via
 /// <see cref="MetaClient.SegmentConceptAsync"/>. When the caller opts in with
 /// VisionEnrichment, a vision pass over the full frame via
-/// <see cref="MetaClient.DescribeFrameAsync"/> (template scene-vision-v1) fills
+/// <see cref="MetaClient.DescribeFrameAsync"/> (template scene-vision-v2) fills
 /// the enrichment fields of the same <see cref="DirectorContext"/>; SAM regions
 /// found first ride along as text context. Neither lane overwrites the other's
 /// fields and fields no lane can evidence stay null.
@@ -19,10 +19,10 @@ public sealed class SceneContextService
     /// <summary>Template "scene-v1": the concept phrase is sent verbatim as input_text.</summary>
     public const string PromptTemplateVersion = "scene-v1";
 
-    /// <summary>Template "scene-vision-v1": the Stage B1 vision ask, ported verbatim from the probe that verified it. Do not reword without a new probe.</summary>
+    /// <summary>Template "scene-vision-v2": the Stage B1 vision ask, extended from the probe-verified v1 with the pacing_label key. Do not reword without a new probe.</summary>
     public const string VisionPromptTemplateVersion = "scene-vision-v2";
 
-    /// <summary>Verbatim scene-vision-v1 prompt text (single text part, sent exactly as written).</summary>
+    /// <summary>Verbatim scene-vision-v2 prompt text (single text part, sent exactly as written).</summary>
     public const string VisionPromptText = "Look at this video frame. Return strict JSON only, with no markdown fences and no commentary, using exactly these keys: scene_summary (one sentence describing the scene), emotion_tone_label (short label for the visible speaker's emotion or tone, or null if no speaker is visible), pacing_label (short label for the visible speaker's delivery pacing and pausing, e.g. brisk, unhurried, halting with pauses, or null if no speaker is visible or pacing cannot be judged), speaker_description (short phrase describing the visible speaker, or null if no speaker is visible), on_screen_text (array of exact text strings physically present in the scene only, such as signs and posters; do not include burned-in subtitles or captions, and do not include watermarks or logos), burned_in_text (array of exact text strings overlaid on the video only, namely burned-in subtitles or captions and watermarks or logos; do not include text physically present in the scene). Use an empty array when no text of that kind is visible. Transcribe text exactly as shown. Do not guess.";
 
     private readonly MetaClient _client;

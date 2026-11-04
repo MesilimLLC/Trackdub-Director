@@ -288,7 +288,15 @@ internal static class ApiEndpoints
             return Results.BadRequest(new { error = optionsError });
         }
 
-        var pipelineRequest = new PipelineRequest(
+        var pipelineRequest = ToPipelineRequest(req, audio, from, to);
+
+        return await ApiHandlers.RunSerializedAsync(
+            () => ApiHandlers.RunPipelineWithReasoningAsync(client, transcribeClient, tts, options, pipelineRequest, ct), ct).ConfigureAwait(false);
+    }
+
+    private static PipelineRequest ToPipelineRequest(PipelineApiRequest req, byte[]? audio, string from, string to)
+    {
+        return new PipelineRequest(
             audio,
             audio is null ? req.Segments : null,
             req.SceneSegments,
@@ -299,9 +307,6 @@ internal static class ApiEndpoints
             AudioFileName: req.AudioFileName,
             SpeedRetake: req.SpeedRetake,
             EmotionTags: req.EmotionTags);
-
-        return await ApiHandlers.RunSerializedAsync(
-            () => ApiHandlers.RunPipelineWithReasoningAsync(client, transcribeClient, tts, options, pipelineRequest, ct), ct).ConfigureAwait(false);
     }
 
     // SPA fallback: for non-/api routes, serve index.html if it exists (after a prod build).

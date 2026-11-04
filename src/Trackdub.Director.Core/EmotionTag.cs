@@ -4,8 +4,8 @@ namespace Trackdub.Director.Core;
 
 /// <summary>
 /// Configuration for carrying detected delivery (emotion, pacing, pauses)
-/// into TTS generation as provider audio tags. Disabled by default; enabling
-/// is per-run configuration. Tags are only ever sent to models that honor
+/// into TTS generation as provider audio tags. Enabled by default; can be
+/// disabled per run via EmotionTagOptions.Disabled. Tags are only ever sent to models that honor
 /// them as control (see <see cref="ITtsProvider.SupportsEmotionTags"/>):
 /// measured 2026-11-02, the v2 model speaks bracket tags aloud, v3 honors
 /// them, and v4 is probed for the same behavior before it is trusted.

@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace Trackdub.Director.Core;
 
 /// <summary>
-/// Enrichment values parsed from a scene-vision-v1 response. Null means the model
+/// Enrichment values parsed from a scene-vision-v2 response. Null means the model
 /// reported nothing visible for that field; an empty text array means it looked
 /// and found no text of that kind. The two are never collapsed.
 /// </summary>
@@ -18,13 +18,14 @@ public sealed record VisionEnrichment(
 public sealed record VisionParseResult(bool IsMalformed, VisionEnrichment? Enrichment, string? Error);
 
 /// <summary>
-/// Parser for the probe-verified scene-vision-v1 response: one JSON object with
-/// exactly the keys scene_summary, emotion_tone_label, speaker_description,
-/// on_screen_text, burned_in_text. Prose or fence wrapping is tolerated (the
-/// first balanced JSON object is extracted, as in <see cref="MeaningGate"/>),
-/// but every key must be present and correctly typed: scalars are string-or-null
-/// and text fields are arrays of strings (or null). Anything else is malformed
-/// and callers must fail closed with null enrichment fields, never default them.
+/// Parser for the probe-verified scene-vision response: one JSON object with
+/// the five legacy keys scene_summary, emotion_tone_label, speaker_description,
+/// on_screen_text, burned_in_text, each required and correctly typed (scalars
+/// are string-or-null, text fields are arrays of strings or null). The v2 key
+/// pacing_label is optional for backward compatibility and defaults to null
+/// when absent. Prose or fence wrapping is tolerated (the first balanced JSON
+/// object is extracted, as in <see cref="MeaningGate"/>). Anything malformed
+/// fails closed with null enrichment fields, never defaulted values.
 /// </summary>
 public static class SceneVisionParser
 {

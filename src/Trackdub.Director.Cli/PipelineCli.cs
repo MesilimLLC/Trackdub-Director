@@ -66,7 +66,7 @@ internal static class PipelineCli
                     speedRetake = true;
                     break;
                 case "--speed-retake-cap" when i + 1 < args.Length:
-                    if (!double.TryParse(args[i + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out speedRetakeCap) || speedRetakeCap < 1.0 || speedRetakeCap > SpeedRetakeMath.HardCeiling)
+                    if (!TryParseSpeedRetakeCap(args[i + 1], out speedRetakeCap))
                     {
                         Console.Error.WriteLine($"error: --speed-retake-cap must be between 1.0 and {SpeedRetakeMath.HardCeiling}.");
                         return 1;
@@ -234,6 +234,12 @@ internal static class PipelineCli
             Console.Error.WriteLine($"error: {ex.Message}");
             return 1;
         }
+    }
+
+    private static bool TryParseSpeedRetakeCap(string text, out double cap)
+    {
+        return double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out cap)
+            && cap >= 1.0 && cap <= SpeedRetakeMath.HardCeiling;
     }
 
     private static async Task<PipelineRequest?> BuildRequestAsync(string? audio, string? input, string? sceneInput, bool scene, bool audition, string from, string to)
