@@ -47,6 +47,11 @@ public sealed class AuditionService
     public const int MaxElevenLabsCharacters = 3000;
     public const int MaxMetaCalls = 40;
 
+    // A voice's advertised models are its high_quality_base_model_ids (the
+    // models it was optimized for), not a synthesis allowlist: synthesis sends
+    // the provider's configured model with the voice id only. Confirmed live
+    // 2026-11-02: Alice/Bella advertise only the v2 family yet synthesized on
+    // eleven_v3 and eleven_v4 in the emotion probes.
     private static readonly string[] SpanishCapableModelIds = ["eleven_v4", "eleven_multilingual_v2"];
     private const int MaxStemLength = 64;
 

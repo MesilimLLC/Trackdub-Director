@@ -202,6 +202,8 @@ public sealed class PipelineService
             return;
         }
 
+        }
+
         if (_tts is null || !ElevenLabsAuth.HasApiKey())
         {
             state.Stages.Add(new PipelineStageReport(StageAudition, PipelineStageStatus.SkippedByFlag, Note: "ELEVENLABS_API_KEY not set"));
@@ -212,7 +214,7 @@ public sealed class PipelineService
             _client,
             _tts,
             _options,
-            new AuditionRuntimeOptions(EmotionTags: EmotionTagOptions.EnabledDefault));
+            new AuditionRuntimeOptions(request.SpeedRetake, EmotionTags: request.EmotionTags ?? EmotionTagOptions.EnabledDefault));
         try
         {
             state.Audition = await auditionService.RunAsync(

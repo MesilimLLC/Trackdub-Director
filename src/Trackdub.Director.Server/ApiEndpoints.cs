@@ -296,7 +296,9 @@ internal static class ApiEndpoints
             Audition: req.Audition ?? false,
             SourceLanguage: from,
             TargetLanguage: to,
-            AudioFileName: req.AudioFileName);
+            AudioFileName: req.AudioFileName,
+            SpeedRetake: req.SpeedRetake,
+            EmotionTags: req.EmotionTags);
 
         return await ApiHandlers.RunSerializedAsync(
             () => ApiHandlers.RunPipelineWithReasoningAsync(client, transcribeClient, tts, options, pipelineRequest, ct), ct).ConfigureAwait(false);

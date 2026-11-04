@@ -18,6 +18,9 @@ internal static class PipelineCli
         string to = "es";
         bool scene = true;
         bool audition = false;
+        bool speedRetake = false;
+        double speedRetakeCap = SpeedRetakeMath.DefaultCap;
+        bool emotionTags = true;
         int maxAttempts = 3;
         double tolerance = 0.10;
         double cps = DurationEstimator.DefaultCharactersPerSecond;
@@ -58,6 +61,22 @@ internal static class PipelineCli
                     break;
                 case "--audition":
                     audition = true;
+                    break;
+                case "--speed-retake":
+                    speedRetake = true;
+                    break;
+                case "--speed-retake-cap" when i + 1 < args.Length:
+                    if (!double.TryParse(args[i + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out speedRetakeCap) || speedRetakeCap < 1.0 || speedRetakeCap > SpeedRetakeMath.HardCeiling)
+                    {
+                        Console.Error.WriteLine($"error: --speed-retake-cap must be between 1.0 and {SpeedRetakeMath.HardCeiling}.");
+                        return 1;
+                    }
+
+                    speedRetake = true;
+                    i++;
+                    break;
+                case "--no-emotion-tags":
+                    emotionTags = false;
                     break;
                 case "--max-attempts" when i + 1 < args.Length:
                     if (!int.TryParse(args[i + 1], out maxAttempts) || maxAttempts < 0)
@@ -134,6 +153,14 @@ internal static class PipelineCli
             _ = MetaAuth.GetApiKey();
 
             PipelineRequest? request = await BuildRequestAsync(audio, input, sceneInput, scene, audition, from, to).ConfigureAwait(false);
+            if (request is not null)
+            {
+                request = request with
+                {
+                    SpeedRetake = speedRetake ? new SpeedRetakeOptions(Enabled: true, Cap: speedRetakeCap) : null,
+                    EmotionTags = emotionTags ? null : EmotionTagOptions.Disabled,
+                };
+            }
             if (request is null)
             {
                 return 1;
@@ -357,6 +384,8 @@ internal static class PipelineCli
         Console.WriteLine("  --output <path>       Pipeline report JSON to write (required).");
         Console.WriteLine("  --no-scene            Skip the scene stage (recorded as SkippedByFlag).");
         Console.WriteLine("  --audition            Run the audition stage (off by default; needs ELEVENLABS_API_KEY).");
+        Console.WriteLine("  --speed-retake [--speed-retake-cap <1.0-1.2>]  Enable the computed-speed retake in audition (default cap 1.10).");
+        Console.WriteLine("  --no-emotion-tags  Opt out of emotion/pacing audio tags in audition (on by default on tag-honoring models).");
         Console.WriteLine("  --from <code>         Source language code. Default: en");
         Console.WriteLine("  --to <code>           Target language code. Default: es");
         Console.WriteLine("  --max-attempts <n>    QA max revision attempts after initial. Default: 3");
