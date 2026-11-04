@@ -77,94 +77,122 @@ public sealed class MetaMuseImageClient : IMuseImageClient, IDisposable
 
     private static MuseImageEditResult ParseResponse(string body, string requestedModel)
     {
-        JsonDocument doc;
+        using JsonDocument doc = ParseDocument(body);
+        JsonElement root = doc.RootElement;
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            throw new MetaApiException($"Unexpected Meta Model API response shape: {Truncate(body)}");
+        }
+
+        ThrowIfFailed(root);
+
+        byte[]? imageBytes = ExtractImageBytes(root);
+        if (imageBytes is null || imageBytes.Length == 0)
+        {
+            throw new MetaApiException("Meta Model API response carried no image (missing image_generation_call result).");
+        }
+
+        RasterImage raster = WicImageDecoder.Decode(imageBytes);
+        return new MuseImageEditResult(
+            raster,
+            ReadString(root, "model") ?? requestedModel,
+            ParseUsage(root),
+            ReadString(root, "id"));
+    }
+
+    private static JsonDocument ParseDocument(string body)
+    {
         try
         {
-            doc = JsonDocument.Parse(body);
+            return JsonDocument.Parse(body);
         }
         catch (JsonException ex)
         {
             throw new MetaApiException($"Failed to parse Meta Model API response: {Truncate(body)}", ex);
         }
+    }
 
-        using (doc)
+    // Throws when the response carries an error object or a status other than "completed".
+    private static void ThrowIfFailed(JsonElement root)
+    {
+        if (root.TryGetProperty("error", out JsonElement error) && error.ValueKind == JsonValueKind.Object)
         {
-            JsonElement root = doc.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
-            {
-                throw new MetaApiException($"Unexpected Meta Model API response shape: {Truncate(body)}");
-            }
-
-            if (root.TryGetProperty("error", out JsonElement error) && error.ValueKind == JsonValueKind.Object)
-            {
-                string message = error.TryGetProperty("message", out JsonElement m) && m.ValueKind == JsonValueKind.String
-                    ? m.GetString() ?? "unknown error"
-                    : "unknown error";
-                throw new MetaApiException($"Meta Model API error: {message}");
-            }
-
-            string? status = root.TryGetProperty("status", out JsonElement s) && s.ValueKind == JsonValueKind.String ? s.GetString() : null;
-            if (status is not null && !string.Equals(status, "completed", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new MetaApiException($"Meta Model API response not completed (status: {status}).");
-            }
-
-            string model = root.TryGetProperty("model", out JsonElement mEl) && mEl.ValueKind == JsonValueKind.String
-                ? mEl.GetString() ?? requestedModel
-                : requestedModel;
-            string? responseId = root.TryGetProperty("id", out JsonElement idEl) && idEl.ValueKind == JsonValueKind.String
-                ? idEl.GetString()
-                : null;
-
-            byte[]? imageBytes = ExtractImageBytes(root);
-            if (imageBytes is null || imageBytes.Length == 0)
-            {
-                throw new MetaApiException("Meta Model API response carried no image (missing image_generation_call result).");
-            }
-
-            RasterImage raster = WicImageDecoder.Decode(imageBytes);
-            return new MuseImageEditResult(raster, model, ParseUsage(root), responseId);
+            throw new MetaApiException($"Meta Model API error: {ReadString(error, "message") ?? "unknown error"}");
         }
+
+        string? status = ReadString(root, "status");
+        if (status is not null && !string.Equals(status, "completed", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new MetaApiException($"Meta Model API response not completed (status: {status}).");
+        }
+    }
+
+    private static string? ReadString(JsonElement obj, string name)
+    {
+        return obj.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
     }
 
     private static byte[]? ExtractImageBytes(JsonElement root)
     {
-        if (!root.TryGetProperty("output", out JsonElement output) || output.ValueKind != JsonValueKind.Array)
+        if (!TryGetOutputArray(root, out JsonElement output))
         {
             return null;
         }
 
         foreach (JsonElement item in output.EnumerateArray())
         {
-            if (item.ValueKind != JsonValueKind.Object)
+            byte[]? bytes = ExtractItemBytes(item);
+            if (bytes is not null)
             {
-                continue;
-            }
-
-            if (item.TryGetProperty("type", out JsonElement type)
-                && type.ValueKind == JsonValueKind.String
-                && string.Equals(type.GetString(), "image_generation_call", StringComparison.Ordinal)
-                && item.TryGetProperty("result", out JsonElement result)
-                && result.ValueKind == JsonValueKind.String)
-            {
-                string? b64 = result.GetString();
-                if (string.IsNullOrWhiteSpace(b64))
-                {
-                    return null;
-                }
-
-                try
-                {
-                    return Convert.FromBase64String(b64.Trim());
-                }
-                catch (FormatException ex)
-                {
-                    throw new MetaApiException("Meta Model API image result was not valid base64.", ex);
-                }
+                return bytes;
             }
         }
 
         return null;
+    }
+
+    private static bool TryGetOutputArray(JsonElement root, out JsonElement output)
+    {
+        return root.TryGetProperty("output", out output) && output.ValueKind == JsonValueKind.Array;
+    }
+
+    private static byte[]? ExtractItemBytes(JsonElement item)
+    {
+        if (item.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (!IsImageGenerationCall(item))
+        {
+            return null;
+        }
+
+        string? b64 = ReadString(item, "result");
+        if (string.IsNullOrWhiteSpace(b64))
+        {
+            return null;
+        }
+
+        try
+        {
+            return Convert.FromBase64String(b64.Trim());
+        }
+        catch (FormatException ex)
+        {
+            throw new MetaApiException("Meta Model API image result was not valid base64.", ex);
+        }
+    }
+
+    private static bool IsImageGenerationCall(JsonElement item)
+    {
+        return item.TryGetProperty("type", out JsonElement type)
+            && type.ValueKind == JsonValueKind.String
+            && string.Equals(type.GetString(), "image_generation_call", StringComparison.Ordinal)
+            && item.TryGetProperty("result", out JsonElement result)
+            && result.ValueKind == JsonValueKind.String;
     }
 
     private static MetaClient.TokenUsage? ParseUsage(JsonElement root)

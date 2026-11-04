@@ -45,11 +45,11 @@ public sealed class DirectorAdaptationService
 
     public QaOptions Options => _options;
 
-    public static string BuildSystemPrompt(string sourceLanguage, string targetLanguage, string targetRegister)
+    internal static string BuildSystemPrompt(SystemPromptInput input)
     {
-        string sourceDisplay = MetaClient.LanguageDisplayName(sourceLanguage);
-        string targetDisplay = MetaClient.LanguageDisplayName(targetLanguage);
-        string registerInstruction = targetRegister == "formal"
+        string sourceDisplay = MetaClient.LanguageDisplayName(input.SourceLanguage);
+        string targetDisplay = MetaClient.LanguageDisplayName(input.TargetLanguage);
+        string registerInstruction = input.TargetRegister == "formal"
             ? "Target register: formal. Use polite, formal address and verb forms where the language distinguishes them (for example usted in Spanish), full uncontracted forms, and no slang, contractions, or casual interjections."
             : "Target register: informal. Use casual, everyday address and verb forms where the language distinguishes them (for example tú in Spanish), natural contractions, and relaxed spoken phrasing, without slang that changes the facts.";
 
@@ -64,32 +64,26 @@ public sealed class DirectorAdaptationService
         });
     }
 
-    public static string BuildUserPrompt(
-        string sourceText,
-        string currentTranslation,
-        string sourceLanguage,
-        string targetLanguage,
-        string targetRegister,
-        IReadOnlyList<string> contextLines)
+    internal static string BuildUserPrompt(DirectorPromptInput input)
     {
         var lines = new List<string>
         {
-            $"SOURCE ({MetaClient.LanguageDisplayName(sourceLanguage)}):",
+            $"SOURCE ({MetaClient.LanguageDisplayName(input.SourceLanguage)}):",
             "<source_text>",
-            sourceText,
+            input.SourceText,
             "</source_text>",
-            $"CURRENT TRANSLATION ({MetaClient.LanguageDisplayName(targetLanguage)}):",
+            $"CURRENT TRANSLATION ({MetaClient.LanguageDisplayName(input.TargetLanguage)}):",
             "<current_translation>",
-            currentTranslation,
+            input.CurrentTranslation,
             "</current_translation>",
-            $"TARGET REGISTER: {targetRegister}",
+            $"TARGET REGISTER: {input.TargetRegister}",
         };
 
-        if (contextLines.Count > 0)
+        if (input.ContextLines.Count > 0)
         {
             lines.Add("SCENE CONTEXT (delivery cues only; do not add these facts to the line):");
             lines.Add("<scene_context>");
-            lines.AddRange(contextLines);
+            lines.AddRange(input.ContextLines);
             lines.Add("</scene_context>");
         }
 
@@ -180,29 +174,70 @@ public sealed class DirectorAdaptationService
 
         if (segment.DirectorAdaptation is null)
         {
-            return new DirectorAdaptationSegmentResult(
-                segment.Id, DirectorAdaptationStatus.NotRequested, segment.Text, segment.Translation,
-                AdaptedTranslation: null, Changed: null, TargetRegister: null, ContextFieldsUsed: [],
-                Error: null, Provenance: null, Usage: null);
+            return NotRequested(segment);
         }
 
-        string? rawRegister = segment.DirectorAdaptation.TargetRegister;
+        PreparedSegment prepared = Prepare(segment, run);
+        if (prepared.Failure is not null)
+        {
+            return prepared.Failure;
+        }
+
+        var request = new AdaptationRequestContext(
+            segment.Text!, segment.Translation!, run, prepared.Normalized, prepared.ContextLines);
+        (MetaClient.AdaptationCompletionResult? response, string? requestError) =
+            await RequestAdaptationAsync(request, cancellationToken).ConfigureAwait(false);
+        if (response is null)
+        {
+            return Failed(
+                segment,
+                new FailureReason(prepared.Normalized, requestError!),
+                new FailureDetails(prepared.FieldsUsed, ProvenanceFor(new ProvenanceInput(MetaAuth.GetModel(), run))));
+        }
+
+        AdaptedLine line = ReadAdaptedLine(segment, prepared, response, run);
+        if (line.Failure is not null)
+        {
+            return line.Failure;
+        }
+
+        (QaVerdict timingVerdict, double estimated, DirectorMeaningResult meaning) = await EvaluateGatesAsync(
+            new GateRequest(segment, line.Text, run, response.Model, prepared.WindowSeconds), cancellationToken).ConfigureAwait(false);
+
+        DirectorAdaptationStatus status =
+            timingVerdict == QaVerdict.Pass && meaning.Verdict == MeaningVerdict.Pass
+                ? DirectorAdaptationStatus.Passed
+                : DirectorAdaptationStatus.Failed;
+
+        return new DirectorAdaptationSegmentResult(
+            segment.Id, status, segment.Text, segment.Translation,
+            line.Text, Changed: !string.Equals(line.Text, segment.Translation, StringComparison.Ordinal),
+            prepared.Normalized, prepared.FieldsUsed, Error: null, line.Provenance, line.Usage,
+            timingVerdict, estimated, prepared.WindowSeconds, meaning, RawContent: response.Content);
+    }
+
+    private PreparedSegment Prepare(DirectorAdaptationSegmentInput segment, AdaptationRunContext run)
+    {
+        string? rawRegister = segment.DirectorAdaptation!.TargetRegister;
         string normalized = rawRegister?.Trim().ToLowerInvariant() ?? string.Empty;
         if (normalized is not ("formal" or "informal"))
         {
             string shown = string.IsNullOrWhiteSpace(rawRegister) ? "(missing)" : rawRegister.Trim();
-            return Failed(segment, targetRegister: rawRegister?.Trim(),
-                $"Invalid target_register '{shown}': expected \"formal\" or \"informal\".");
+            return new PreparedSegment(string.Empty, 0, [], [], Failed(
+                segment,
+                new FailureReason(rawRegister?.Trim(), $"Invalid target_register '{shown}': expected \"formal\" or \"informal\".")));
         }
 
         if (string.IsNullOrWhiteSpace(segment.Text))
         {
-            return Failed(segment, normalized, "Segment has no source text to adapt against.");
+            return new PreparedSegment(string.Empty, 0, [], [], Failed(
+                segment, new FailureReason(normalized, "Segment has no source text to adapt against.")));
         }
 
         if (string.IsNullOrWhiteSpace(segment.Translation))
         {
-            return Failed(segment, normalized, "Segment has no existing translation to adapt.");
+            return new PreparedSegment(string.Empty, 0, [], [], Failed(
+                segment, new FailureReason(normalized, "Segment has no existing translation to adapt.")));
         }
 
         double windowSeconds;
@@ -213,106 +248,125 @@ public sealed class DirectorAdaptationService
         }
         catch (ArgumentOutOfRangeException ex)
         {
-            return Failed(segment, normalized, ex.Message);
+            return new PreparedSegment(string.Empty, 0, [], [], Failed(segment, new FailureReason(normalized, ex.Message)));
         }
 
         (string[] fieldsUsed, string[] contextLines) = SelectContext(segment.Context);
+        return new PreparedSegment(normalized, windowSeconds, fieldsUsed, contextLines, Failure: null);
+    }
 
-        MetaClient.AdaptationCompletionResult response;
-        try
-        {
-            response = await _client.AdaptRegisterAsync(
-                new MetaClient.AdaptationRequest(
-                    BuildSystemPrompt(run.SourceLanguage, run.TargetLanguage, normalized),
-                    BuildUserPrompt(segment.Text, segment.Translation, run.SourceLanguage, run.TargetLanguage, normalized, contextLines)),
-                cancellationToken).ConfigureAwait(false);
-        }
-        catch (MetaApiException ex) when (!IsMissingKey(ex))
-        {
-            return Failed(segment, normalized, ex.Message, fieldsUsed,
-                new TranslationProvenance(MetaAuth.GetModel(), run.EndpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion));
-        }
-        catch (HttpRequestException ex)
-        {
-            return Failed(segment, normalized, ex.Message, fieldsUsed,
-                new TranslationProvenance(MetaAuth.GetModel(), run.EndpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion));
-        }
+    private static AdaptedLine ReadAdaptedLine(
+        DirectorAdaptationSegmentInput segment,
+        PreparedSegment prepared,
+        MetaClient.AdaptationCompletionResult response,
+        AdaptationRunContext run)
+    {
+        TranslationProvenance provenance = ProvenanceFor(new ProvenanceInput(response.Model, run));
+        DirectorAdaptationUsage? usage = ToUsage(response);
 
-        // A truncated completion (finish_reason "length") is not an adapted line:
-        // fail closed before the gates can pass a prefix.
         if (!string.Equals(response.FinishReason, "stop", StringComparison.OrdinalIgnoreCase))
         {
             string reason = string.IsNullOrWhiteSpace(response.FinishReason) ? "(missing)" : $"'{response.FinishReason.Trim()}'";
-            return Failed(segment, normalized,
-                $"Incomplete adaptation response (finish_reason: {reason}); failing closed.",
-                fieldsUsed,
-                new TranslationProvenance(response.Model, run.EndpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion),
-                response.Usage is null ? null : new DirectorAdaptationUsage(
-                    response.Usage.PromptTokens, response.Usage.CompletionTokens, response.Usage.TotalTokens,
-                    response.Usage.ReasoningTokens, response.Usage.CachedTokens),
-                rawContent: response.Content);
+            return new AdaptedLine(
+                string.Empty, provenance, usage,
+                Failed(
+                    segment,
+                    new FailureReason(prepared.Normalized, $"Incomplete adaptation response (finish_reason: {reason}); failing closed."),
+                    new FailureDetails(prepared.FieldsUsed, provenance, usage, response.Content)));
         }
-
-        var provenance = new TranslationProvenance(
-            response.Model, run.EndpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion);
-        DirectorAdaptationUsage? usage = response.Usage is null
-            ? null
-            : new DirectorAdaptationUsage(
-                response.Usage.PromptTokens, response.Usage.CompletionTokens, response.Usage.TotalTokens,
-                response.Usage.ReasoningTokens, response.Usage.CachedTokens);
 
         string adapted = response.Content.Trim();
         if (adapted.Length == 0 || adapted.Contains('\n'))
         {
-            return Failed(segment, normalized,
-                "Malformed adaptation response: expected exactly one adapted line; failing closed.",
-                fieldsUsed, provenance, usage, rawContent: response.Content);
+            return new AdaptedLine(
+                string.Empty, provenance, usage,
+                Failed(
+                    segment,
+                    new FailureReason(prepared.Normalized, "Malformed adaptation response: expected exactly one adapted line; failing closed."),
+                    new FailureDetails(prepared.FieldsUsed, provenance, usage, response.Content)));
         }
 
-        double targetCps = _options.GetCharactersPerSecond(run.TargetLanguage);
-        double estimated = DurationEstimator.EstimateSeconds(adapted, targetCps);
-        bool fits = DurationEstimator.Fits(estimated, windowSeconds, _options.ToleranceFraction);
+        return new AdaptedLine(adapted, provenance, usage, Failure: null);
+    }
+
+    // Returns the completion, or the provider error message when the call failed (a missing key still throws).
+    private async Task<(MetaClient.AdaptationCompletionResult? Response, string? Error)> RequestAdaptationAsync(
+        AdaptationRequestContext request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            MetaClient.AdaptationCompletionResult response = await _client.AdaptRegisterAsync(
+                new MetaClient.AdaptationRequest(
+                    BuildSystemPrompt(new SystemPromptInput(request.Run.SourceLanguage, request.Run.TargetLanguage, request.Register)),
+                    BuildUserPrompt(new DirectorPromptInput(
+                        request.SourceText,
+                        request.CurrentTranslation,
+                        request.Run.SourceLanguage,
+                        request.Run.TargetLanguage,
+                        request.Register,
+                        request.ContextLines))),
+                cancellationToken).ConfigureAwait(false);
+            return (response, null);
+        }
+        catch (MetaApiException ex) when (!IsMissingKey(ex))
+        {
+            return (null, ex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return (null, ex.Message);
+        }
+    }
+
+    // Timing runs first; the meaning gate runs only on a line that fits its window.
+    private async Task<(QaVerdict Timing, double Estimated, DirectorMeaningResult Meaning)> EvaluateGatesAsync(
+        GateRequest request,
+        CancellationToken cancellationToken)
+    {
+        double targetCps = _options.GetCharactersPerSecond(request.Run.TargetLanguage);
+        double estimated = DurationEstimator.EstimateSeconds(request.Adapted, targetCps);
+        bool fits = DurationEstimator.Fits(estimated, request.WindowSeconds, _options.ToleranceFraction);
         QaVerdict timingVerdict = fits ? QaVerdict.Pass : QaVerdict.Fail;
 
         DirectorMeaningResult meaning = fits
-            ? await CheckMeaningAsync(segment, adapted, run, response.Model, cancellationToken).ConfigureAwait(false)
+            ? await CheckMeaningAsync(request, cancellationToken).ConfigureAwait(false)
             : new DirectorMeaningResult(
                 MeaningVerdict.NotEvaluated, [],
                 "Not evaluated: the adapted line already failed the timing gate.",
                 ModelId: null, PromptTemplateVersion: null, TimestampUtc: null,
                 new TranslationUsage(0, 0, 0));
 
-        DirectorAdaptationStatus status =
-            timingVerdict == QaVerdict.Pass && meaning.Verdict == MeaningVerdict.Pass
-                ? DirectorAdaptationStatus.Passed
-                : DirectorAdaptationStatus.Failed;
-
-        return new DirectorAdaptationSegmentResult(
-            segment.Id, status, segment.Text, segment.Translation,
-            adapted, Changed: !string.Equals(adapted, segment.Translation, StringComparison.Ordinal),
-            normalized, fieldsUsed, Error: null, provenance, usage,
-            timingVerdict, estimated, windowSeconds, meaning, RawContent: response.Content);
+        return (timingVerdict, estimated, meaning);
     }
 
+    private static TranslationProvenance ProvenanceFor(ProvenanceInput input) =>
+        new(input.Model, input.Run.EndpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion);
+
+    private static DirectorAdaptationUsage? ToUsage(MetaClient.AdaptationCompletionResult response) =>
+        response.Usage is null
+            ? null
+            : new DirectorAdaptationUsage(
+                response.Usage.PromptTokens, response.Usage.CompletionTokens, response.Usage.TotalTokens,
+                response.Usage.ReasoningTokens, response.Usage.CachedTokens);
+
     private async Task<DirectorMeaningResult> CheckMeaningAsync(
-        DirectorAdaptationSegmentInput segment,
-        string adapted,
-        AdaptationRunContext run,
-        string adaptationModelId,
+        GateRequest request,
         CancellationToken cancellationToken)
     {
         MeaningCheckResult meaning;
         try
         {
             meaning = await _client.CheckMeaningAsync(
-                new MetaClient.MeaningCheckRequest(segment.Text!, adapted, run.SourceLanguage, run.TargetLanguage),
+                new MetaClient.MeaningCheckRequest(
+                    request.Segment.Text!, request.Adapted, request.Run.SourceLanguage, request.Run.TargetLanguage),
                 cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (
             ex is MetaApiException or HttpRequestException or InvalidOperationException
             || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
-            meaning = MeaningGate.ForError(ex.Message, adaptationModelId, null, run.EndpointHost);
+            meaning = MeaningGate.ForError(ex.Message, request.AdaptationModelId, null, request.Run.EndpointHost);
         }
 
         return new DirectorMeaningResult(
@@ -324,20 +378,21 @@ public sealed class DirectorAdaptationService
                 meaning.Usage?.TotalTokens ?? 0));
     }
 
+    private static DirectorAdaptationSegmentResult NotRequested(DirectorAdaptationSegmentInput segment) =>
+        new(segment.Id, DirectorAdaptationStatus.NotRequested, segment.Text, segment.Translation,
+            AdaptedTranslation: null, Changed: null, TargetRegister: null, ContextFieldsUsed: [],
+            Error: null, Provenance: null, Usage: null);
+
     private static DirectorAdaptationSegmentResult Failed(
         DirectorAdaptationSegmentInput segment,
-        string? targetRegister,
-        string error,
-        string[]? fieldsUsed = null,
-        TranslationProvenance? provenance = null,
-        DirectorAdaptationUsage? usage = null,
-        string? rawContent = null)
+        FailureReason reason,
+        FailureDetails? details = null)
     {
         return new DirectorAdaptationSegmentResult(
             segment.Id, DirectorAdaptationStatus.Failed, segment.Text, segment.Translation,
-            AdaptedTranslation: null, Changed: null, targetRegister, fieldsUsed ?? [],
-            error.Length > 500 ? error[..500] : error, provenance, usage,
-            RawContent: rawContent);
+            AdaptedTranslation: null, Changed: null, reason.TargetRegister, details?.FieldsUsed ?? [],
+            reason.Error.Length > 500 ? reason.Error[..500] : reason.Error, details?.Provenance, details?.Usage,
+            RawContent: details?.RawContent);
     }
 
     private static DirectorAdaptationBatch BuildBatch(AdaptationRunContext run, List<DirectorAdaptationSegmentResult> results)
@@ -462,4 +517,51 @@ public sealed class DirectorAdaptationService
     }
 
     private sealed record AdaptationRunContext(string SourceLanguage, string TargetLanguage, string EndpointHost);
+
+    internal sealed record SystemPromptInput(string SourceLanguage, string TargetLanguage, string TargetRegister);
+
+    internal sealed record DirectorPromptInput(
+        string SourceText,
+        string CurrentTranslation,
+        string SourceLanguage,
+        string TargetLanguage,
+        string TargetRegister,
+        IReadOnlyList<string> ContextLines);
+
+    private sealed record AdaptationRequestContext(
+        string SourceText,
+        string CurrentTranslation,
+        AdaptationRunContext Run,
+        string Register,
+        string[] ContextLines);
+
+    private sealed record GateRequest(
+        DirectorAdaptationSegmentInput Segment,
+        string Adapted,
+        AdaptationRunContext Run,
+        string AdaptationModelId,
+        double WindowSeconds);
+
+    private sealed record PreparedSegment(
+        string Normalized,
+        double WindowSeconds,
+        string[] FieldsUsed,
+        string[] ContextLines,
+        DirectorAdaptationSegmentResult? Failure);
+
+    private sealed record AdaptedLine(
+        string Text,
+        TranslationProvenance Provenance,
+        DirectorAdaptationUsage? Usage,
+        DirectorAdaptationSegmentResult? Failure);
+
+    private sealed record ProvenanceInput(string Model, AdaptationRunContext Run);
+
+    private sealed record FailureReason(string? TargetRegister, string Error);
+
+    private sealed record FailureDetails(
+        string[]? FieldsUsed = null,
+        TranslationProvenance? Provenance = null,
+        DirectorAdaptationUsage? Usage = null,
+        string? RawContent = null);
 }
