@@ -159,36 +159,35 @@ internal static class RequestParsing
             throw new InvalidOperationException("Request body must be a JSON object with 'audio_base64' or a 'segments' array.");
         }
 
-        TranscribeSegment[]? segments = null;
-        if (root.TryGetProperty("segments", out JsonElement segEl) && segEl.ValueKind == JsonValueKind.Array)
-        {
-            segments = JsonSerializer.Deserialize<TranscribeSegment[]>(segEl.GetRawText(), JsonOptionsWeb)
-                ?? throw new InvalidOperationException("Invalid 'segments' array.");
-        }
-
-        SceneSegmentInput[]? sceneSegments = null;
-        if (root.TryGetProperty("scene_segments", out JsonElement sceneEl) && sceneEl.ValueKind == JsonValueKind.Array)
-        {
-            sceneSegments = JsonSerializer.Deserialize<SceneSegmentInput[]>(sceneEl.GetRawText(), JsonOptionsWeb)
-                ?? throw new InvalidOperationException("Invalid 'scene_segments' array.");
-        }
-
-        QaOptionsDto? optionsDto = null;
-        if (root.TryGetProperty("options", out JsonElement optEl) && optEl.ValueKind == JsonValueKind.Object)
-        {
-            optionsDto = ReadQaOptions(optEl);
-        }
-
         return new PipelineApiRequest(
-            ReadFirst<string>(root, el => el.ValueKind == JsonValueKind.String ? el.GetString() : null, "audio_base64", "audioBase64"),
-            ReadFirst<string>(root, el => el.ValueKind == JsonValueKind.String ? el.GetString() : null, "audio_file_name", "audioFileName"),
-            segments,
-            sceneSegments,
-            ReadFirst<bool?>(root, el => el.ValueKind is JsonValueKind.True or JsonValueKind.False ? el.GetBoolean() : null, "scene"),
-            ReadFirst<bool?>(root, el => el.ValueKind is JsonValueKind.True or JsonValueKind.False ? el.GetBoolean() : null, "audition"),
+            ReadFirst<string>(root, AsString, "audio_base64", "audioBase64"),
+            ReadFirst<string>(root, AsString, "audio_file_name", "audioFileName"),
+            ReadOptionalArray<TranscribeSegment>(root, "segments", "Invalid 'segments' array."),
+            ReadOptionalArray<SceneSegmentInput>(root, "scene_segments", "Invalid 'scene_segments' array."),
+            ReadFirst<bool?>(root, AsBool, "scene"),
+            ReadFirst<bool?>(root, AsBool, "audition"),
             ReadFirstPresentString(root, "sourceLanguage", "source_language", "from"),
             ReadFirstPresentString(root, "targetLanguage", "target_language", "to"),
-            optionsDto);
+            ReadOptionalQaOptions(root));
+    }
+
+    private static string? AsString(JsonElement el) => el.ValueKind == JsonValueKind.String ? el.GetString() : null;
+
+    private static bool? AsBool(JsonElement el) => el.ValueKind is JsonValueKind.True or JsonValueKind.False ? el.GetBoolean() : null;
+
+    // Returns the named array when present with an array value; any other value is treated as absent.
+    private static T[]? ReadOptionalArray<T>(JsonElement root, string name, string errorMessage)
+    {
+        return root.TryGetProperty(name, out JsonElement el) && el.ValueKind == JsonValueKind.Array
+            ? DeserializeSegments<T>(el, errorMessage)
+            : null;
+    }
+
+    private static QaOptionsDto? ReadOptionalQaOptions(JsonElement root)
+    {
+        return root.TryGetProperty("options", out JsonElement optEl) && optEl.ValueKind == JsonValueKind.Object
+            ? ReadQaOptions(optEl)
+            : null;
     }
 
     // A body is either a raw segment array, or an object with a 'segments' array and optional languages.

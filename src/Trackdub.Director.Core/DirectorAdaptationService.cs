@@ -218,24 +218,11 @@ public sealed class DirectorAdaptationService
 
         (string[] fieldsUsed, string[] contextLines) = SelectContext(segment.Context);
 
-        MetaClient.AdaptationCompletionResult response;
-        try
+        (MetaClient.AdaptationCompletionResult? response, string? requestError) = await RequestAdaptationAsync(
+            segment.Text, segment.Translation, run, normalized, contextLines, cancellationToken).ConfigureAwait(false);
+        if (response is null)
         {
-            response = await _client.AdaptRegisterAsync(
-                new MetaClient.AdaptationRequest(
-                    BuildSystemPrompt(run.SourceLanguage, run.TargetLanguage, normalized),
-                    BuildUserPrompt(segment.Text, segment.Translation, run.SourceLanguage, run.TargetLanguage, normalized, contextLines)),
-                cancellationToken).ConfigureAwait(false);
-        }
-        catch (MetaApiException ex) when (!IsMissingKey(ex))
-        {
-            return Failed(segment, normalized, ex.Message, fieldsUsed,
-                new TranslationProvenance(MetaAuth.GetModel(), run.EndpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion));
-        }
-        catch (HttpRequestException ex)
-        {
-            return Failed(segment, normalized, ex.Message, fieldsUsed,
-                new TranslationProvenance(MetaAuth.GetModel(), run.EndpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion));
+            return Failed(segment, normalized, requestError!, fieldsUsed, ProvenanceFor(MetaAuth.GetModel(), run));
         }
 
         // A truncated completion (finish_reason "length") is not an adapted line:
@@ -246,20 +233,13 @@ public sealed class DirectorAdaptationService
             return Failed(segment, normalized,
                 $"Incomplete adaptation response (finish_reason: {reason}); failing closed.",
                 fieldsUsed,
-                new TranslationProvenance(response.Model, run.EndpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion),
-                response.Usage is null ? null : new DirectorAdaptationUsage(
-                    response.Usage.PromptTokens, response.Usage.CompletionTokens, response.Usage.TotalTokens,
-                    response.Usage.ReasoningTokens, response.Usage.CachedTokens),
+                ProvenanceFor(response.Model, run),
+                ToUsage(response),
                 rawContent: response.Content);
         }
 
-        var provenance = new TranslationProvenance(
-            response.Model, run.EndpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion);
-        DirectorAdaptationUsage? usage = response.Usage is null
-            ? null
-            : new DirectorAdaptationUsage(
-                response.Usage.PromptTokens, response.Usage.CompletionTokens, response.Usage.TotalTokens,
-                response.Usage.ReasoningTokens, response.Usage.CachedTokens);
+        var provenance = ProvenanceFor(response.Model, run);
+        DirectorAdaptationUsage? usage = ToUsage(response);
 
         string adapted = response.Content.Trim();
         if (adapted.Length == 0 || adapted.Contains('\n'))
@@ -269,18 +249,8 @@ public sealed class DirectorAdaptationService
                 fieldsUsed, provenance, usage, rawContent: response.Content);
         }
 
-        double targetCps = _options.GetCharactersPerSecond(run.TargetLanguage);
-        double estimated = DurationEstimator.EstimateSeconds(adapted, targetCps);
-        bool fits = DurationEstimator.Fits(estimated, windowSeconds, _options.ToleranceFraction);
-        QaVerdict timingVerdict = fits ? QaVerdict.Pass : QaVerdict.Fail;
-
-        DirectorMeaningResult meaning = fits
-            ? await CheckMeaningAsync(segment, adapted, run, response.Model, cancellationToken).ConfigureAwait(false)
-            : new DirectorMeaningResult(
-                MeaningVerdict.NotEvaluated, [],
-                "Not evaluated: the adapted line already failed the timing gate.",
-                ModelId: null, PromptTemplateVersion: null, TimestampUtc: null,
-                new TranslationUsage(0, 0, 0));
+        (QaVerdict timingVerdict, double estimated, DirectorMeaningResult meaning) = await EvaluateGatesAsync(
+            segment, adapted, run, response.Model, windowSeconds, cancellationToken).ConfigureAwait(false);
 
         DirectorAdaptationStatus status =
             timingVerdict == QaVerdict.Pass && meaning.Verdict == MeaningVerdict.Pass
@@ -293,6 +263,69 @@ public sealed class DirectorAdaptationService
             normalized, fieldsUsed, Error: null, provenance, usage,
             timingVerdict, estimated, windowSeconds, meaning, RawContent: response.Content);
     }
+
+    // Returns the completion, or the provider error message when the call failed (a missing key still throws).
+    private async Task<(MetaClient.AdaptationCompletionResult? Response, string? Error)> RequestAdaptationAsync(
+        string sourceText,
+        string currentTranslation,
+        AdaptationRunContext run,
+        string register,
+        string[] contextLines,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            MetaClient.AdaptationCompletionResult response = await _client.AdaptRegisterAsync(
+                new MetaClient.AdaptationRequest(
+                    BuildSystemPrompt(run.SourceLanguage, run.TargetLanguage, register),
+                    BuildUserPrompt(sourceText, currentTranslation, run.SourceLanguage, run.TargetLanguage, register, contextLines)),
+                cancellationToken).ConfigureAwait(false);
+            return (response, null);
+        }
+        catch (MetaApiException ex) when (!IsMissingKey(ex))
+        {
+            return (null, ex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return (null, ex.Message);
+        }
+    }
+
+    // Timing runs first; the meaning gate runs only on a line that fits its window.
+    private async Task<(QaVerdict Timing, double Estimated, DirectorMeaningResult Meaning)> EvaluateGatesAsync(
+        DirectorAdaptationSegmentInput segment,
+        string adapted,
+        AdaptationRunContext run,
+        string adaptationModelId,
+        double windowSeconds,
+        CancellationToken cancellationToken)
+    {
+        double targetCps = _options.GetCharactersPerSecond(run.TargetLanguage);
+        double estimated = DurationEstimator.EstimateSeconds(adapted, targetCps);
+        bool fits = DurationEstimator.Fits(estimated, windowSeconds, _options.ToleranceFraction);
+        QaVerdict timingVerdict = fits ? QaVerdict.Pass : QaVerdict.Fail;
+
+        DirectorMeaningResult meaning = fits
+            ? await CheckMeaningAsync(segment, adapted, run, adaptationModelId, cancellationToken).ConfigureAwait(false)
+            : new DirectorMeaningResult(
+                MeaningVerdict.NotEvaluated, [],
+                "Not evaluated: the adapted line already failed the timing gate.",
+                ModelId: null, PromptTemplateVersion: null, TimestampUtc: null,
+                new TranslationUsage(0, 0, 0));
+
+        return (timingVerdict, estimated, meaning);
+    }
+
+    private static TranslationProvenance ProvenanceFor(string model, AdaptationRunContext run) =>
+        new(model, run.EndpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion);
+
+    private static DirectorAdaptationUsage? ToUsage(MetaClient.AdaptationCompletionResult response) =>
+        response.Usage is null
+            ? null
+            : new DirectorAdaptationUsage(
+                response.Usage.PromptTokens, response.Usage.CompletionTokens, response.Usage.TotalTokens,
+                response.Usage.ReasoningTokens, response.Usage.CachedTokens);
 
     private async Task<DirectorMeaningResult> CheckMeaningAsync(
         DirectorAdaptationSegmentInput segment,

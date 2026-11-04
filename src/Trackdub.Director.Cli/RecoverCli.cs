@@ -50,10 +50,8 @@ internal static class RecoverCli
             IReadOnlyList<RecoveryItem> set = await RecoverySetBuilder.BuildAsync(options.ReportPaths).ConfigureAwait(false);
             PrintSet(set);
 
-            if (set.Count < MinSetSize || set.Count > MaxSetSize)
+            if (!IsSetSizeInRange(set))
             {
-                Console.Error.WriteLine(
-                    $"error: recovery set has {set.Count} item(s), outside the [{MinSetSize}, {MaxSetSize}] range; stopping without a run.");
                 return 1;
             }
 
@@ -63,23 +61,15 @@ internal static class RecoverCli
                 return 0;
             }
 
-            // The source language is intrinsic to the report text; a --from that disagrees with
-            // the captured reports would judge the meaning gate against the wrong source language.
-            string? mismatchedSource = set.FirstOrDefault(
-                i => !string.Equals(i.SourceLanguage, options.From, StringComparison.OrdinalIgnoreCase))?.SourceLanguage;
-            if (mismatchedSource is not null)
+            // Checked before the route: a language mismatch is a usage error, not a route error.
+            if (!IsSourceLanguageMatch(set, options.From))
             {
-                Console.Error.WriteLine(
-                    $"error: recovery set has source language '{mismatchedSource}' but --from is '{options.From}'; source language cannot be overridden.");
                 return 1;
             }
 
             // Fail closed BEFORE constructing any client or making any call; name the missing vars.
-            string[] missing = MissingRouteVars();
-            if (missing.Length > 0)
+            if (!IsRouteConfigured())
             {
-                Console.Error.WriteLine(
-                    $"error: Glimmer route not configured; no call was made. Missing: {string.Join(", ", missing)}.");
                 return 1;
             }
 
@@ -90,6 +80,47 @@ internal static class RecoverCli
             Console.Error.WriteLine($"error: {ex.Message}");
             return 1;
         }
+    }
+
+    private static bool IsSetSizeInRange(IReadOnlyList<RecoveryItem> set)
+    {
+        if (set.Count >= MinSetSize && set.Count <= MaxSetSize)
+        {
+            return true;
+        }
+
+        Console.Error.WriteLine(
+            $"error: recovery set has {set.Count} item(s), outside the [{MinSetSize}, {MaxSetSize}] range; stopping without a run.");
+        return false;
+    }
+
+    // The source language is intrinsic to the report text; a --from that disagrees with
+    // the captured reports would judge the meaning gate against the wrong source language.
+    private static bool IsSourceLanguageMatch(IReadOnlyList<RecoveryItem> set, string from)
+    {
+        string? mismatchedSource = set.FirstOrDefault(
+            i => !string.Equals(i.SourceLanguage, from, StringComparison.OrdinalIgnoreCase))?.SourceLanguage;
+        if (mismatchedSource is null)
+        {
+            return true;
+        }
+
+        Console.Error.WriteLine(
+            $"error: recovery set has source language '{mismatchedSource}' but --from is '{from}'; source language cannot be overridden.");
+        return false;
+    }
+
+    private static bool IsRouteConfigured()
+    {
+        string[] missing = MissingRouteVars();
+        if (missing.Length == 0)
+        {
+            return true;
+        }
+
+        Console.Error.WriteLine(
+            $"error: Glimmer route not configured; no call was made. Missing: {string.Join(", ", missing)}.");
+        return false;
     }
 
     private static async Task<int> RunRecoveryAsync(Options options, IReadOnlyList<RecoveryItem> set)
