@@ -9,8 +9,57 @@ namespace Trackdub.Director.Tests;
 /// </summary>
 public sealed class RecoveryOutputWriterTests : IDisposable
 {
+    // Expected markers live in arrays so the test methods pass a list rather than a
+    // long run of string arguments.
+    private static readonly string[] SummaryMarkers =
+    [
+        "# Glimmer recovery run notes",
+        "- Direction: es -> en",
+        "muse-glimmer-1",
+        "muse-spark-1.1",
+        "1/2 items recovered",
+        "1/2 lines recovered",
+        "Glimmer calls 4/20, Meta calls 2/10",
+        "## Leakage rule",
+        "## Per-item outcomes",
+    ];
+
+    private static readonly string[] AbsentSectionMarkers =
+    [
+        // No probe and no run error: neither optional section may appear.
+        "### Pre-flight probe",
+        "## Run failure",
+    ];
+
+    private static readonly string[] ProbeMarkers =
+    [
+        "### Pre-flight probe",
+        "api.meta.ai",
+        "prompt=12 completion=3 total=15",
+        "## Run failure",
+        "provider 502",
+    ];
+
+    private static readonly string[] ItemMarkers =
+    [
+        "`seg-001` att#1 (samples/source.json, Timing, window",
+        "Recovered -> \"hola!\" [1 attempt(s)]",
+        "`seg-002` att#1",
+        "ExhaustedAttempts [1 attempt(s)]",
+    ];
+
+    private static readonly string[] AbsentRecoveredMarkers =
+    [
+        // A refused item has no recovered text, so no arrow line for it.
+        "ExhaustedAttempts ->",
+    ];
+
     private readonly string _folder =
         Path.Combine(Path.GetTempPath(), "trackdub-recovery-" + Guid.NewGuid().ToString("N"));
+
+    private string ReportPath => Path.Combine(_folder, RecoveryOutputWriter.ReportFileName);
+
+    private string NotesPath => Path.Combine(_folder, RecoveryOutputWriter.NotesFileName);
 
     public void Dispose()
     {
@@ -82,8 +131,8 @@ public sealed class RecoveryOutputWriterTests : IDisposable
             ]);
     }
 
-    /// <summary>Asserts that every marker appears in <paramref name="text"/>.</summary>
-    private static void ExpectMarkers(string text, params string[] markers)
+    /// <summary>Asserts that every marker appears in the written text.</summary>
+    private static void ExpectMarkers(string text, IReadOnlyList<string> markers)
     {
         foreach (string marker in markers)
         {
@@ -91,8 +140,8 @@ public sealed class RecoveryOutputWriterTests : IDisposable
         }
     }
 
-    /// <summary>Asserts that none of the markers appear in <paramref name="text"/>.</summary>
-    private static void ExpectNoMarkers(string text, params string[] markers)
+    /// <summary>Asserts that none of the markers appear in the written text.</summary>
+    private static void ExpectNoMarkers(string text, IReadOnlyList<string> markers)
     {
         foreach (string marker in markers)
         {
@@ -100,7 +149,7 @@ public sealed class RecoveryOutputWriterTests : IDisposable
         }
     }
 
-    /// <summary>The report header: the required fields and their explicit snake_case wire names.</summary>
+    /// <summary>The report header: required fields and their explicit snake_case wire names.</summary>
     private static void ExpectReportHeader(JsonDocument doc)
     {
         Assert.Equal("es", doc.RootElement.GetProperty("source_language").GetString());
@@ -114,10 +163,9 @@ public sealed class RecoveryOutputWriterTests : IDisposable
         // The folder does not exist yet: the writer must create it.
         await RecoveryOutputWriter.WriteReportAsync(_folder, Report());
 
-        string path = Path.Combine(_folder, RecoveryOutputWriter.ReportFileName);
-        Assert.True(File.Exists(path));
+        Assert.True(File.Exists(ReportPath));
 
-        string json = await File.ReadAllTextAsync(path);
+        string json = await File.ReadAllTextAsync(ReportPath);
         using JsonDocument doc = JsonDocument.Parse(json);
 
         ExpectReportHeader(doc);
@@ -140,7 +188,7 @@ public sealed class RecoveryOutputWriterTests : IDisposable
         await RecoveryOutputWriter.WriteReportAsync(_folder, Report());
         await RecoveryOutputWriter.WriteReportAsync(_folder, Report(items: [Item("seg-001", RecoveryOutcome.Recovered, "hola!")]));
 
-        string json = await File.ReadAllTextAsync(Path.Combine(_folder, RecoveryOutputWriter.ReportFileName));
+        string json = await File.ReadAllTextAsync(ReportPath);
         using JsonDocument doc = JsonDocument.Parse(json);
 
         Assert.Equal("seg-001", doc.RootElement.GetProperty("items")[0].GetProperty("segment_id").GetString());
@@ -152,7 +200,7 @@ public sealed class RecoveryOutputWriterTests : IDisposable
         // A directory sitting at the destination makes the final move fail, which must
         // delete the staged temp file and rethrow rather than leave a partial artifact.
         Directory.CreateDirectory(_folder);
-        Directory.CreateDirectory(Path.Combine(_folder, RecoveryOutputWriter.ReportFileName));
+        Directory.CreateDirectory(ReportPath);
 
         Exception error = await Record.ExceptionAsync(() => RecoveryOutputWriter.WriteReportAsync(_folder, Report()))
             ?? new InvalidOperationException("The write unexpectedly succeeded.");
@@ -184,21 +232,10 @@ public sealed class RecoveryOutputWriterTests : IDisposable
     {
         await RecoveryOutputWriter.WriteNotesAsync(_folder, Report());
 
-        string notes = await File.ReadAllTextAsync(Path.Combine(_folder, RecoveryOutputWriter.NotesFileName));
+        string notes = await File.ReadAllTextAsync(NotesPath);
 
-        ExpectMarkers(
-            notes,
-            "# Glimmer recovery run notes",
-            "- Direction: es -> en",
-            "muse-glimmer-1",
-            "muse-spark-1.1",
-            "1/2 items recovered",
-            "1/2 lines recovered",
-            "Glimmer calls 4/20, Meta calls 2/10",
-            "## Leakage rule",
-            "## Per-item outcomes");
-        // No probe and no run error: neither optional section may appear.
-        ExpectNoMarkers(notes, "### Pre-flight probe", "## Run failure");
+        ExpectMarkers(notes, SummaryMarkers);
+        ExpectNoMarkers(notes, AbsentSectionMarkers);
     }
 
     [Fact]
@@ -215,15 +252,9 @@ public sealed class RecoveryOutputWriterTests : IDisposable
 
         await RecoveryOutputWriter.WriteNotesAsync(_folder, Report(probe: probe, runError: "provider 502"));
 
-        string notes = await File.ReadAllTextAsync(Path.Combine(_folder, RecoveryOutputWriter.NotesFileName));
+        string notes = await File.ReadAllTextAsync(NotesPath);
 
-        ExpectMarkers(
-            notes,
-            "### Pre-flight probe",
-            "api.meta.ai",
-            "prompt=12 completion=3 total=15",
-            "## Run failure",
-            "provider 502");
+        ExpectMarkers(notes, ProbeMarkers);
     }
 
     [Fact]
@@ -237,16 +268,10 @@ public sealed class RecoveryOutputWriterTests : IDisposable
                 Item("seg-002", RecoveryOutcome.ExhaustedAttempts, null),
             ]));
 
-        string notes = await File.ReadAllTextAsync(Path.Combine(_folder, RecoveryOutputWriter.NotesFileName));
+        string notes = await File.ReadAllTextAsync(NotesPath);
 
-        ExpectMarkers(
-            notes,
-            "`seg-001` att#1 (samples/source.json, Timing, window",
-            "Recovered -> \"hola!\" [1 attempt(s)]",
-            "`seg-002` att#1",
-            "ExhaustedAttempts [1 attempt(s)]");
-        // A refused item has no recovered text, so no arrow line for it.
-        ExpectNoMarkers(notes, "ExhaustedAttempts ->");
+        ExpectMarkers(notes, ItemMarkers);
+        ExpectNoMarkers(notes, AbsentRecoveredMarkers);
     }
 
     [Fact]
