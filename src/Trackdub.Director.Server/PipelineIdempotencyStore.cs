@@ -27,13 +27,10 @@ internal sealed class PipelineIdempotencyStore
 
         int prefixLength = key.LastIndexOf(':') + 1;
         int separator = key.IndexOf('_', prefixLength);
-        if (separator <= prefixLength
-            || separator == key.Length - 1
-            || !long.TryParse(key.AsSpan(prefixLength, separator - prefixLength), NumberStyles.None, CultureInfo.InvariantCulture, out long timestamp)
-            || !Guid.TryParseExact(key[(separator + 1)..], "D", out _))
-        {
-            return false;
-        }
+        if (separator <= prefixLength) return false;
+        if (separator == key.Length - 1) return false;
+        if (!long.TryParse(key.AsSpan(prefixLength, separator - prefixLength), NumberStyles.None, CultureInfo.InvariantCulture, out long timestamp)) return false;
+        if (!Guid.TryParseExact(key[(separator + 1)..], "D", out _)) return false;
 
         try
         {
@@ -53,53 +50,69 @@ internal sealed class PipelineIdempotencyStore
             return Task.FromResult(Results.BadRequest(new { error = "Idempotency-Key must be a timestamped UUID." }));
         }
 
+        var request = new IdempotencyRequest(key, fingerprint);
         lock (_gate)
         {
-            DateTimeOffset now = DateTimeOffset.UtcNow;
-            if (createdAt > now.AddMinutes(1))
-            {
-                return Task.FromResult(Results.BadRequest(new { error = "Idempotency-Key timestamp is in the future." }));
-            }
-
-            if (createdAt < now - Retention)
-            {
-                return ExpiredResult();
-            }
-
-            PruneExpired(now);
-            if (_entries.TryGetValue(key, out Entry? existing))
-            {
-                if (!string.Equals(existing.Fingerprint, fingerprint, StringComparison.Ordinal))
-                {
-                    return Task.FromResult(Results.Conflict(new { error = "This Idempotency-Key was already used for a different request." }));
-                }
-
-                return existing.Result ?? UnknownOutcomeResult();
-            }
-
-            if (!_persistenceHealthy)
-            {
-                return RecoveryUnavailableResult();
-            }
-
-            if (_entries.Count >= MaxEntries)
-            {
-                return Task.FromResult(Results.Json(
-                    new { error = "Idempotency recovery capacity is full; retry later rather than starting a duplicate run." },
-                    statusCode: StatusCodes.Status503ServiceUnavailable));
-            }
-
-            var entry = new Entry(key, fingerprint, createdAt);
-            _entries.Add(key, entry);
-            if (!PersistEntries())
-            {
-                _entries.Remove(key);
-                return RecoveryUnavailableResult();
-            }
-
-            entry.Result = ExecuteSafelyAsync(execute, entry);
-            return entry.Result;
+            return RunLocked(request, createdAt, execute);
         }
+    }
+
+    private Task<IResult> RunLocked(IdempotencyRequest request, DateTimeOffset createdAt, Func<Task<IResult>> execute)
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (createdAt > now.AddMinutes(1))
+        {
+            return Task.FromResult(Results.BadRequest(new { error = "Idempotency-Key timestamp is in the future." }));
+        }
+
+        if (createdAt < now - Retention)
+        {
+            return ExpiredResult();
+        }
+
+        PruneExpired(now);
+        if (_entries.TryGetValue(request.Key, out Entry? existing))
+        {
+            return ReplayExisting(existing, request);
+        }
+
+        if (!_persistenceHealthy)
+        {
+            return RecoveryUnavailableResult();
+        }
+
+        if (_entries.Count >= MaxEntries)
+        {
+            return Task.FromResult(Results.Json(
+                new { error = "Idempotency recovery capacity is full; retry later rather than starting a duplicate run." },
+                statusCode: StatusCodes.Status503ServiceUnavailable));
+        }
+
+        return StartNew(request, createdAt, execute);
+    }
+
+    private static Task<IResult> ReplayExisting(Entry existing, IdempotencyRequest request)
+    {
+        if (!string.Equals(existing.Fingerprint, request.Fingerprint, StringComparison.Ordinal))
+        {
+            return Task.FromResult(Results.Conflict(new { error = "This Idempotency-Key was already used for a different request." }));
+        }
+
+        return existing.Result ?? UnknownOutcomeResult();
+    }
+
+    private Task<IResult> StartNew(IdempotencyRequest request, DateTimeOffset createdAt, Func<Task<IResult>> execute)
+    {
+        var entry = new Entry(request, createdAt);
+        _entries.Add(request.Key, entry);
+        if (!PersistEntries())
+        {
+            _entries.Remove(key);
+            return RecoveryUnavailableResult();
+        }
+
+        entry.Result = ExecuteSafelyAsync(execute, entry);
+        return entry.Result;
     }
 
     private void LoadPersistedEntries()
@@ -116,7 +129,7 @@ internal sealed class PipelineIdempotencyStore
             {
                 if (item.CreatedAt >= retainAfter && TryParseKey(item.Key, out _))
                 {
-                    _entries[item.Key] = new Entry(item.Key, item.Fingerprint, item.CreatedAt, item.CompletedAt);
+                    _entries[item.Key] = new Entry(new IdempotencyRequest(item.Key, item.Fingerprint), item.CreatedAt, item.CompletedAt);
                 }
             }
         }
@@ -200,14 +213,16 @@ internal sealed class PipelineIdempotencyStore
         new { error = "Idempotency recovery storage is unavailable; the paid request was not started." },
         statusCode: StatusCodes.Status503ServiceUnavailable));
 
-    private sealed class Entry(string key, string fingerprint, DateTimeOffset createdAt, DateTimeOffset? completedAt = null)
+    private sealed class Entry(IdempotencyRequest request, DateTimeOffset createdAt, DateTimeOffset? completedAt = null)
     {
-        public string Key { get; } = key;
-        public string Fingerprint { get; } = fingerprint;
+        public string Key { get; } = request.Key;
+        public string Fingerprint { get; } = request.Fingerprint;
         public DateTimeOffset CreatedAt { get; } = createdAt;
         public DateTimeOffset? CompletedAt { get; set; } = completedAt;
         public Task<IResult>? Result { get; set; }
     }
 
     private sealed record PersistedEntry(string Key, string Fingerprint, DateTimeOffset CreatedAt, DateTimeOffset? CompletedAt);
+
+    private readonly record struct IdempotencyRequest(string Key, string Fingerprint);
 }

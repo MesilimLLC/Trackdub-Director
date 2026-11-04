@@ -3,14 +3,14 @@ namespace Trackdub.Director.Core;
 /// <summary>
     /// Frame-level visual localisation by crop-edit-composite. The sign box plus
     /// padding is cropped, edited by the image model (template image-edit-v2: the
-/// probe's working instruction, verbatim), resampled back to the crop size,
-/// and only the exact box interior is pasted into a copy of the source — so
-/// pixels outside the box provably come from the source, never from model
-/// output. The outside-box diff is still computed and stored (0 by
-/// construction). Any missing/undecodable/undersized edit fails the segment
-/// with the reason recorded; an unmodified frame is never passed off as
-/// localised.
-/// </summary>
+    /// probe's working instruction, verbatim), resampled back to the crop size,
+    /// and only the exact box interior is pasted into a copy of the source — so
+    /// pixels outside the box provably come from the source, never from model
+    /// output. The outside-box diff is still computed and stored (0 by
+    /// construction). Any missing/undecodable/undersized edit fails the segment
+    /// with the reason recorded; an unmodified frame is never passed off as
+    /// localised.
+    /// </summary>
 public sealed class VisualLocalisationService : IDisposable
 {
     /// <summary>Template "image-edit-v2": generic visible-sign text replacement with source/target filled in.</summary>
@@ -57,99 +57,27 @@ public sealed class VisualLocalisationService : IDisposable
     }
 
     /// <summary>
-    /// Localise one decoded frame. <paramref name="imageCalls"/> reports how
-    /// many model calls this segment consumed (0 when validation rejected the
-    /// box before any call).
+    /// Localise one decoded frame. The first two <paramref name="texts"/> entries
+    /// are the source and target sign text; missing text is rejected during validation.
     /// </summary>
-    public async Task<VisualLocalisationSegmentResult> LocaliseRasterAsync(
+    public Task<VisualLocalisationSegmentResult> LocaliseRasterAsync(
         string segmentId,
         RasterImage frame,
         LocalisationBox box,
-        string sourceText,
-        string targetText,
-        CancellationToken cancellationToken = default)
+        params string[] texts)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(segmentId);
-        ArgumentNullException.ThrowIfNull(frame);
-        ArgumentNullException.ThrowIfNull(box);
-        string endpointHost = GetEndpointHost();
-        int imageCalls = 0;
-
-        VisualLocalisationSegmentResult Failure(string error, string modelId, MetaClient.TokenUsage? usage = null) => new(
-            segmentId,
-            VisualLocalisationStatus.Failed,
-            LocalisedImageDataUrl: null,
-            box,
-            sourceText,
-            targetText,
-            OutsideBoxDiff: null,
-            Truncate(error),
-            new VisualLocalisationProvenance(modelId, endpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion),
-            ToUsage(usage),
-            imageCalls);
-
-        string? boxError = ValidateBox(box, frame);
-        if (boxError is not null)
+        string sourceText = texts.Length > 0 ? texts[0] : string.Empty;
+        string targetText = texts.Length > 1 ? texts[1] : string.Empty;
+        var context = new LocalisationContext
         {
-            return Failure(boxError, MetaMuseImageClient.GetImageModel());
-        }
-
-        if (string.IsNullOrWhiteSpace(sourceText) || string.IsNullOrWhiteSpace(targetText))
-        {
-            return Failure("Source and target text are required.", MetaMuseImageClient.GetImageModel());
-        }
-
-        int cropX = Math.Max(0, box.X1 - CropPaddingPixels);
-        int cropY = Math.Max(0, box.Y1 - CropPaddingPixels);
-        int cropX2 = Math.Min(frame.Width, box.X2 + CropPaddingPixels);
-        int cropY2 = Math.Min(frame.Height, box.Y2 + CropPaddingPixels);
-        RasterImage crop = frame.Crop(cropX, cropY, cropX2 - cropX, cropY2 - cropY);
-
-        MuseImageEditResult edit;
-        imageCalls++;
-        try
-        {
-            edit = await _client.EditAsync(crop, BuildInstruction(sourceText, targetText), cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is MetaApiException or HttpRequestException or InvalidOperationException)
-        {
-            return Failure(ex.Message, MetaMuseImageClient.GetImageModel());
-        }
-
-        int boxWidth = box.X2 - box.X1;
-        int boxHeight = box.Y2 - box.Y1;
-        if (edit.Image.Width < boxWidth || edit.Image.Height < boxHeight)
-        {
-            return Failure(
-                $"Edited image is {edit.Image.Width}x{edit.Image.Height}, smaller than the target box {boxWidth}x{boxHeight}.",
-                edit.Model,
-                edit.Usage);
-        }
-
-        RasterImage resized = edit.Image.ResizeBilinear(crop.Width, crop.Height);
-        RasterImage patch = resized.Crop(box.X1 - cropX, box.Y1 - cropY, boxWidth, boxHeight);
-        if (patch.Rgb.AsSpan().SequenceEqual(frame.Crop(box.X1, box.Y1, boxWidth, boxHeight).Rgb))
-        {
-            return Failure("Edited image did not change the target box.", edit.Model, edit.Usage);
-        }
-
-        RasterImage localised = frame.Paste(patch, box.X1, box.Y1);
-        int outsideDiff = localised.CountDiffOutsideBox(frame, box.X1, box.Y1, box.X2, box.Y2);
-
-        byte[] png = PngCodec.Encode(localised);
-        return new VisualLocalisationSegmentResult(
-            segmentId,
-            VisualLocalisationStatus.Localised,
-            "data:image/png;base64," + Convert.ToBase64String(png),
-            box,
-            sourceText.Trim(),
-            targetText.Trim(),
-            outsideDiff,
-            Error: null,
-            new VisualLocalisationProvenance(edit.Model, endpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion),
-            ToUsage(edit.Usage),
-            imageCalls,
-            png);
+            SegmentId = segmentId,
+            Frame = frame,
+            Box = box,
+            SourceText = sourceText,
+            TargetText = targetText,
+            EndpointHost = GetEndpointHost(),
+        };
+        return LocaliseRasterCoreAsync(context, CancellationToken.None);
     }
 
     public async Task<VisualLocalisationBatch> RunAsync(
@@ -177,77 +105,198 @@ public sealed class VisualLocalisationService : IDisposable
             results.Sum(r => r.ImageCalls));
     }
 
+    private async Task<VisualLocalisationSegmentResult> LocaliseRasterCoreAsync(
+        LocalisationContext context,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(context.SegmentId);
+        ArgumentNullException.ThrowIfNull(context.Frame);
+        ArgumentNullException.ThrowIfNull(context.Box);
+
+        string? boxError = ValidateBox(context.Box, context.Frame);
+        if (boxError is not null)
+        {
+            return Failure(context, boxError);
+        }
+
+        if (string.IsNullOrWhiteSpace(context.SourceText) || string.IsNullOrWhiteSpace(context.TargetText))
+        {
+            return Failure(context, "Source and target text are required.");
+        }
+
+        return await EditAndCompositeAsync(context, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<VisualLocalisationSegmentResult> EditAndCompositeAsync(
+        LocalisationContext context,
+        CancellationToken cancellationToken)
+    {
+        RasterImage frame = context.Frame!;
+        LocalisationBox box = context.Box!;
+        int cropX = Math.Max(0, box.X1 - CropPaddingPixels);
+        int cropY = Math.Max(0, box.Y1 - CropPaddingPixels);
+        int cropX2 = Math.Min(frame.Width, box.X2 + CropPaddingPixels);
+        int cropY2 = Math.Min(frame.Height, box.Y2 + CropPaddingPixels);
+        RasterImage crop = frame.Crop(cropX, cropY, cropX2 - cropX, cropY2 - cropY);
+
+        MuseImageEditResult edit;
+        try
+        {
+            edit = await _client.EditAsync(crop, BuildInstruction(context.SourceText!, context.TargetText!), cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is MetaApiException or HttpRequestException or InvalidOperationException)
+        {
+            return Failure(context, ex.Message, imageCalls: 1);
+        }
+
+        int boxWidth = box.X2 - box.X1;
+        int boxHeight = box.Y2 - box.Y1;
+        if (edit.Image.Width < boxWidth || edit.Image.Height < boxHeight)
+        {
+            return Failure(
+                context,
+                $"Edited image is {edit.Image.Width}x{edit.Image.Height}, smaller than the target box {boxWidth}x{boxHeight}.",
+                edit,
+                imageCalls: 1);
+        }
+
+        RasterImage resized = edit.Image.ResizeBilinear(crop.Width, crop.Height);
+        RasterImage patch = resized.Crop(box.X1 - cropX, box.Y1 - cropY, boxWidth, boxHeight);
+        if (patch.Rgb.AsSpan().SequenceEqual(frame.Crop(box.X1, box.Y1, boxWidth, boxHeight).Rgb))
+        {
+            return Failure(context, "Edited image did not change the target box.", edit, imageCalls: 1);
+        }
+
+        RasterImage localised = frame.Paste(patch, box.X1, box.Y1);
+        int outsideDiff = localised.CountDiffOutsideBox(frame, box.X1, box.Y1, box.X2, box.Y2);
+
+        byte[] png = PngCodec.Encode(localised);
+        return new VisualLocalisationSegmentResult(
+            context.SegmentId,
+            VisualLocalisationStatus.Localised,
+            "data:image/png;base64," + Convert.ToBase64String(png),
+            box,
+            context.SourceText!.Trim(),
+            context.TargetText!.Trim(),
+            outsideDiff,
+            Error: null,
+            new VisualLocalisationProvenance(edit.Model, context.EndpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion),
+            ToUsage(edit.Usage),
+            imageCalls: 1,
+            png);
+    }
+
     private async Task<VisualLocalisationSegmentResult> ProcessInputAsync(
         VisualLocalisationSegmentInput segment,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(segment.Id);
-        string endpointHost = GetEndpointHost();
 
-        VisualLocalisationSegmentResult Failure(string error) => new(
-            segment.Id,
-            VisualLocalisationStatus.Failed,
-            LocalisedImageDataUrl: null,
-            segment.Box,
-            segment.SourceText,
-            segment.TargetText,
-            OutsideBoxDiff: null,
-            Truncate(error),
-            new VisualLocalisationProvenance(MetaMuseImageClient.GetImageModel(), endpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion),
-            new TranslationUsage(0, 0, 0),
-            ImageCalls: 0);
-
-        if (segment.Box is null || string.IsNullOrWhiteSpace(segment.SourceText) || string.IsNullOrWhiteSpace(segment.TargetText))
+        string? validationError = ValidateSegment(segment, out RasterImage? frame);
+        if (validationError is not null)
         {
-            return Failure("Each segment needs a box plus source_text and target_text.");
+            return Failure(CreateContext(segment, null), validationError);
         }
 
-        if (!TryDecodeDataUrl(segment.FrameImageDataUrl, out byte[]? frameBytes, out string? decodeError))
+        return await LocaliseRasterCoreAsync(CreateContext(segment, frame), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static LocalisationContext CreateContext(VisualLocalisationSegmentInput segment, RasterImage? frame)
+    {
+        return new LocalisationContext
         {
-            return Failure(decodeError!);
+            SegmentId = segment.Id,
+            Frame = frame,
+            Box = segment.Box,
+            SourceText = segment.SourceText,
+            TargetText = segment.TargetText,
+            EndpointHost = GetEndpointHost(),
+        };
+    }
+
+    private static string? ValidateSegment(VisualLocalisationSegmentInput segment, out RasterImage? frame)
+    {
+        frame = null;
+        if (segment.Box is null) return "Each segment needs a box plus source_text and target_text.";
+        if (string.IsNullOrWhiteSpace(segment.SourceText)) return "Each segment needs a box plus source_text and target_text.";
+        if (string.IsNullOrWhiteSpace(segment.TargetText)) return "Each segment needs a box plus source_text and target_text.";
+        return DecodeFrame(new FrameDataUrl(segment.FrameImageDataUrl), out frame);
+    }
+
+    private static string? DecodeFrame(FrameDataUrl dataUrl, out RasterImage? frame)
+    {
+        frame = null;
+        if (!TryDecodeDataUrl(dataUrl, out byte[]? frameBytes, out string? decodeError))
+        {
+            return decodeError!;
         }
 
         if (frameBytes!.Length > MaxFrameBytes)
         {
-            return Failure($"Frame image exceeds the {MaxFrameBytes} byte limit.");
+            return $"Frame image exceeds the {MaxFrameBytes} byte limit.";
         }
 
-        if (!MatchesDeclaredImageType(segment.FrameImageDataUrl!.Trim(), frameBytes!))
+        if (!MatchesDeclaredImageType(dataUrl, frameBytes))
         {
-            return Failure("Frame image bytes do not match the declared PNG, JPEG, or WebP type.");
+            return "Frame image bytes do not match the declared PNG, JPEG, or WebP type.";
         }
 
-        RasterImage frame;
         try
         {
-            frame = WicImageDecoder.Decode(frameBytes!);
+            frame = WicImageDecoder.Decode(frameBytes);
         }
         catch (InvalidOperationException ex)
         {
-            return Failure(ex.Message);
+            return ex.Message;
         }
 
+        return ValidateDimensions(frame);
+    }
+
+    private static string? ValidateDimensions(RasterImage frame)
+    {
         if (frame.Width > MaxFrameDimension || frame.Height > MaxFrameDimension)
         {
-            return Failure($"Frame dimensions {frame.Width}x{frame.Height} exceed the {MaxFrameDimension} pixel limit.");
+            return $"Frame dimensions {frame.Width}x{frame.Height} exceed the {MaxFrameDimension} pixel limit.";
         }
 
         if ((long)frame.Width * frame.Height > MaxFramePixels)
         {
-            return Failure($"Frame dimensions {frame.Width}x{frame.Height} exceed the {MaxFramePixels} total pixel limit.");
+            return $"Frame dimensions {frame.Width}x{frame.Height} exceed the {MaxFramePixels} total pixel limit.";
         }
 
-        return await LocaliseRasterAsync(segment.Id, frame, segment.Box, segment.SourceText!, segment.TargetText!, cancellationToken).ConfigureAwait(false);
+        return null;
+    }
+
+    private static VisualLocalisationSegmentResult Failure(
+        LocalisationContext context,
+        string error,
+        MuseImageEditResult? edit = null,
+        int imageCalls = 0)
+    {
+        string modelId = edit?.Model ?? MetaMuseImageClient.GetImageModel();
+        return new VisualLocalisationSegmentResult(
+            context.SegmentId,
+            VisualLocalisationStatus.Failed,
+            LocalisedImageDataUrl: null,
+            context.Box,
+            context.SourceText,
+            context.TargetText,
+            OutsideBoxDiff: null,
+            error.Length > 500 ? error[..500] : error,
+            new VisualLocalisationProvenance(modelId, context.EndpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion),
+            ToUsage(edit?.Usage),
+            imageCalls);
     }
 
     private static string? ValidateBox(LocalisationBox box, RasterImage frame)
     {
-        if (box.X1 < 0 || box.Y1 < 0 || box.X2 <= box.X1 || box.Y2 <= box.Y1 || box.X2 > frame.Width || box.Y2 > frame.Height)
+        if (!IsInsideFrame(box, frame))
         {
             return $"Box ({box.X1},{box.Y1})-({box.X2},{box.Y2}) does not lie inside the {frame.Width}x{frame.Height} frame.";
         }
 
-        if (box.X2 - box.X1 < MinBoxPixels || box.Y2 - box.Y1 < MinBoxPixels)
+        if (!IsLargeEnough(box))
         {
             return $"Box must be at least {MinBoxPixels}x{MinBoxPixels} pixels.";
         }
@@ -255,17 +304,27 @@ public sealed class VisualLocalisationService : IDisposable
         return null;
     }
 
-    private static bool IsSupportedImageDataUrl(string value)
+    private static bool IsInsideFrame(LocalisationBox box, RasterImage frame)
     {
-        return value.StartsWith("data:image/png;", StringComparison.OrdinalIgnoreCase)
-            || value.StartsWith("data:image/jpeg;", StringComparison.OrdinalIgnoreCase)
-            || value.StartsWith("data:image/webp;", StringComparison.OrdinalIgnoreCase);
+        if (box.X1 < 0) return false;
+        if (box.Y1 < 0) return false;
+        if (box.X2 <= box.X1) return false;
+        if (box.Y2 <= box.Y1) return false;
+        if (box.X2 > frame.Width) return false;
+        return box.Y2 <= frame.Height;
     }
 
-    private static bool MatchesDeclaredImageType(string dataUrl, byte[] bytes)
+    private static bool IsLargeEnough(LocalisationBox box)
     {
-        if (dataUrl.StartsWith("data:image/png;", StringComparison.OrdinalIgnoreCase)) return HasPngSignature(bytes);
-        if (dataUrl.StartsWith("data:image/jpeg;", StringComparison.OrdinalIgnoreCase)) return HasJpegSignature(bytes);
+        if (box.X2 - box.X1 < MinBoxPixels) return false;
+        return box.Y2 - box.Y1 >= MinBoxPixels;
+    }
+
+    private static bool MatchesDeclaredImageType(FrameDataUrl dataUrl, byte[] bytes)
+    {
+        string value = dataUrl.Value ?? string.Empty;
+        if (value.StartsWith("data:image/png;", StringComparison.OrdinalIgnoreCase)) return HasPngSignature(bytes);
+        if (value.StartsWith("data:image/jpeg;", StringComparison.OrdinalIgnoreCase)) return HasJpegSignature(bytes);
         return HasWebpSignature(bytes);
     }
 
@@ -286,19 +345,29 @@ public sealed class VisualLocalisationService : IDisposable
             && bytes.AsSpan(8, 4).SequenceEqual("WEBP"u8);
     }
 
-    private static bool TryDecodeDataUrl(string? dataUrl, out byte[]? bytes, out string? error)
+    private static bool TryDecodeDataUrl(FrameDataUrl dataUrl, out byte[]? bytes, out string? error)
     {
         bytes = null;
         error = null;
-        if (string.IsNullOrWhiteSpace(dataUrl))
+        string? value = dataUrl.Value;
+        if (string.IsNullOrWhiteSpace(value))
         {
             error = "Frame image is required (data:image data URL).";
             return false;
         }
 
-        string trimmed = dataUrl.Trim();
+        string trimmed = value.Trim();
         int marker = trimmed.IndexOf(";base64,", StringComparison.OrdinalIgnoreCase);
-        if (!IsSupportedImageDataUrl(trimmed) || marker < 0)
+        bool supported = trimmed.StartsWith("data:image/png;", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("data:image/jpeg;", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("data:image/webp;", StringComparison.OrdinalIgnoreCase);
+        if (!supported)
+        {
+            error = "Frame image must be a base64 PNG, JPEG, or WebP data URL.";
+            return false;
+        }
+
+        if (marker < 0)
         {
             error = "Frame image must be a base64 PNG, JPEG, or WebP data URL.";
             return false;
@@ -330,8 +399,15 @@ public sealed class VisualLocalisationService : IDisposable
         return Uri.TryCreate(baseUrl, UriKind.Absolute, out Uri? uri) ? uri.Host : baseUrl;
     }
 
-    private static string Truncate(string message)
+    private sealed class LocalisationContext
     {
-        return message.Length > 500 ? message[..500] : message;
+        public required string SegmentId { get; init; }
+        public RasterImage? Frame { get; init; }
+        public LocalisationBox? Box { get; init; }
+        public string? SourceText { get; init; }
+        public string? TargetText { get; init; }
+        public required string EndpointHost { get; init; }
     }
+
+    private readonly record struct FrameDataUrl(string? Value);
 }

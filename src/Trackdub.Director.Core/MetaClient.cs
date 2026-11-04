@@ -581,77 +581,90 @@ public sealed class MetaClient : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             _budget?.Reserve();
             using HttpRequestMessage attemptRequest = CloneRequest(request, content);
-            HttpResponseMessage response;
-            try
-            {
-                response = await _httpClient.SendAsync(attemptRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new MetaApiException($"Meta Model API request failed: {ex.Message}", ex);
-            }
-            catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
-            {
-                // A timeout may happen after the provider has accepted and billed the request.
-                // Keep it indeterminate; do not automatically send the paid request again.
-                throw new MetaApiException("Meta Model API request timed out; the provider outcome is unknown, so it was not retried.", ex);
-            }
+            HttpResponseMessage response = await SendOnceAsync(attemptRequest, cancellationToken).ConfigureAwait(false);
 
             if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests && attempt < 2)
             {
-                TimeSpan delay = RetryDelay(response.Headers.RetryAfter, attempt);
-                response.Dispose();
-                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                await DelayAndDisposeAsync(response, attempt, cancellationToken).ConfigureAwait(false);
                 continue;
             }
 
-            bool retryAfterBodyRead = false;
-            TimeSpan bodyRetryDelay = TimeSpan.Zero;
-            using (response)
+            ResponseOutcome outcome = await ReadResponseAsync(response, attempt, cancellationToken).ConfigureAwait(false);
+            if (outcome.Body is not null)
             {
-                string body;
-                try
-                {
-                    body = response.Content is null
-                        ? string.Empty
-                        : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                }
-                catch (HttpRequestException ex)
-                {
-                    throw new MetaApiException($"Meta Model API response ended unexpectedly ({ex.Message}); provider outcome is unknown, so it was not retried.", ex);
-                }
-                catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
-                {
-                    throw new MetaApiException("Meta Model API response timed out; provider outcome is unknown, so it was not retried.", ex);
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    TokenUsage? errorUsage = ReadErrorUsage(body);
-                    if (ShouldRetryTransientServerError(response.StatusCode, attempt, errorUsage))
-                    {
-                        retryAfterBodyRead = true;
-                        bodyRetryDelay = RetryDelay(response.Headers.RetryAfter, attempt);
-                    }
-                    else
-                    {
-                        throw new MetaApiException(
-                            $"Meta Model API HTTP {(int)response.StatusCode}: {Truncate(new BodyText(body))}",
-                            errorUsage);
-                    }
-                }
-                else
-                {
-                    return body;
-                }
+                return outcome.Body;
             }
 
-            if (retryAfterBodyRead)
-            {
-                await Task.Delay(bodyRetryDelay, cancellationToken).ConfigureAwait(false);
-            }
+            await Task.Delay(outcome.RetryDelay, cancellationToken).ConfigureAwait(false);
         }
     }
+
+    private async Task<HttpResponseMessage> SendOnceAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new MetaApiException($"Meta Model API request failed: {ex.Message}", ex);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // A timeout may happen after the provider has accepted and billed the request.
+            // Keep it indeterminate; do not automatically send the paid request again.
+            throw new MetaApiException("Meta Model API request timed out; the provider outcome is unknown, so it was not retried.", ex);
+        }
+    }
+
+    private static async Task DelayAndDisposeAsync(HttpResponseMessage response, int attempt, CancellationToken cancellationToken)
+    {
+        TimeSpan delay = RetryDelay(response.Headers.RetryAfter, attempt);
+        response.Dispose();
+        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<ResponseOutcome> ReadResponseAsync(HttpResponseMessage response, int attempt, CancellationToken cancellationToken)
+    {
+        using (response)
+        {
+            string body = await ReadBodyAsync(response, cancellationToken).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode)
+            {
+                return new ResponseOutcome(body, TimeSpan.Zero);
+            }
+
+            TokenUsage? errorUsage = ReadErrorUsage(body);
+            if (ShouldRetryTransientServerError(response.StatusCode, attempt, errorUsage))
+            {
+                return new ResponseOutcome(null, RetryDelay(response.Headers.RetryAfter, attempt));
+            }
+
+            throw new MetaApiException(
+                $"Meta Model API HTTP {(int)response.StatusCode}: {Truncate(new BodyText(body))}",
+                errorUsage);
+        }
+    }
+
+    private static async Task<string> ReadBodyAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return response.Content is null
+                ? string.Empty
+                : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new MetaApiException($"Meta Model API response ended unexpectedly ({ex.Message}); provider outcome is unknown, so it was not retried.", ex);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new MetaApiException("Meta Model API response timed out; provider outcome is unknown, so it was not retried.", ex);
+        }
+    }
+
+    private readonly record struct ResponseOutcome(string? Body, TimeSpan RetryDelay);
 
     private static HttpRequestMessage CloneRequest(HttpRequestMessage source, byte[]? content)
     {
