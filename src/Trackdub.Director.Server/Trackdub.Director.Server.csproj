@@ -7,4 +7,9 @@
   <ItemGroup>
     <ProjectReference Include="..\Trackdub.Director.Core\Trackdub.Director.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Trackdub.Director.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>

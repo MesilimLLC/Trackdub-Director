@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Trackdub.Director.Core\Trackdub.Director.Core.csproj" />
     <ProjectReference Include="..\..\src\Trackdub.Director.Server\Trackdub.Director.Server.csproj" />
+    <ProjectReference Include="..\..\src\Trackdub.Director.Cli\Trackdub.Director.Cli.csproj" Aliases="directorcli" />
   </ItemGroup>
 
 </Project>
