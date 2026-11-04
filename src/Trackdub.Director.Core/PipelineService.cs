@@ -202,8 +202,6 @@ public sealed class PipelineService
             return;
         }
 
-        }
-
         if (_tts is null || !ElevenLabsAuth.HasApiKey())
         {
             state.Stages.Add(new PipelineStageReport(StageAudition, PipelineStageStatus.SkippedByFlag, Note: "ELEVENLABS_API_KEY not set"));

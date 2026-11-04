@@ -54,10 +54,10 @@ public sealed class VoiceCompatibilityTests
             ]);
         }
 
-        public Task<TtsSynthesisResult> SynthesizeAsync(string voiceId, string text, string languageCode, double? speed = null, CancellationToken cancellationToken = default)
+        public Task<TtsSynthesisResult> SynthesizeAsync(TtsSynthesisRequest request, CancellationToken cancellationToken = default)
         {
             byte[] wav = AudioDuration.ToWav(new byte[16000 * 2], new PcmFormat { SampleRate = 16000, Channels = 1, BitsPerSample = 16 });
-            return Task.FromResult(new TtsSynthesisResult(wav, text.Length));
+            return Task.FromResult(new TtsSynthesisResult(wav, request.Text.Length));
         }
     }
 
@@ -107,7 +107,7 @@ public sealed class VoiceCompatibilityTests
 
             // The voice id is all synthesis takes from the voice; its advertised
             // model list (high_quality_base_model_ids) is never consulted here.
-            await provider.SynthesizeAsync("voice-that-advertises-v2-only", "Hola.", "es");
+            await provider.SynthesizeAsync(new TtsSynthesisRequest("voice-that-advertises-v2-only", "Hola.", "es"));
 
             using JsonDocument doc = JsonDocument.Parse(requestBody!);
             Assert.Equal("eleven_v4", doc.RootElement.GetProperty("model_id").GetString());
