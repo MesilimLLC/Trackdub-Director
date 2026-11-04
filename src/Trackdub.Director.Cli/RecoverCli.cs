@@ -29,6 +29,21 @@ internal static class RecoverCli
 
     private sealed record Options(string[] ReportPaths, string OutputFolder, string From, string To, double Tolerance, bool ListOnly);
 
+    private sealed class ParseState
+    {
+        public Dictionary<string, string> Values { get; } = new(StringComparer.Ordinal)
+        {
+            ["--from"] = "en",
+            ["--to"] = "es",
+            ["--output"] = DefaultOutputFolder,
+            ["--tolerance"] = QaOptions.Default.ToleranceFraction.ToString(CultureInfo.InvariantCulture),
+        };
+
+        public List<string> Reports { get; } = [];
+
+        public bool ListOnly { get; set; }
+    }
+
     public static async Task<int> RunAsync(string[] args)
     {
         if (args.Any(a => a is "-h" or "--help"))
@@ -62,7 +77,7 @@ internal static class RecoverCli
             }
 
             // Checked before the route: a language mismatch is a usage error, not a route error.
-            if (!IsSourceLanguageMatch(set, options.From))
+            if (!IsSourceLanguageMatch(set, options))
             {
                 return 1;
             }
@@ -96,17 +111,17 @@ internal static class RecoverCli
 
     // The source language is intrinsic to the report text; a --from that disagrees with
     // the captured reports would judge the meaning gate against the wrong source language.
-    private static bool IsSourceLanguageMatch(IReadOnlyList<RecoveryItem> set, string from)
+    private static bool IsSourceLanguageMatch(IReadOnlyList<RecoveryItem> set, Options options)
     {
         string? mismatchedSource = set.FirstOrDefault(
-            i => !string.Equals(i.SourceLanguage, from, StringComparison.OrdinalIgnoreCase))?.SourceLanguage;
+            i => !string.Equals(i.SourceLanguage, options.From, StringComparison.OrdinalIgnoreCase))?.SourceLanguage;
         if (mismatchedSource is null)
         {
             return true;
         }
 
         Console.Error.WriteLine(
-            $"error: recovery set has source language '{mismatchedSource}' but --from is '{from}'; source language cannot be overridden.");
+            $"error: recovery set has source language '{mismatchedSource}' but --from is '{options.From}'; source language cannot be overridden.");
         return false;
     }
 
@@ -178,7 +193,7 @@ internal static class RecoverCli
         await RecoveryOutputWriter.WriteReportAsync(outputFolder, report).ConfigureAwait(false);
         await RecoveryOutputWriter.WriteNotesAsync(outputFolder, report).ConfigureAwait(false);
 
-        PrintSummary(report, outputFolder);
+        PrintSummary(report, options);
         if (report.RunError is not null)
         {
             // A mid-loop provider failure: the completed item reports were still persisted above.
@@ -188,8 +203,6 @@ internal static class RecoverCli
 
         return 0;
     }
-
-    private static string Truncate(string s, int n) => s.Length <= n ? s : s[..n] + "...";
 
     /// <summary>The route vars that are unset/blank, in a stable order; empty when the route is complete.</summary>
     private static string[] MissingRouteVars()
@@ -210,8 +223,9 @@ internal static class RecoverCli
         }
     }
 
-    private static void PrintSummary(RecoveryReport report, string outputFolder)
+    private static void PrintSummary(RecoveryReport report, Options options)
     {
+        string outputFolder = Path.GetFullPath(options.OutputFolder);
         Console.WriteLine(
             $"Recovery run: {report.Totals.Recovered}/{report.Totals.TotalItems} attempts recovered, " +
             $"{report.Totals.DistinctLinesRecovered}/{report.Totals.DistinctLines} distinct lines recovered " +
@@ -223,50 +237,56 @@ internal static class RecoverCli
 
     private static Options? Parse(string[] args, out string? error)
     {
-        var values = new Dictionary<string, string>(StringComparer.Ordinal)
+        var state = new ParseState();
+        error = ParseArguments(args, state);
+        if (error is not null)
         {
-            ["--from"] = "en",
-            ["--to"] = "es",
-            ["--output"] = DefaultOutputFolder,
-            ["--tolerance"] = QaOptions.Default.ToleranceFraction.ToString(CultureInfo.InvariantCulture),
-        };
-        bool listOnly = false;
-        var reports = new List<string>();
+            return null;
+        }
 
+        if (!TryParseTolerance(state.Values["--tolerance"], out double tolerance))
+        {
+            error = "--tolerance must be a non-negative number (a fraction, e.g. 0.10).";
+            return null;
+        }
+
+        string[] paths = state.Reports.Count > 0 ? state.Reports.ToArray() : DefaultReportPaths;
+        return new Options(paths, state.Values["--output"], state.Values["--from"], state.Values["--to"], tolerance, state.ListOnly);
+    }
+
+    private static string? ParseArguments(string[] args, ParseState state)
+    {
         for (int i = 0; i < args.Length; i++)
         {
             if (args[i] == "--list-only")
             {
-                listOnly = true;
+                state.ListOnly = true;
                 continue;
             }
 
             if (args[i] == "--report" && i + 1 < args.Length)
             {
-                reports.Add(args[++i]);
+                state.Reports.Add(args[++i]);
                 continue;
             }
 
             string? validation = ValidatePair(args, i);
             if (validation is not null)
             {
-                error = validation;
-                return null;
+                return validation;
             }
 
-            values[args[i]] = args[++i];
+            state.Values[args[i]] = args[++i];
         }
 
-        if (!double.TryParse(values["--tolerance"], NumberStyles.Float, CultureInfo.InvariantCulture, out double tolerance)
-            || !double.IsFinite(tolerance) || tolerance < 0)
-        {
-            error = "--tolerance must be a non-negative number (a fraction, e.g. 0.10).";
-            return null;
-        }
+        return null;
+    }
 
-        error = null;
-        string[] paths = reports.Count > 0 ? reports.ToArray() : DefaultReportPaths;
-        return new Options(paths, values["--output"], values["--from"], values["--to"], tolerance, listOnly);
+    private static bool TryParseTolerance(string raw, out double tolerance)
+    {
+        return double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out tolerance)
+            && double.IsFinite(tolerance)
+            && tolerance >= 0;
     }
 
     private static string? ValidatePair(string[] args, int i)

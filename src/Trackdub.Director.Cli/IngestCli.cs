@@ -3,6 +3,7 @@ using Trackdub.Director.Core;
 internal static class IngestCli
 {
     private static readonly string[] ValueOptions = ["--input", "--output", "--result", "--raw"];
+    private static readonly string[] HelpOptions = ["-h", "--help"];
 
     public static async Task<int> RunAsync(string[] args)
     {
@@ -17,23 +18,14 @@ internal static class IngestCli
             return 1;
         }
 
-        string resolvedInput = Path.GetFullPath(parsed.Input!);
-        if (!File.Exists(resolvedInput))
+        if (!TryValidate(parsed))
         {
-            Console.Error.WriteLine($"error: input file not found: {resolvedInput}");
-            return 1;
-        }
-
-        string? pathClash = ValidateOutputPaths(resolvedInput, parsed.Output!, parsed.ResultOutput, parsed.RawOutput);
-        if (pathClash is not null)
-        {
-            Console.Error.WriteLine($"error: {pathClash}");
             return 1;
         }
 
         try
         {
-            return await TranscribeAsync(parsed, resolvedInput).ConfigureAwait(false);
+            return await TranscribeAsync(parsed).ConfigureAwait(false);
         }
         catch (MetaApiException ex)
         {
@@ -47,6 +39,25 @@ internal static class IngestCli
         }
     }
 
+    private static bool TryValidate(IngestArgs parsed)
+    {
+        string resolvedInput = Path.GetFullPath(parsed.Input!);
+        if (!File.Exists(resolvedInput))
+        {
+            Console.Error.WriteLine($"error: input file not found: {resolvedInput}");
+            return false;
+        }
+
+        string? pathClash = ValidateOutputPaths(resolvedInput, parsed);
+        if (pathClash is null)
+        {
+            return true;
+        }
+
+        Console.Error.WriteLine($"error: {pathClash}");
+        return false;
+    }
+
     // Returns null when the command should stop (help shown or a bad option); exitCode carries the result.
     private static IngestArgs? ParseArgs(string[] args, out int exitCode)
     {
@@ -55,13 +66,13 @@ internal static class IngestCli
 
         for (int i = 0; i < args.Length; i++)
         {
-            if (args[i] is "-h" or "--help")
+            if (HelpOptions.Contains(args[i]))
             {
                 PrintHelp();
                 return null;
             }
 
-            if (!ValueOptions.Contains(args[i]) || i + 1 >= args.Length)
+            if (!TryReadOption(args, i, values, out int next))
             {
                 Console.Error.WriteLine($"Unknown option '{args[i]}' for 'ingest'.");
                 PrintHelp();
@@ -69,19 +80,33 @@ internal static class IngestCli
                 return null;
             }
 
-            values[args[i]] = args[i + 1];
-            i++;
+            i = next;
         }
 
         return new IngestArgs(
-            Input: Get(values, "--input"),
-            Output: Get(values, "--output"),
-            ResultOutput: Get(values, "--result"),
-            RawOutput: Get(values, "--raw"));
+            Input: values.TryGetValue("--input", out string? input) ? input : null,
+            Output: values.TryGetValue("--output", out string? output) ? output : null,
+            ResultOutput: values.TryGetValue("--result", out string? result) ? result : null,
+            RawOutput: values.TryGetValue("--raw", out string? raw) ? raw : null);
     }
 
-    private static string? Get(Dictionary<string, string> values, string option) =>
-        values.TryGetValue(option, out string? value) ? value : null;
+    private static bool TryReadOption(
+        string[] args,
+        int index,
+        Dictionary<string, string> values,
+        out int next)
+    {
+        string option = args[index];
+        if (!ValueOptions.Contains(option) || index + 1 >= args.Length)
+        {
+            next = index;
+            return false;
+        }
+
+        values[option] = args[index + 1];
+        next = index + 1;
+        return true;
+    }
 
     private static bool HasRequiredOptions(IngestArgs parsed)
     {
@@ -102,8 +127,9 @@ internal static class IngestCli
         return true;
     }
 
-    private static async Task<int> TranscribeAsync(IngestArgs parsed, string resolvedInput)
+    private static async Task<int> TranscribeAsync(IngestArgs parsed)
     {
+        string resolvedInput = Path.GetFullPath(parsed.Input!);
         var service = string.IsNullOrWhiteSpace(parsed.RawOutput) ? new TranscribeService() : new TranscribeService(Path.GetFullPath(parsed.RawOutput));
         Console.WriteLine($"Transcribing {resolvedInput} (POST /v1/asr/transcribe, DIARIZATION)...");
         TranscribeResult result = await service.TranscribeFileAsync(resolvedInput).ConfigureAwait(false);
@@ -115,14 +141,17 @@ internal static class IngestCli
             await service.WriteResultAsync(Path.GetFullPath(parsed.ResultOutput), result).ConfigureAwait(false);
         }
 
-        PrintSummary(result, resolvedOutput);
+        PrintSummary(result, parsed);
         return 0;
     }
 
-    private static void PrintSummary(TranscribeResult result, string resolvedOutput)
+    private static string UsageNote() => "usage: not reported by the endpoint (null, never zero)";
+
+    private static void PrintSummary(TranscribeResult result, IngestArgs parsed)
     {
+        string resolvedOutput = Path.GetFullPath(parsed.Output!);
         Console.WriteLine($"Wrote {result.Segments.Length} segment(s) to {resolvedOutput}");
-        Console.WriteLine($"Audio: {result.AudioDurationMs} ms | session: {result.SessionId ?? "(none)"} | usage: not reported by the endpoint (null, never zero)");
+        Console.WriteLine($"Audio: {result.AudioDurationMs} ms | session: {result.SessionId ?? "(none)"} | {UsageNote()}");
         foreach (TranscribeSegment segment in result.Segments)
         {
             string duration = segment.DurationSeconds?.ToString("0.0") ?? "?";
@@ -130,15 +159,15 @@ internal static class IngestCli
         }
     }
 
-    private static string? ValidateOutputPaths(string resolvedInput, string output, string? resultOutput, string? rawOutput)
+    private static string? ValidateOutputPaths(string resolvedInput, IngestArgs parsed)
     {
         StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         foreach ((string label, string? path) in new (string, string?)[]
-        {
-            ("--output", output),
-            ("--result", resultOutput),
-            ("--raw", rawOutput),
-        })
+            {
+                ("--output", parsed.Output),
+                ("--result", parsed.ResultOutput),
+                ("--raw", parsed.RawOutput),
+            })
         {
             if (string.IsNullOrWhiteSpace(path))
             {
