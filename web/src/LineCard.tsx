@@ -8,7 +8,8 @@ import {
 } from "./api";
 import { AuditionPanel } from "./AuditionPanel";
 import { DirectorPanel } from "./DirectorPanel";
-import { AttemptsPanel, type LineView, StatusPills, TimingPill, deriveLineView } from "./QaParts";
+import { type LineView, deriveLineView } from "./lineView";
+import { AttemptsPanel, StatusPills, TimingPill } from "./QaParts";
 import { ScenePanel, SceneStatusPill } from "./ScenePanel";
 import { VisualPanel, VisualStatusPill } from "./VisualPanel";
 import { resolveScene } from "./directorInput";

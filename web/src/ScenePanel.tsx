@@ -72,7 +72,7 @@ export function SceneDetails({ scene }: { scene: SceneSegmentResult }) {
   );
 }
 
-export function hasFrameInfo(scene: SceneSegmentResult): boolean {
+function hasFrameInfo(scene: SceneSegmentResult): boolean {
   return Boolean(scene.frame_id || scene.timecode_seconds != null || scene.frame_sha256);
 }
 

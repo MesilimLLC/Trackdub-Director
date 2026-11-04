@@ -70,7 +70,7 @@ export function DirectorSideBySide({ director }: { director: DirectorAdaptationS
   );
 }
 
-export function isQuietMeaning(meaning: DirectorMeaningResult): boolean {
+function isQuietMeaning(meaning: DirectorMeaningResult): boolean {
   return meaning.issues.length === 0 && meaning.verdict === "Pass";
 }
 

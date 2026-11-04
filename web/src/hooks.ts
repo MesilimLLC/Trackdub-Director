@@ -44,8 +44,21 @@ export function useStatus() {
   }, []);
 
   useEffect(() => {
-    void refreshStatus();
-  }, [refreshStatus]);
+    let active = true;
+    fetchStatus().then(
+      (next) => {
+        if (!active) return;
+        setStatus(next);
+        setStatusError(null);
+      },
+      (e: unknown) => {
+        if (active) setStatusError(errorMessage(e));
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return { status, statusError, refreshStatus };
 }

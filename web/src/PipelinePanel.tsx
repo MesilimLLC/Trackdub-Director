@@ -27,8 +27,15 @@ export function PipelinePanel({ busy, pipeline, resetGeneration, onRun }: {
   const [auditionOn, setAuditionOn] = useState(false);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  // Reset the chosen file when the parent bumps resetGeneration: adjust state
+  // during render, and clear the uncontrolled input element in an effect.
+  const [seenGeneration, setSeenGeneration] = useState(resetGeneration);
+  if (seenGeneration !== resetGeneration) {
+    setSeenGeneration(resetGeneration);
     setAudio(null);
+  }
+
+  useEffect(() => {
     if (audioInputRef.current) audioInputRef.current.value = "";
   }, [resetGeneration]);
 
