@@ -182,7 +182,7 @@ public sealed class VisualLocalisationService : IDisposable
             Error: null,
             new VisualLocalisationProvenance(edit.Model, context.EndpointHost, DateTime.UtcNow.ToString("O"), PromptTemplateVersion),
             ToUsage(edit.Usage),
-            imageCalls: 1,
+            ImageCalls: 1,
             png);
     }
 

@@ -318,6 +318,38 @@ async function readFrameFile(file: File): Promise<{ dataUrl: string; width: numb
   }
 }
 
+function FrameUploadField({
+  segment,
+  busy,
+  onFrameLoaded,
+  onError,
+}: {
+  segment: SegmentInput;
+  busy: boolean;
+  onFrameLoaded: (expected: SegmentInput, patch: Partial<SegmentInput>) => boolean;
+  onError: (message: string | null) => void;
+}) {
+  return (
+    <label>Frame image
+      <input aria-label="Frame image" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={(e) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        if (!file) return;
+        if (file.size > MAX_IMAGE_BYTES) { onError("Frame exceeds the 10 MiB limit."); return; }
+        const expected = segment;
+        void readFrameFile(file).then(({ dataUrl, sha256 }) => {
+          const applied = onFrameLoaded(expected, {
+            frame_image_data_url: dataUrl,
+            frame_id: expected.frame_id ?? file.name,
+            frame_sha256: sha256,
+          });
+          onError(applied ? null : "Frame upload finished after that segment was replaced. Choose the frame again.");
+        }).catch((error: unknown) => onError(error instanceof Error ? error.message : String(error)));
+      }} />
+    </label>
+  );
+}
+
 function SegmentMediaFields({
   segment,
   busy,
@@ -333,23 +365,7 @@ function SegmentMediaFields({
 }) {
   return (
     <div className="workbench-grid">
-      <label>Frame image
-        <input aria-label="Frame image" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={(e) => {
-          const file = e.target.files?.[0];
-          e.target.value = "";
-          if (!file) return;
-          if (file.size > MAX_IMAGE_BYTES) { onError("Frame exceeds the 10 MiB limit."); return; }
-          const expected = segment;
-          void readFrameFile(file).then(({ dataUrl, sha256 }) => {
-            const applied = onFrameLoaded(expected, {
-              frame_image_data_url: dataUrl,
-              frame_id: expected.frame_id ?? file.name,
-              frame_sha256: sha256,
-            });
-            onError(applied ? null : "Frame upload finished after that segment was replaced. Choose the frame again.");
-          }).catch((error: unknown) => onError(error instanceof Error ? error.message : String(error)));
-        }} />
-      </label>
+      <FrameUploadField segment={segment} busy={busy} onFrameLoaded={onFrameLoaded} onError={onError} />
       <label>Scene concepts (comma separated)
         <input aria-label="Scene concepts" value={(segment.concepts ?? []).join(", ")} disabled={busy}
           onChange={(e) => update({ concepts: e.target.value.split(",").map((v) => v.trim()).filter(Boolean) })} />
@@ -388,23 +404,18 @@ function SegmentMediaFields({
 
 function VisualBoxEditor({
   segment,
-  natural,
-  shownBox,
-  frameRef,
-  onNatural,
-  onPointerDown,
-  onPointerMove,
-  onPointerUp,
+  onBox,
+  onError,
 }: {
   segment: SegmentInput;
-  natural: { width: number; height: number } | null;
-  shownBox: LocalisationBox | null | undefined;
-  frameRef: React.RefObject<HTMLDivElement | null>;
-  onNatural: (size: { width: number; height: number }) => void;
-  onPointerDown: (event: React.PointerEvent) => void;
-  onPointerMove: (event: React.PointerEvent) => void;
-  onPointerUp: (event: React.PointerEvent) => void;
+  onBox: (box: LocalisationBox) => void;
+  onError: (message: string | null) => void;
 }) {
+  const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
+  const [dragStart, setDragStart] = useState<PointerPoint | null>(null);
+  const [draftBox, setDraftBox] = useState<LocalisationBox | null>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const shownBox = draftBox ?? segment.box;
   if (!segment.frame_image_data_url) {
     return <div className="token-usage">Upload a frame to enable Scene visual context and the sign box editor.</div>;
   }
@@ -415,12 +426,12 @@ function VisualBoxEditor({
         className="visual-editor"
         role="application"
         aria-label="Draw sign box"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
+        onPointerDown={(event) => startBoxDrag(event, frameRef, natural, setDragStart, setDraftBox)}
+        onPointerMove={(event) => moveBoxDraft(event, frameRef, natural, dragStart, setDraftBox)}
+        onPointerUp={(event) => finishBoxDrag(event, frameRef, natural, dragStart, setDragStart, setDraftBox, onBox, onError)}
       >
         <img src={segment.frame_image_data_url} alt={`Frame for ${segment.id}`} draggable={false}
-          onLoad={(e) => onNatural({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })} />
+          onLoad={(e) => setNatural({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })} />
         {shownBox && natural && (
           <div className="visual-box" style={{
             left: `${(shownBox.x1 / natural.width) * 100}%`,
@@ -438,6 +449,63 @@ function VisualBoxEditor({
   );
 }
 
+type FrameElementRef = React.RefObject<HTMLDivElement | null>;
+type FrameSize = { width: number; height: number };
+
+function pointFromEvent(event: React.PointerEvent<HTMLDivElement>, frameRef: FrameElementRef, natural: FrameSize | null): PointerPoint | null {
+  const rect = frameRef.current?.getBoundingClientRect();
+  if (!rect || !natural) return null;
+  return pointerToOriginal(event.clientX, event.clientY, rect, natural);
+}
+
+function startBoxDrag(
+  event: React.PointerEvent<HTMLDivElement>,
+  frameRef: FrameElementRef,
+  natural: FrameSize | null,
+  setDragStart: React.Dispatch<React.SetStateAction<PointerPoint | null>>,
+  setDraftBox: React.Dispatch<React.SetStateAction<LocalisationBox | null>>,
+): void {
+  const point = pointFromEvent(event, frameRef, natural);
+  if (!point) return;
+  setDragStart(point);
+  setDraftBox(null);
+}
+
+function moveBoxDraft(
+  event: React.PointerEvent<HTMLDivElement>,
+  frameRef: FrameElementRef,
+  natural: FrameSize | null,
+  dragStart: PointerPoint | null,
+  setDraftBox: React.Dispatch<React.SetStateAction<LocalisationBox | null>>,
+): void {
+  if (!dragStart || !natural) return;
+  const point = pointFromEvent(event, frameRef, natural);
+  if (!point) return;
+  setDraftBox(normalizeBox(dragStart, point, natural));
+}
+
+function finishBoxDrag(
+  event: React.PointerEvent<HTMLDivElement>,
+  frameRef: FrameElementRef,
+  natural: FrameSize | null,
+  dragStart: PointerPoint | null,
+  setDragStart: React.Dispatch<React.SetStateAction<PointerPoint | null>>,
+  setDraftBox: React.Dispatch<React.SetStateAction<LocalisationBox | null>>,
+  onBox: (box: LocalisationBox) => void,
+  onError: (message: string | null) => void,
+): void {
+  if (!dragStart || !natural) return;
+  const point = pointFromEvent(event, frameRef, natural);
+  const box = point ? normalizeBox(dragStart, point, natural) : null;
+  setDragStart(null);
+  setDraftBox(null);
+  if (!box) {
+    onError("Sign box must be at least 8×8 original pixels.");
+    return;
+  }
+  onBox(box);
+}
+
 export function SegmentMediaEditor({
   segment,
   busy,
@@ -451,46 +519,13 @@ export function SegmentMediaEditor({
   onFrameLoaded: (expected: SegmentInput, patch: Partial<SegmentInput>) => boolean;
   onError: (message: string | null) => void;
 }) {
-  const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
-  const [dragStart, setDragStart] = useState<PointerPoint | null>(null);
-  const [draftBox, setDraftBox] = useState<LocalisationBox | null>(null);
-  const frameRef = useRef<HTMLDivElement>(null);
   if (!segment) return null;
-
   const update = (patch: Partial<SegmentInput>) => onChange({ ...segment, ...patch });
-  const pointFromEvent = (event: React.PointerEvent): PointerPoint | null => {
-    const rect = frameRef.current?.getBoundingClientRect();
-    if (!rect || !natural) return null;
-    return pointerToOriginal(event.clientX, event.clientY, rect, natural);
-  };
-  const shownBox = draftBox ?? segment.box;
-
   return (
     <section className="workbench-panel" aria-label="Segment media editor">
       <div className="panel-heading"><h2>Scene, Director, and Visual — {segment.id || "selected line"}</h2></div>
       <SegmentMediaFields segment={segment} busy={busy} update={update} onFrameLoaded={onFrameLoaded} onError={onError} />
-      <VisualBoxEditor
-        segment={segment}
-        natural={natural}
-        shownBox={shownBox}
-        frameRef={frameRef}
-        onNatural={setNatural}
-        onPointerDown={(e) => { const p = pointFromEvent(e); if (p) { setDragStart(p); setDraftBox(null); } }}
-        onPointerMove={(e) => {
-          if (!dragStart || !natural) return;
-          const p = pointFromEvent(e);
-          if (p) setDraftBox(normalizeBox(dragStart, p, natural));
-        }}
-        onPointerUp={(e) => {
-          if (!dragStart || !natural) return;
-          const p = pointFromEvent(e);
-          const box = p ? normalizeBox(dragStart, p, natural) : null;
-          setDragStart(null);
-          setDraftBox(null);
-          if (box) update({ box });
-          else onError("Sign box must be at least 8×8 original pixels.");
-        }}
-      />
+      <VisualBoxEditor segment={segment} onBox={(box) => update({ box })} onError={onError} />
     </section>
   );
 }

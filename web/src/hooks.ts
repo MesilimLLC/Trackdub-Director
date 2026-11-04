@@ -79,6 +79,19 @@ export function useStatus() {
   return { status, statusError, refreshStatus };
 }
 
+function nextRequestId(ref: React.RefObject<number>): number {
+  ref.current += 1;
+  return ref.current;
+}
+
+function mapSegmentsById<T extends { id: string }, V>(segments: T[] | undefined, value: (segment: T) => V): Map<string, V> | null {
+  return segments ? new Map(segments.map((segment) => [segment.id, value(segment)] as const)) : null;
+}
+
+function mapSegmentsByIndex<T, V>(segments: T[] | undefined, value: (segment: T) => V): Map<number, V> | null {
+  return segments ? new Map(segments.map((segment, index) => [index, value(segment)] as const)) : null;
+}
+
 export function useReports() {
   const [qa, setQa] = useState<QaReport | null>(null);
   const [batch, setBatch] = useState<TranslateBatch | null>(null);
@@ -107,11 +120,11 @@ export function useReports() {
 
   const sceneById = useMemo(() => (scene ? new Map(scene.segments.map((s, i) => [i, s] as const)) : null), [scene]);
   const sceneBySegId = useMemo(() => (scene ? new Map(scene.segments.map((s) => [s.id, s] as const)) : null), [scene]);
-  const qaById = useMemo(() => (qa ? new Map(qa.segments.map((s) => [s.id, s] as const)) : null), [qa]);
-  const batchById = useMemo(() => (batch ? new Map(batch.segments.map((s) => [s.id, s.translation] as const)) : null), [batch]);
-  const directorById = useMemo(() => (director ? new Map(director.segments.map((s) => [s.id, s] as const)) : null), [director]);
-  const auditionById = useMemo(() => (audition ? new Map(audition.segments.map((s) => [s.id, s] as const)) : null), [audition]);
-  const visualById = useMemo(() => (visual ? new Map(visual.segments.map((s, i) => [i, s] as const)) : null), [visual]);
+  const qaById = useMemo(() => mapSegmentsById(qa?.segments, (s) => s), [qa]);
+  const batchById = useMemo(() => mapSegmentsById(batch?.segments, (s) => s.translation), [batch]);
+  const directorById = useMemo(() => mapSegmentsById(director?.segments, (s) => s), [director]);
+  const auditionById = useMemo(() => mapSegmentsById(audition?.segments, (s) => s), [audition]);
+  const visualById = useMemo(() => mapSegmentsByIndex(visual?.segments, (s) => s), [visual]);
 
   return {
     qa, setQa, batch, setBatch, scene, setScene, director, setDirector,
@@ -129,10 +142,11 @@ export function useSegments(onReset: () => void, setError: React.Dispatch<React.
   const segmentKeySequenceRef = useRef(0);
 
   const keyForSegment = useCallback((segment: SegmentInput): number => {
-    let key = segmentKeysRef.current.get(segment);
+    const keys = segmentKeysRef.current;
+    let key = keys.get(segment);
     if (key === undefined) {
-      key = ++segmentKeySequenceRef.current;
-      segmentKeysRef.current.set(segment, key);
+      key = nextRequestId(segmentKeySequenceRef);
+      keys.set(segment, key);
     }
     return key;
   }, []);
@@ -145,20 +159,20 @@ export function useSegments(onReset: () => void, setError: React.Dispatch<React.
   }, [keyForSegment]);
 
   const loadSegments = useCallback((next: SegmentInput[]) => {
-    segmentsRequestRef.current++;
+    nextRequestId(segmentsRequestRef);
     setSegments(next);
     setError(null);
     onReset();
   }, [onReset, setError]);
 
   const replaceSegments = useCallback((next: SegmentInput[]) => {
-    segmentsRequestRef.current++;
+    nextRequestId(segmentsRequestRef);
     setSegments((previous) => inheritSegmentKeys(previous, next));
     setError(null);
   }, [setError, inheritSegmentKeys]);
 
   const handleLoadSample = useCallback(() => {
-    segmentsRequestRef.current++;
+    nextRequestId(segmentsRequestRef);
     setSegments(sampleSegments as SegmentInput[]);
     setError(null);
     onReset();
@@ -166,7 +180,7 @@ export function useSegments(onReset: () => void, setError: React.Dispatch<React.
 
   const handleFile = useCallback(async (file: File) => {
     setError(null);
-    const requestId = ++segmentsRequestRef.current;
+    const requestId = nextRequestId(segmentsRequestRef);
     try {
       const parsed = parseSegments(await file.text());
       if (requestId !== segmentsRequestRef.current) return;
@@ -258,7 +272,7 @@ export function useActions(context: ActionsContext) {
     emotionTags: emotionTagsFromSettings(settings),
   };
   const runTranslate = useCallback(async () => {
-    const requestId = ++context.translateRequestRef.current;
+    const requestId = nextRequestId(context.translateRequestRef);
     await run("translate", async () => {
       const res = await postTranslate(segments, from, to);
       if (requestId === context.translateRequestRef.current) setBatch(res);
@@ -266,15 +280,15 @@ export function useActions(context: ActionsContext) {
   }, [context.translateRequestRef, run, segments, from, to, setBatch]);
 
   const runQa = useCallback(async () => {
-    const requestId = ++context.qaRequestRef.current;
+    const requestId = nextRequestId(context.qaRequestRef);
     await run("qa", async () => {
       const res = await postQa(segments, from, to, qaOptions);
       if (requestId === context.qaRequestRef.current) setQa(res);
     });
-  }, [context.qaRequestRef, run, segments, from, to, qaOptions.maxAttempts, qaOptions.toleranceFraction, qaOptions.targetCharactersPerSecond, setQa]);
+  }, [context.qaRequestRef, run, segments, from, to, qaOptions, setQa]);
 
   const runScene = useCallback(async () => {
-    const requestId = ++context.sceneRequestRef.current;
+    const requestId = nextRequestId(context.sceneRequestRef);
     await run("scene", async () => {
       const res = await postSceneContext(segments);
       if (requestId === context.sceneRequestRef.current) setScene(res);
@@ -282,17 +296,17 @@ export function useActions(context: ActionsContext) {
   }, [context.sceneRequestRef, run, segments, setScene]);
 
   const runDirector = useCallback(async () => {
-    const requestId = ++context.directorRequestRef.current;
+    const requestId = nextRequestId(context.directorRequestRef);
     await run("director", async () => {
       const lookups = { qaById, batchById, sceneById, sceneBySegId };
       const prepared = segments.map((seg, idx) => prepareDirectorInput(seg, idx, segments.length, lookups));
       const res = await postDirectorAdaptation(prepared, from, to, qaOptions);
       if (requestId === context.directorRequestRef.current) setDirector(res);
     });
-  }, [context.directorRequestRef, run, segments, from, to, qaOptions.maxAttempts, qaOptions.toleranceFraction, qaOptions.targetCharactersPerSecond, setDirector, qaById, batchById, sceneById, sceneBySegId]);
+  }, [context.directorRequestRef, run, segments, from, to, qaOptions, setDirector, qaById, batchById, sceneById, sceneBySegId]);
 
   const runAudition = useCallback(async (speakerMapping: SpeakerMapping = {}) => {
-    const requestId = ++context.auditionRequestRef.current;
+    const requestId = nextRequestId(context.auditionRequestRef);
     if (!auditionKeyRef.current) {
       const key = createIdempotencyKey();
       if (!savePendingIdempotencyKey("audition", key)) {
@@ -318,7 +332,7 @@ export function useActions(context: ActionsContext) {
       clearPendingIdempotencyKey("audition");
       setAuditionRetryPending(false);
     });
-  }, [context.auditionRequestRef, run, segments, from, to, settings, setAudition, sceneById, sceneBySegId]);
+  }, [context.auditionRequestRef, run, segments, from, to, auditionOptions, setAudition, setError, sceneById, sceneBySegId]);
 
   const startNewAudition = useCallback(() => {
     auditionKeyRef.current = null;
@@ -327,7 +341,7 @@ export function useActions(context: ActionsContext) {
   }, []);
 
   const runVisual = useCallback(async () => {
-    const requestId = ++context.visualRequestRef.current;
+    const requestId = nextRequestId(context.visualRequestRef);
     await run("visual", async () => {
       try {
         const res = await postVisualLocalisation(segments);
@@ -339,7 +353,7 @@ export function useActions(context: ActionsContext) {
   }, [context.visualRequestRef, run, segments, setVisual]);
 
   const runTranscribe = useCallback(async (audio: File) => {
-    const requestId = ++context.transcribeRequestRef.current;
+    const requestId = nextRequestId(context.transcribeRequestRef);
     await run("transcribe", async () => {
       const res = await postTranscribe(audio);
       if (requestId !== context.transcribeRequestRef.current) return;
@@ -354,7 +368,7 @@ export function useActions(context: ActionsContext) {
   }, [context.transcribeRequestRef, run, loadSegments]);
 
   const runCopilot = useCallback(async (request: CopilotRequest, onProposal: (proposal: CopilotProposal) => void) => {
-    const requestId = ++context.copilotRequestRef.current;
+    const requestId = nextRequestId(context.copilotRequestRef);
     await run("copilot", async () => {
       const proposal = await postCopilotProposal(request);
       if (requestId === context.copilotRequestRef.current) onProposal(proposal);
@@ -364,7 +378,7 @@ export function useActions(context: ActionsContext) {
   const runPipeline = useCallback(
     (audio: File | null, flags: { scene: boolean; audition: boolean }, speakerMapping: SpeakerMapping = {}, idempotencyKey?: string) =>
       run("pipeline", async () => {
-        const requestId = ++context.pipelineRequestRef.current;
+        const requestId = nextRequestId(context.pipelineRequestRef);
         const priorById = new Map(segments.map((s) => [s.id, s] as const));
         const report = await postPipeline(audio, segments, segments, flags, from, to, { ...auditionOptions, speakerMapping }, idempotencyKey);
         if (requestId !== context.pipelineRequestRef.current) return;
@@ -386,7 +400,7 @@ export function useActions(context: ActionsContext) {
         if (report.scene) setScene(report.scene);
         if (report.audition) setAudition(report.audition);
       }),
-    [context.pipelineRequestRef, run, segments, from, to, settings, setPipeline, loadSegments, setQa, setScene, setAudition],
+    [context.pipelineRequestRef, run, segments, from, to, auditionOptions, setPipeline, loadSegments, setQa, setScene, setAudition],
   );
 
   const runExportDub = useCallback(async (video: File) => {

@@ -1,5 +1,91 @@
-import type { CopilotSegmentUpdate, CopilotSettings, SegmentInput } from "./api";
+import type {
+  AuditionReport,
+  CopilotProposal,
+  CopilotRequest,
+  CopilotSegmentUpdate,
+  CopilotSettings,
+  DirectorAdaptationBatch,
+  QaReport,
+  SceneContextBatch,
+  SegmentInput,
+  VisualLocalisationBatch,
+} from "./api";
 import type { ChangeKind, RunSettings } from "./workbench";
+
+export interface CopilotReportState {
+  qa: QaReport | null;
+  scene: SceneContextBatch | null;
+  director: DirectorAdaptationBatch | null;
+  audition: AuditionReport | null;
+  visual: VisualLocalisationBatch | null;
+}
+
+export function buildCopilotRequest(input: {
+  goal: string;
+  from: string;
+  to: string;
+  settings: RunSettings;
+  segments: SegmentInput[];
+  reports: CopilotReportState;
+}): CopilotRequest {
+  return {
+    goal: input.goal.trim(),
+    source_language: input.from,
+    target_language: input.to,
+    settings: copilotSettings(input.settings),
+    segments: input.segments.map(copilotSegmentSummary),
+    report_summary: reportSummary(input.reports),
+  };
+}
+
+function copilotSettings(settings: RunSettings): CopilotSettings {
+  return {
+    max_revisions: settings.maxRevisions,
+    tolerance_percent: settings.tolerancePercent,
+    target_cps: settings.targetCps === "" ? null : Number(settings.targetCps),
+    speed_retake_enabled: settings.speedRetakeEnabled,
+    speed_cap: settings.speedCap,
+    emotion_tags_enabled: settings.emotionTagsEnabled,
+  };
+}
+
+function copilotSegmentSummary(segment: SegmentInput) {
+  return {
+    id: segment.id,
+    text: segment.text,
+    duration_seconds: segment.duration_seconds,
+    speaker_id: segment.speaker_id,
+    has_frame: Boolean(segment.frame_image_data_url),
+    concepts: segment.concepts,
+    vision_enrichment: segment.vision_enrichment ?? false,
+    director_register: segment.director_adaptation?.target_register ?? null,
+    has_sign_box: Boolean(segment.box),
+    sign_source_text: segment.source_text,
+    sign_target_text: segment.target_text,
+  };
+}
+
+function reportSummary(reports: CopilotReportState): string {
+  return [
+    qaSummary(reports.qa),
+    statuses("Scene", reports.scene?.segments.map((s) => s.status)),
+    statuses("Director", reports.director?.segments.map((s) => s.status)),
+    auditionSummary(reports.audition),
+    statuses("Visual", reports.visual?.segments.map((s) => s.status)),
+  ].join(" | ").slice(0, 4000);
+}
+
+function qaSummary(qa: QaReport | null): string {
+  return qa ? `QA final ${qa.totals.final_pass_count}/${qa.totals.total_segments}, revisions ${qa.totals.total_revisions}` : "QA not run";
+}
+
+function auditionSummary(audition: AuditionReport | null): string {
+  return audition ? `Audition cast ${audition.totals.lines_cast}/${audition.totals.total_segments}` : "Audition not run";
+}
+
+function statuses(label: string, values: string[] | undefined): string {
+  return values ? `${label} statuses ${values.join(",")}` : `${label} not run`;
+}
 
 export function hasDuplicateSegmentIds(segments: SegmentInput[]): boolean {
   const seen = new Set<string>();
@@ -39,6 +125,29 @@ function auditionSettingsChanged(a: RunSettings, b: RunSettings): boolean {
   return a.speedRetakeEnabled !== b.speedRetakeEnabled
     || a.speedCap !== b.speedCap
     || a.emotionTagsEnabled !== b.emotionTagsEnabled;
+}
+
+export type CopilotApplyPlan =
+  | { error: string; clearProposal: boolean }
+  | { merged: { settings: RunSettings; changes: ChangeKind[] }; segments: SegmentInput[] | null };
+
+export function planCopilotApply(input: {
+  proposalState: { proposal: CopilotProposal; fingerprint: string } | null;
+  currentFingerprint: string;
+  segments: SegmentInput[];
+  settings: RunSettings;
+}): CopilotApplyPlan {
+  if (!input.proposalState || input.proposalState.fingerprint !== input.currentFingerprint) {
+    return { error: "Copilot proposal is stale because the workbench changed. Prepare a new proposal.", clearProposal: true };
+  }
+  const { proposal } = input.proposalState;
+  if (proposal.segment_updates.length > 0 && hasDuplicateSegmentIds(input.segments)) {
+    return { error: "Copilot segment updates cannot be applied while segment IDs are duplicated. Make the segment IDs unique first.", clearProposal: false };
+  }
+  return {
+    merged: mergeCopilotSettings(input.settings, proposal.settings),
+    segments: proposal.segment_updates.length > 0 ? applyCopilotUpdates(input.segments, proposal.segment_updates) : null,
+  };
 }
 
 export function applyCopilotUpdates(

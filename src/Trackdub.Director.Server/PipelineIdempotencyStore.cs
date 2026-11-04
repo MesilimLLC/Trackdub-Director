@@ -107,7 +107,7 @@ internal sealed class PipelineIdempotencyStore
         _entries.Add(request.Key, entry);
         if (!PersistEntries())
         {
-            _entries.Remove(key);
+            _entries.Remove(request.Key);
             return RecoveryUnavailableResult();
         }
 

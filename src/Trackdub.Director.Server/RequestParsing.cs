@@ -27,7 +27,7 @@ internal static class RequestParsing
     {
         using var doc = await JsonDocument.ParseAsync(http.Body, cancellationToken: ct).ConfigureAwait(false);
         JsonElement root = doc.RootElement;
-        TSegment[] segments = ReadSegmentsFromRoot(root, out bool isArray, out string? from, out string? to);
+        TSegment[] segments = ReadSegmentsFromRoot<TSegment>(root, out bool isArray, out string? from, out string? to);
         return create(segments, from, to, root, isArray);
     }
 

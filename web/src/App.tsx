@@ -5,8 +5,8 @@ import { LineList } from "./LineCard";
 import { PipelinePanel } from "./PipelinePanel";
 import { QaReportFooter } from "./QaReport";
 import { CopilotPanel, DubExportPanel, RunSettingsPanel, SegmentEditor, SegmentMediaEditor } from "./WorkbenchPanels";
-import type { CopilotProposal, CopilotRequest, SegmentInput, SpeakerMapping } from "./api";
-import { applyCopilotUpdates, hasDuplicateSegmentIds, mergeCopilotSettings } from "./copilot";
+import type { CopilotProposal, SegmentInput, SpeakerMapping } from "./api";
+import { buildCopilotRequest, planCopilotApply } from "./copilot";
 import { DEFAULT_FROM, DEFAULT_TO, useActions, useReports, useSegments, useStatus } from "./hooks";
 import {
   DEFAULT_RUN_SETTINGS,
@@ -25,7 +25,7 @@ export default function App() {
   const [to, setTo] = useState(DEFAULT_TO);
   const [settings, setSettings] = useState<RunSettings>(DEFAULT_RUN_SETTINGS);
   const [speakerMapping, setSpeakerMapping] = useState<SpeakerMapping>({ A: "anna", B: "ashley" });
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedIndexState, setSelectedIndex] = useState(0);
   const [copilotGoal, setCopilotGoal] = useState("");
   const [copilotProposal, setCopilotProposal] = useState<{ proposal: CopilotProposal; fingerprint: string } | null>(null);
   const { status, statusError, refreshStatus } = useStatus();
@@ -78,11 +78,10 @@ export default function App() {
 
   const input = useSegments(onReset, setError);
   const segmentsRef = useRef(input.segments);
-  segmentsRef.current = input.segments;
-
   useEffect(() => {
-    setSelectedIndex((current) => Math.max(0, Math.min(current, Math.max(0, input.segments.length - 1))));
-  }, [input.segments.length]);
+    segmentsRef.current = input.segments;
+  });
+  const selectedIndex = Math.max(0, Math.min(selectedIndexState, Math.max(0, input.segments.length - 1)));
 
   const updateSegments = useCallback((next: SegmentInput[]) => {
     invalidateChanges(classifySegmentChanges(input.segments, next));
@@ -164,66 +163,38 @@ export default function App() {
   });
   const evidenceAvailable = Boolean(reports.batch || reports.qa || reports.scene || reports.director || reports.audition || reports.visual || reports.pipeline);
 
-  const copilotSettings = {
-    max_revisions: settings.maxRevisions,
-    tolerance_percent: settings.tolerancePercent,
-    target_cps: settings.targetCps === "" ? null : Number(settings.targetCps),
-    speed_retake_enabled: settings.speedRetakeEnabled,
-    speed_cap: settings.speedCap,
-    emotion_tags_enabled: settings.emotionTagsEnabled,
-  };
-
-  const buildCopilotRequest = (): CopilotRequest => ({
-    goal: copilotGoal.trim(),
-    source_language: from || DEFAULT_FROM,
-    target_language: to || DEFAULT_TO,
-    settings: copilotSettings,
-    segments: input.segments.map((segment) => ({
-      id: segment.id,
-      text: segment.text,
-      duration_seconds: segment.duration_seconds,
-      speaker_id: segment.speaker_id,
-      has_frame: Boolean(segment.frame_image_data_url),
-      concepts: segment.concepts,
-      vision_enrichment: segment.vision_enrichment ?? false,
-      director_register: segment.director_adaptation?.target_register ?? null,
-      has_sign_box: Boolean(segment.box),
-      sign_source_text: segment.source_text,
-      sign_target_text: segment.target_text,
-    })),
-    report_summary: [
-      reports.qa ? `QA final ${reports.qa.totals.final_pass_count}/${reports.qa.totals.total_segments}, revisions ${reports.qa.totals.total_revisions}` : "QA not run",
-      reports.scene ? `Scene statuses ${reports.scene.segments.map((s) => s.status).join(",")}` : "Scene not run",
-      reports.director ? `Director statuses ${reports.director.segments.map((s) => s.status).join(",")}` : "Director not run",
-      reports.audition ? `Audition cast ${reports.audition.totals.lines_cast}/${reports.audition.totals.total_segments}` : "Audition not run",
-      reports.visual ? `Visual statuses ${reports.visual.segments.map((s) => s.status).join(",")}` : "Visual not run",
-    ].join(" | ").slice(0, 4000),
+  const currentCopilotRequest = () => buildCopilotRequest({
+    goal: copilotGoal,
+    from: from || DEFAULT_FROM,
+    to: to || DEFAULT_TO,
+    settings,
+    segments: input.segments,
+    reports,
   });
 
   const prepareCopilot = () => {
-    const request = buildCopilotRequest();
+    const request = currentCopilotRequest();
     const fingerprint = JSON.stringify(request);
     void actions.runCopilot(request, (proposal) => setCopilotProposal({ proposal, fingerprint }));
   };
 
   const applyCopilot = () => {
-    if (!copilotProposal || copilotProposal.fingerprint !== JSON.stringify(buildCopilotRequest())) {
-      setCopilotProposal(null);
-      setError("Copilot proposal is stale because the workbench changed. Prepare a new proposal.");
+    const plan = planCopilotApply({
+      proposalState: copilotProposal,
+      currentFingerprint: JSON.stringify(currentCopilotRequest()),
+      segments: input.segments,
+      settings,
+    });
+    if ("error" in plan) {
+      if (plan.clearProposal) setCopilotProposal(null);
+      setError(plan.error);
       return;
     }
-    if (copilotProposal.proposal.segment_updates.length > 0 && hasDuplicateSegmentIds(input.segments)) {
-      setError("Copilot segment updates cannot be applied while segment IDs are duplicated. Make the segment IDs unique first.");
-      return;
+    if (plan.merged.changes.length > 0) {
+      invalidateChanges(plan.merged.changes);
+      setSettings(plan.merged.settings);
     }
-    const merged = mergeCopilotSettings(settings, copilotProposal.proposal.settings);
-    if (merged.changes.length > 0) {
-      invalidateChanges(merged.changes);
-      setSettings(merged.settings);
-    }
-    if (copilotProposal.proposal.segment_updates.length > 0) {
-      updateSegments(applyCopilotUpdates(input.segments, copilotProposal.proposal.segment_updates));
-    }
+    if (plan.segments) updateSegments(plan.segments);
     setCopilotProposal(null);
   };
 

@@ -984,7 +984,7 @@ describe("App smoke", () => {
       const url = input.toString();
       if (url.includes("/api/status")) return new Response(JSON.stringify(statusOk), { status: 200 });
       if (url.includes("/api/transcribe")) {
-        uploadedWav = (init?.body as FormData).get("audio") as File;
+        uploadedWav = (init!.body as FormData).get("audio") as File;
         return new Response(JSON.stringify({
           segments: [{ id: "seg-001", text: "Converted in browser.", duration_seconds: 1.4, speaker: "A" }],
           usage_reported: false,

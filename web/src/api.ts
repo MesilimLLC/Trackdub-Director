@@ -420,25 +420,40 @@ export type AuditionReport = {
 
 type StageRequestOptions = AuditionRequestOptions & { speakerMapping?: SpeakerMapping; idempotencyKey?: string };
 
+function mappedSpeaker(segment: SegmentInput, options?: StageRequestOptions): string | null {
+  return options?.speakerMapping?.[segment.speaker_id ?? ""] || segment.speaker_id || null;
+}
+
+function emotionLabel(segment: SegmentInput, options?: StageRequestOptions): string | null {
+  return options?.labelsById?.get(segment.id)?.emotion_tone_label ?? segment.context?.emotion_tone_label ?? null;
+}
+
+function pacingLabel(segment: SegmentInput, options?: StageRequestOptions): string | null {
+  return options?.labelsById?.get(segment.id)?.pacing_label ?? segment.context?.pacing_label ?? null;
+}
+
 function auditionSegmentBody(segment: SegmentInput, options?: StageRequestOptions) {
-  const labels = options?.labelsById?.get(segment.id);
   return {
     id: segment.id,
     text: segment.text,
     duration_seconds: segment.duration_seconds ?? null,
-    speaker_id: options?.speakerMapping?.[segment.speaker_id ?? ""] || segment.speaker_id || null,
-    emotion_tone_label: labels?.emotion_tone_label ?? segment.context?.emotion_tone_label ?? null,
-    pacing_label: labels?.pacing_label ?? segment.context?.pacing_label ?? null,
+    speaker_id: mappedSpeaker(segment, options),
+    emotion_tone_label: emotionLabel(segment, options),
+    pacing_label: pacingLabel(segment, options),
   };
 }
 
+function addOption(body: Record<string, unknown>, key: string, value: unknown): void {
+  if (value !== undefined) body[key] = value;
+}
+
 function stageOptionsBody(options?: StageRequestOptions): Record<string, unknown> {
-  return {
-    ...(options?.qaOptions ? { options: options.qaOptions } : {}),
-    ...(options?.speedRetake ? { speedRetake: options.speedRetake } : {}),
-    ...(options?.emotionTags ? { emotionTags: options.emotionTags } : {}),
-    ...(options?.speakerMapping ? { speaker_mapping: options.speakerMapping } : {}),
-  };
+  const body: Record<string, unknown> = {};
+  addOption(body, "options", options?.qaOptions);
+  addOption(body, "speedRetake", options?.speedRetake);
+  addOption(body, "emotionTags", options?.emotionTags);
+  addOption(body, "speaker_mapping", options?.speakerMapping);
+  return body;
 }
 
 export async function postAudition(

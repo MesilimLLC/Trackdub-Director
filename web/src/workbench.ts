@@ -79,15 +79,21 @@ function speakerChanged(a: SegmentInput, b: SegmentInput): boolean {
   return changed(a.speaker_id, b.speaker_id) || changed(a.speaker_label, b.speaker_label);
 }
 
+const CHANGE_DETECTORS: Array<[ChangeKind, (a: SegmentInput, b: SegmentInput) => boolean]> = [
+  ["text", (a, b) => a.text !== b.text],
+  ["duration", (a, b) => changed(a.duration_seconds, b.duration_seconds)],
+  ["start", (a, b) => changed(a.start_seconds, b.start_seconds)],
+  ["speaker", speakerChanged],
+  ["frame", (a, b) => changed(a.frame_image_data_url, b.frame_image_data_url)],
+  ["sceneConfig", sceneConfigChanged],
+  ["director", directorChanged],
+  ["visual", visualChanged],
+];
+
 function classifyPair(a: SegmentInput, b: SegmentInput, changes: Set<ChangeKind>): void {
-  if (a.text !== b.text) changes.add("text");
-  if (changed(a.duration_seconds, b.duration_seconds)) changes.add("duration");
-  if (changed(a.start_seconds, b.start_seconds)) changes.add("start");
-  if (speakerChanged(a, b)) changes.add("speaker");
-  if (changed(a.frame_image_data_url, b.frame_image_data_url)) changes.add("frame");
-  if (sceneConfigChanged(a, b)) changes.add("sceneConfig");
-  if (directorChanged(a, b)) changes.add("director");
-  if (visualChanged(a, b)) changes.add("visual");
+  for (const [kind, detector] of CHANGE_DETECTORS) {
+    if (detector(a, b)) changes.add(kind);
+  }
 }
 
 function hasStructureChange(before: SegmentInput[], after: SegmentInput[]): boolean {

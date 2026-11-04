@@ -30,7 +30,7 @@ export function PipelinePanel({ busy, pipeline, resetGeneration, segments, speak
   const [audio, setAudio] = useState<File | null>(null);
   const [sceneOn, setSceneOn] = useState(true);
   const [auditionOn, setAuditionOn] = useState(false);
-  const [retryKey, setRetryKey] = useState<string | null>(() => readPendingIdempotencyKey("pipeline"));
+  const [retryKeyState, setRetryKey] = useState<string | null>(() => readPendingIdempotencyKey("pipeline"));
   const audioInputRef = useRef<HTMLInputElement>(null);
   const speakerLabels = [...new Set(["A", "B", ...segments.map((segment) => segment.speaker_id).filter((speaker): speaker is string => Boolean(speaker?.trim()))])];
 
@@ -38,12 +38,12 @@ export function PipelinePanel({ busy, pipeline, resetGeneration, segments, speak
     if (audioInputRef.current) audioInputRef.current.value = "";
   }, [resetGeneration]);
 
+  const pipelineSucceeded = Boolean(pipeline && pipeline.stages.every((stage) => stage.status !== "Failed"));
+  const retryKey = pipelineSucceeded ? null : retryKeyState;
+
   useEffect(() => {
-    if (pipeline && pipeline.stages.every((stage) => stage.status !== "Failed")) {
-      clearPendingIdempotencyKey("pipeline");
-      setRetryKey(null);
-    }
-  }, [pipeline]);
+    if (pipelineSucceeded) clearPendingIdempotencyKey("pipeline");
+  }, [pipelineSucceeded]);
 
   const chooseAudio = (next: File | null) => {
     setAudio(next);
