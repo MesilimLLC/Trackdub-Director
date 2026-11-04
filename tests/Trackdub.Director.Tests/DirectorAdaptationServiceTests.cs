@@ -186,40 +186,36 @@ public sealed class DirectorAdaptationServiceTests
             new DirectorAdaptationSpec(register));
     }
 
-    private static void ExpectCalls(LaneStub stub, int adaptation, int meaning)
+    private static void ExpectMeaning(DirectorAdaptationSegmentResult result, MeaningVerdict verdict)
     {
-        Assert.Equal(adaptation, stub.AdaptationCalls);
-        Assert.Equal(meaning, stub.MeaningCalls);
-    }
-
-    private static void ExpectMeaning(DirectorAdaptationSegmentResult result, MeaningVerdict verdict, int tokens)
-    {
+        // Pass and Fail spent a meaning call (90 + 30 tokens); NotEvaluated and Error spent none.
+        int expectedTokens = verdict is MeaningVerdict.Pass or MeaningVerdict.Fail ? 120 : 0;
         Assert.NotNull(result.Meaning);
         Assert.Equal(verdict, result.Meaning.Verdict);
-        Assert.Equal(tokens, result.Meaning.Usage.TotalTokens);
+        Assert.Equal(expectedTokens, result.Meaning.Usage.TotalTokens);
     }
 
     private static void ExpectBilledAdaptationFailure(DirectorAdaptationSegmentResult result, string errorFragment)
     {
         ExpectFailedBeforeGates(result);
-        ExpectError(result, errorFragment);
+        Assert.NotNull(result.Error);
+        Assert.Contains(errorFragment, result.Error, StringComparison.Ordinal);
 
         // The call was made and billed; usage is recorded, not discarded.
-        ExpectUsage(result, 160);
+        ExpectBilledUsage(result);
     }
 
-    private static void ExpectPassed(DirectorAdaptationSegmentResult result, string adapted, bool changed)
+    private static void ExpectPassed(DirectorAdaptationSegmentResult result, string adapted)
     {
         Assert.Equal(DirectorAdaptationStatus.Passed, result.Status);
         Assert.Equal(adapted, result.AdaptedTranslation);
-        Assert.Equal(changed, result.Changed);
     }
 
     private static void ExpectBothGatesRan(DirectorAdaptationSegmentResult result, LaneStub stub)
     {
         Assert.Equal(QaVerdict.Pass, result.TimingVerdict);
-        ExpectMeaning(result, MeaningVerdict.Pass, 120);
-        ExpectCalls(stub, 1, 1);
+        ExpectMeaning(result, MeaningVerdict.Pass);
+        Assert.Equal((1, 1), (stub.AdaptationCalls, stub.MeaningCalls));
     }
 
     private static void ExpectFailedBeforeGates(DirectorAdaptationSegmentResult result)
@@ -232,16 +228,10 @@ public sealed class DirectorAdaptationServiceTests
         Assert.Null(meaning);
     }
 
-    private static void ExpectError(DirectorAdaptationSegmentResult result, string fragment)
-    {
-        Assert.NotNull(result.Error);
-        Assert.Contains(fragment, result.Error, StringComparison.Ordinal);
-    }
-
-    private static void ExpectUsage(DirectorAdaptationSegmentResult result, int totalTokens)
+    private static void ExpectBilledUsage(DirectorAdaptationSegmentResult result)
     {
         Assert.NotNull(result.Usage);
-        Assert.Equal(totalTokens, result.Usage.TotalTokens);
+        Assert.Equal(160, result.Usage.TotalTokens);
     }
 
     private static void ExpectProvenance(DirectorAdaptationSegmentResult result)
@@ -286,7 +276,7 @@ public sealed class DirectorAdaptationServiceTests
         string? register = result.TargetRegister;
         Assert.Equal("informal", register);
 
-        ExpectMeaning(result, MeaningVerdict.Pass, 120);
+        ExpectMeaning(result, MeaningVerdict.Pass);
         Assert.Null(result.Error);
         Assert.Empty(result.Meaning!.Issues);
 
@@ -296,12 +286,12 @@ public sealed class DirectorAdaptationServiceTests
         Assert.Equal(4.0, result.WindowSeconds);
 
         ExpectProvenance(result);
-        ExpectUsage(result, 160);
+        ExpectBilledUsage(result);
 
         int? reasoning = result.Usage?.ReasoningTokens;
         Assert.Equal(12, reasoning);
 
-        ExpectCalls(stub, 1, 1);
+        Assert.Equal((1, 1), (stub.AdaptationCalls, stub.MeaningCalls));
         Assert.Equal(160, batch.UsageTotal.TotalTokens);
         Assert.Equal(120, batch.MeaningUsageTotal.TotalTokens);
 
@@ -322,14 +312,14 @@ public sealed class DirectorAdaptationServiceTests
 
         DirectorAdaptationBatch batch = await service.RunAsync([OptedIn()], "en", "es");
 
-        ExpectCalls(stub, 1, 1);
+        Assert.Equal((1, 1), (stub.AdaptationCalls, stub.MeaningCalls));
         DirectorAdaptationSegmentResult result = batch.Segments.Single();
         Assert.Equal(DirectorAdaptationStatus.Failed, result.Status);
         Assert.Equal(AdaptedInformal, result.AdaptedTranslation);
         Assert.Equal(QaVerdict.Pass, result.TimingVerdict);
 
         var meaning = result.Meaning;
-        ExpectMeaning(result, MeaningVerdict.Fail, 120);
+        ExpectMeaning(result, MeaningVerdict.Fail);
         Assert.Equal(["dropped modality: source says the take is needed"], meaning!.Issues);
         Assert.Equal("Candidate drops the obligation.", meaning.Explanation);
     }
@@ -349,13 +339,13 @@ public sealed class DirectorAdaptationServiceTests
         Assert.Equal(QaVerdict.Fail, result.TimingVerdict);
 
         double? estimated = result.EstimatedSeconds;
-        ExpectMeaning(result, MeaningVerdict.NotEvaluated, 0);
+        ExpectMeaning(result, MeaningVerdict.NotEvaluated);
         Assert.NotNull(estimated);
         Assert.True(estimated.Value > 0.5);
 
         double? window = result.WindowSeconds;
         Assert.Equal(0.5, window);
-        ExpectCalls(stub, 1, 0);
+        Assert.Equal((1, 0), (stub.AdaptationCalls, stub.MeaningCalls));
         Assert.Equal(0, batch.MeaningUsageTotal.TotalTokens);
     }
 
@@ -410,7 +400,7 @@ public sealed class DirectorAdaptationServiceTests
             Assert.Equal(DirectorAdaptationStatus.Passed, withoutContext.Status);
             Assert.DoesNotContain("SCENE CONTEXT", stub.AdaptationBodies[1], StringComparison.Ordinal);
 
-            ExpectCalls(stub, 2, 2);
+            Assert.Equal((2, 2), (stub.AdaptationCalls, stub.MeaningCalls));
         }
         finally
         {
@@ -445,7 +435,7 @@ public sealed class DirectorAdaptationServiceTests
         Assert.Equal(DirectorAdaptationStatus.NotRequested, untouched.Status);
         ExpectNoSpend(untouched);
 
-        ExpectCalls(stub, 0, 0);
+        Assert.Equal((0, 0), (stub.AdaptationCalls, stub.MeaningCalls));
         Assert.Equal(0, batch.UsageTotal.TotalTokens);
         Assert.Equal(0, batch.MeaningUsageTotal.TotalTokens);
     }
@@ -463,7 +453,7 @@ public sealed class DirectorAdaptationServiceTests
 
         DirectorAdaptationSegmentResult result = Assert.Single(batch.Segments);
         ExpectBilledAdaptationFailure(result, "Malformed");
-        ExpectCalls(stub, 1, 0);
+        Assert.Equal((1, 0), (stub.AdaptationCalls, stub.MeaningCalls));
     }
 
     [Fact]
@@ -482,7 +472,8 @@ public sealed class DirectorAdaptationServiceTests
         DirectorAdaptationBatch batch = await service.RunAsync([segment], "en", "es");
 
         DirectorAdaptationSegmentResult result = Assert.Single(batch.Segments);
-        ExpectPassed(result, "Le veremos en la próxima etapa.", changed: true);
+        ExpectPassed(result, "Le veremos en la próxima etapa.");
+        Assert.True(result.Changed);
         ExpectBothGatesRan(result, stub);
     }
 
@@ -502,8 +493,9 @@ public sealed class DirectorAdaptationServiceTests
 
         DirectorAdaptationBatch batch = await service.RunAsync([segment], "en", "es");
 
-        DirectorAdaptationSegmentResult result = Assert.Single(batch.Segments);
-        ExpectPassed(result, "Nos vemos en la próxima etapa.", changed: false);
+        DirectorAdaptationSegmentResult result = batch.Segments.Single();
+        ExpectPassed(result, "Nos vemos en la próxima etapa.");
+        Assert.False(result.Changed);
         ExpectBothGatesRan(result, stub);
     }
 
@@ -518,9 +510,9 @@ public sealed class DirectorAdaptationServiceTests
 
         DirectorAdaptationBatch batch = await service.RunAsync([OptedIn(durationSeconds: 4.0)], "en", "es");
 
-        DirectorAdaptationSegmentResult result = Assert.Single(batch.Segments);
+        DirectorAdaptationSegmentResult result = batch.Segments.Single();
         ExpectBilledAdaptationFailure(result, "length");
-        ExpectCalls(stub, 1, 0);
+        Assert.Equal((1, 0), (stub.AdaptationCalls, stub.MeaningCalls));
     }
 
     [Fact]
@@ -568,12 +560,12 @@ public sealed class DirectorAdaptationServiceTests
         {
             Assert.NotNull(result.Error);
             Assert.Contains(failure == TransportFailure.BodyRead ? "body read reset" : "HTTP 500", result.Error, StringComparison.Ordinal);
-            ExpectCalls(stub, 1, 0);
+            Assert.Equal((1, 0), (stub.AdaptationCalls, stub.MeaningCalls));
             return;
         }
 
         Assert.Equal(QaVerdict.Pass, result.TimingVerdict);
-        ExpectMeaning(result, MeaningVerdict.Error, 0);
-        ExpectCalls(stub, 1, 1);
+        ExpectMeaning(result, MeaningVerdict.Error);
+        Assert.Equal((1, 1), (stub.AdaptationCalls, stub.MeaningCalls));
     }
 }

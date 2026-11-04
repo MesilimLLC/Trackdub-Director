@@ -181,10 +181,10 @@ export function useActions({ segments, from, to, refreshStatus, setBatch, setQa,
   }, [run, segments, setScene, sceneRequestRef]);
 
   const runDirector = useCallback(async () => {
+    const requestId = ++directorRequestRef.current;
     await run("director", async () => {
       const lookups = { qaById, batchById, sceneById, sceneBySegId };
       const prepared = segments.map((seg, idx) => prepareDirectorInput(seg, idx, segments.length, lookups));
-      const requestId = ++directorRequestRef.current;
       const res = await postDirectorAdaptation(prepared, from, to);
       if (requestId === directorRequestRef.current) setDirector(res);
     });
