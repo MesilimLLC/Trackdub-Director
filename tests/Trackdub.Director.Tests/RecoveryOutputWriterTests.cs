@@ -9,50 +9,58 @@ namespace Trackdub.Director.Tests;
 /// </summary>
 public sealed class RecoveryOutputWriterTests : IDisposable
 {
-    // Expected markers live in arrays so the test methods pass a list rather than a
-    // long run of string arguments.
-    private static readonly string[] SummaryMarkers =
-    [
-        "# Glimmer recovery run notes",
-        "- Direction: es -> en",
-        "muse-glimmer-1",
-        "muse-spark-1.1",
-        "1/2 items recovered",
-        "1/2 lines recovered",
-        "Glimmer calls 4/20, Meta calls 2/10",
-        "## Leakage rule",
-        "## Per-item outcomes",
-    ];
+    private static readonly string[] BlankFolders = ["", "   "];
 
-    private static readonly string[] AbsentSectionMarkers =
-    [
+    private static readonly MarkerSet SummaryMarkers = new()
+    {
+        Markers =
+        [
+            "# Glimmer recovery run notes",
+            "- Direction: es -> en",
+            "muse-glimmer-1",
+            "muse-spark-1.1",
+            "1/2 items recovered",
+            "1/2 lines recovered",
+            "Glimmer calls 4/20, Meta calls 2/10",
+            "## Leakage rule",
+            "## Per-item outcomes",
+        ],
+    };
+
+    private static readonly MarkerSet AbsentSectionMarkers = new()
+    {
         // No probe and no run error: neither optional section may appear.
-        "### Pre-flight probe",
-        "## Run failure",
-    ];
+        Markers = ["### Pre-flight probe", "## Run failure"],
+    };
 
-    private static readonly string[] ProbeMarkers =
-    [
-        "### Pre-flight probe",
-        "api.meta.ai",
-        "prompt=12 completion=3 total=15",
-        "## Run failure",
-        "provider 502",
-    ];
+    private static readonly MarkerSet ProbeMarkers = new()
+    {
+        Markers =
+        [
+            "### Pre-flight probe",
+            "api.meta.ai",
+            "prompt=12 completion=3 total=15",
+            "## Run failure",
+            "provider 502",
+        ],
+    };
 
-    private static readonly string[] ItemMarkers =
-    [
-        "`seg-001` att#1 (samples/source.json, Timing, window",
-        "Recovered -> \"hola!\" [1 attempt(s)]",
-        "`seg-002` att#1",
-        "ExhaustedAttempts [1 attempt(s)]",
-    ];
+    private static readonly MarkerSet ItemMarkers = new()
+    {
+        Markers =
+        [
+            "`seg-001` att#1 (samples/source.json, Timing, window",
+            "Recovered -> \"hola!\" [1 attempt(s)]",
+            "`seg-002` att#1",
+            "ExhaustedAttempts [1 attempt(s)]",
+        ],
+    };
 
-    private static readonly string[] AbsentRecoveredMarkers =
-    [
+    private static readonly MarkerSet AbsentRecoveredMarkers = new()
+    {
         // A refused item has no recovered text, so no arrow line for it.
-        "ExhaustedAttempts ->",
-    ];
+        Markers = ["ExhaustedAttempts ->"],
+    };
 
     private readonly string _folder =
         Path.Combine(Path.GetTempPath(), "trackdub-recovery-" + Guid.NewGuid().ToString("N"));
@@ -69,11 +77,10 @@ public sealed class RecoveryOutputWriterTests : IDisposable
         }
     }
 
-    private static RecoveryReport Report(
-        RecoveryProbeInfo? probe = null,
-        string? runError = null,
-        RecoveryItemReport[]? items = null)
+    private static RecoveryReport Report(ReportSpec? spec = null)
     {
+        ReportSpec run = spec ?? new ReportSpec();
+
         return new RecoveryReport(
             SourceLanguage: "es",
             TargetLanguage: "en",
@@ -82,9 +89,9 @@ public sealed class RecoveryOutputWriterTests : IDisposable
             MeaningModel: "muse-spark-1.1",
             MeaningPromptTemplateVersion: "meaning-v1",
             MaxAttemptsPerItem: 3,
-            Probe: probe,
-            RunError: runError,
-            Items: items ?? [],
+            Probe: run.Probe,
+            RunError: run.RunError,
+            Items: run.Items,
             Totals: new RecoveryTotals(
                 TotalItems: 2,
                 Recovered: 1,
@@ -100,17 +107,17 @@ public sealed class RecoveryOutputWriterTests : IDisposable
                 MetaTokens: GlimmerUsageRecord.Zero));
     }
 
-    private static RecoveryItemReport Item(string segmentId, RecoveryOutcome outcome, string? recoveredText)
+    private static RecoveryItemReport Item(ItemSpec spec)
     {
         return new RecoveryItemReport(
             SourceFile: "samples/source.json",
-            SegmentId: segmentId,
+            SegmentId: spec.SegmentId,
             AttemptNumber: 1,
             SourceLine: "hola",
             WindowSeconds: 2.5,
             FailureType: RecoveryFailureType.Timing,
-            Outcome: outcome,
-            RecoveredText: recoveredText,
+            Outcome: spec.Outcome,
+            RecoveredText: spec.RecoveredText,
             Attempts:
             [
                 new RecoveryAttemptTrace(
@@ -132,18 +139,18 @@ public sealed class RecoveryOutputWriterTests : IDisposable
     }
 
     /// <summary>Asserts that every marker appears in the written text.</summary>
-    private static void ExpectMarkers(string text, IReadOnlyList<string> markers)
+    private static void ExpectMarkers(string text, MarkerSet set)
     {
-        foreach (string marker in markers)
+        foreach (string marker in set.Markers)
         {
             Assert.Contains(marker, text);
         }
     }
 
     /// <summary>Asserts that none of the markers appear in the written text.</summary>
-    private static void ExpectNoMarkers(string text, IReadOnlyList<string> markers)
+    private static void ExpectNoMarkers(string text, MarkerSet set)
     {
-        foreach (string marker in markers)
+        foreach (string marker in set.Markers)
         {
             Assert.DoesNotContain(marker, text);
         }
@@ -186,7 +193,20 @@ public sealed class RecoveryOutputWriterTests : IDisposable
     public async Task WriteReportAsync_overwrites_a_previous_report()
     {
         await RecoveryOutputWriter.WriteReportAsync(_folder, Report());
-        await RecoveryOutputWriter.WriteReportAsync(_folder, Report(items: [Item("seg-001", RecoveryOutcome.Recovered, "hola!")]));
+        await RecoveryOutputWriter.WriteReportAsync(
+            _folder,
+            Report(new ReportSpec
+            {
+                Items =
+                [
+                    Item(new ItemSpec
+                    {
+                        SegmentId = "seg-001",
+                        Outcome = RecoveryOutcome.Recovered,
+                        RecoveredText = "hola!",
+                    }),
+                ],
+            }));
 
         string json = await File.ReadAllTextAsync(ReportPath);
         using JsonDocument doc = JsonDocument.Parse(json);
@@ -219,12 +239,12 @@ public sealed class RecoveryOutputWriterTests : IDisposable
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task WriteReportAsync_rejects_a_blank_folder(string folder)
+    [InlineData(0)]
+    [InlineData(1)]
+    public async Task WriteReportAsync_rejects_a_blank_folder(int index)
     {
         await Assert.ThrowsAsync<ArgumentException>(
-            () => RecoveryOutputWriter.WriteReportAsync(folder, Report()));
+            () => RecoveryOutputWriter.WriteReportAsync(BlankFolders[index], Report()));
     }
 
     [Fact]
@@ -250,7 +270,9 @@ public sealed class RecoveryOutputWriterTests : IDisposable
             TotalTokens: 15,
             WallSeconds: 5.0);
 
-        await RecoveryOutputWriter.WriteNotesAsync(_folder, Report(probe: probe, runError: "provider 502"));
+        await RecoveryOutputWriter.WriteNotesAsync(
+            _folder,
+            Report(new ReportSpec { Probe = probe, RunError = "provider 502" }));
 
         string notes = await File.ReadAllTextAsync(NotesPath);
 
@@ -262,11 +284,23 @@ public sealed class RecoveryOutputWriterTests : IDisposable
     {
         await RecoveryOutputWriter.WriteNotesAsync(
             _folder,
-            Report(items:
-            [
-                Item("seg-001", RecoveryOutcome.Recovered, "hola!"),
-                Item("seg-002", RecoveryOutcome.ExhaustedAttempts, null),
-            ]));
+            Report(new ReportSpec
+            {
+                Items =
+                [
+                    Item(new ItemSpec
+                    {
+                        SegmentId = "seg-001",
+                        Outcome = RecoveryOutcome.Recovered,
+                        RecoveredText = "hola!",
+                    }),
+                    Item(new ItemSpec
+                    {
+                        SegmentId = "seg-002",
+                        Outcome = RecoveryOutcome.ExhaustedAttempts,
+                    }),
+                ],
+            }));
 
         string notes = await File.ReadAllTextAsync(NotesPath);
 
@@ -282,11 +316,37 @@ public sealed class RecoveryOutputWriterTests : IDisposable
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task WriteNotesAsync_rejects_a_blank_folder(string folder)
+    [InlineData(0)]
+    [InlineData(1)]
+    public async Task WriteNotesAsync_rejects_a_blank_folder(int index)
     {
         await Assert.ThrowsAsync<ArgumentException>(
-            () => RecoveryOutputWriter.WriteNotesAsync(folder, Report()));
+            () => RecoveryOutputWriter.WriteNotesAsync(BlankFolders[index], Report()));
+    }
+
+    /// <summary>What to record in the report. The defaults describe a plain run.</summary>
+    private sealed class ReportSpec
+    {
+        public RecoveryProbeInfo? Probe { get; init; }
+
+        public string? RunError { get; init; }
+
+        public RecoveryItemReport[] Items { get; init; } = [];
+    }
+
+    /// <summary>One item outcome to record, with its recovered text when it recovered.</summary>
+    private sealed class ItemSpec
+    {
+        public required string SegmentId { get; init; }
+
+        public required RecoveryOutcome Outcome { get; init; }
+
+        public string? RecoveredText { get; init; }
+    }
+
+    /// <summary>Text that a written file must (or must not) contain.</summary>
+    private sealed class MarkerSet
+    {
+        public required string[] Markers { get; init; }
     }
 }
