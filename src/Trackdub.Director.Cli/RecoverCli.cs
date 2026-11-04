@@ -62,39 +62,44 @@ internal static class RecoverCli
 
         try
         {
-            IReadOnlyList<RecoveryItem> set = await RecoverySetBuilder.BuildAsync(options.ReportPaths).ConfigureAwait(false);
-            PrintSet(set);
-
-            if (!IsSetSizeInRange(set))
-            {
-                return 1;
-            }
-
-            if (options.ListOnly)
-            {
-                Console.WriteLine($"--list-only: enumerated {set.Count} item(s); no run performed.");
-                return 0;
-            }
-
-            // Checked before the route: a language mismatch is a usage error, not a route error.
-            if (!IsSourceLanguageMatch(set, options))
-            {
-                return 1;
-            }
-
-            // Fail closed BEFORE constructing any client or making any call; name the missing vars.
-            if (!IsRouteConfigured())
-            {
-                return 1;
-            }
-
-            return await RunRecoveryAsync(options, set).ConfigureAwait(false);
+            return await RunSetAsync(options).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or MetaApiException)
         {
             Console.Error.WriteLine($"error: {ex.Message}");
             return 1;
         }
+    }
+
+    private static async Task<int> RunSetAsync(Options options)
+    {
+        IReadOnlyList<RecoveryItem> set = await RecoverySetBuilder.BuildAsync(options.ReportPaths).ConfigureAwait(false);
+        PrintSet(set);
+
+        if (!IsSetSizeInRange(set))
+        {
+            return 1;
+        }
+
+        if (options.ListOnly)
+        {
+            Console.WriteLine($"--list-only: enumerated {set.Count} item(s); no run performed.");
+            return 0;
+        }
+
+        // Checked before the route: a language mismatch is a usage error, not a route error.
+        if (!IsSourceLanguageMatch(set, options))
+        {
+            return 1;
+        }
+
+        // Fail closed BEFORE constructing any client or making any call; name the missing vars.
+        if (!IsRouteConfigured())
+        {
+            return 1;
+        }
+
+        return await RunRecoveryAsync(options, set).ConfigureAwait(false);
     }
 
     private static bool IsSetSizeInRange(IReadOnlyList<RecoveryItem> set)
