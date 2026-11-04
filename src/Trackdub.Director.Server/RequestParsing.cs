@@ -6,24 +6,42 @@ internal static class RequestParsing
 {
     internal static async Task<AuditionApiRequest?> ReadAuditionRequestAsync(HttpRequest http, CancellationToken ct)
     {
+        return await ReadSegmentRequestAsync<AuditionSegmentInput, AuditionApiRequest>(
+            http,
+            ct,
+            (segments, from, to, root, isArray) => new AuditionApiRequest(
+                segments,
+                from,
+                to,
+                isArray ? null : ReadOptionalObject<SpeedRetakeOptions>(root, "speedRetake", "speed_retake"),
+                isArray ? null : ReadOptionalObject<EmotionTagOptions>(root, "emotionTags", "emotion_tags"),
+                isArray ? null : ReadOptionalQaOptions(root),
+                isArray ? null : ReadOptionalObject<Dictionary<string, string>>(root, "speakerMapping", "speaker_mapping"))).ConfigureAwait(false);
+    }
+
+    private static async Task<TRequest?> ReadSegmentRequestAsync<TSegment, TRequest>(
+        HttpRequest http,
+        CancellationToken ct,
+        Func<TSegment[], string?, string?, JsonElement, bool, TRequest> create)
+        where TRequest : class
+    {
         using var doc = await JsonDocument.ParseAsync(http.Body, cancellationToken: ct).ConfigureAwait(false);
         JsonElement root = doc.RootElement;
         if (root.ValueKind == JsonValueKind.Array)
         {
-            return new AuditionApiRequest(DeserializeSegments<AuditionSegmentInput>(root, "Invalid segments array."), null, null);
+            return create(DeserializeSegments<TSegment>(root, "Invalid segments array."), null, null, root, true);
         }
         if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("segments", out JsonElement segEl))
         {
             throw new InvalidOperationException("Request must include a non-empty 'segments' array.");
         }
 
-        return new AuditionApiRequest(
-            DeserializeSegments<AuditionSegmentInput>(segEl, "Invalid 'segments' array."),
+        return create(
+            DeserializeSegments<TSegment>(segEl, "Invalid 'segments' array."),
             ReadFirstPresentString(root, "sourceLanguage", "source_language", "from"),
             ReadFirstPresentString(root, "targetLanguage", "target_language", "to"),
-            ReadOptionalObject<SpeedRetakeOptions>(root, "speedRetake", "speed_retake"),
-            ReadOptionalObject<EmotionTagOptions>(root, "emotionTags", "emotion_tags"),
-            ReadOptionalQaOptions(root));
+            root,
+            false);
     }
 
     internal static async Task<TranslateRequest?> ReadTranslateRequestAsync(HttpRequest http, CancellationToken ct)
@@ -161,22 +179,14 @@ internal static class RequestParsing
 
     internal static async Task<AdaptationApiRequest?> ReadAdaptationRequestAsync(HttpRequest http, CancellationToken ct)
     {
-        using var doc = await JsonDocument.ParseAsync(http.Body, cancellationToken: ct).ConfigureAwait(false);
-        JsonElement root = doc.RootElement;
-        if (root.ValueKind == JsonValueKind.Array)
-        {
-            return new AdaptationApiRequest(DeserializeSegments<DirectorAdaptationSegmentInput>(root, "Invalid segments array."), null, null);
-        }
-        if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("segments", out JsonElement segEl))
-        {
-            throw new InvalidOperationException("Request must include a non-empty 'segments' array.");
-        }
-
-        return new AdaptationApiRequest(
-            DeserializeSegments<DirectorAdaptationSegmentInput>(segEl, "Invalid 'segments' array."),
-            ReadFirstPresentString(root, "sourceLanguage", "source_language", "from"),
-            ReadFirstPresentString(root, "targetLanguage", "target_language", "to"),
-            ReadOptionalQaOptions(root));
+        return await ReadSegmentRequestAsync<DirectorAdaptationSegmentInput, AdaptationApiRequest>(
+            http,
+            ct,
+            (segments, from, to, root, isArray) => new AdaptationApiRequest(
+                segments,
+                from,
+                to,
+                isArray ? null : ReadOptionalQaOptions(root))).ConfigureAwait(false);
     }
 
     internal static async Task<PipelineApiRequest?> ReadPipelineRequestAsync(HttpRequest http, CancellationToken ct)
@@ -200,7 +210,8 @@ internal static class RequestParsing
             ReadFirstPresentString(root, "targetLanguage", "target_language", "to"),
             ReadOptionalQaOptions(root),
             ReadOptionalObject<SpeedRetakeOptions>(root, "speedRetake", "speed_retake"),
-            ReadOptionalObject<EmotionTagOptions>(root, "emotionTags", "emotion_tags"));
+            ReadOptionalObject<EmotionTagOptions>(root, "emotionTags", "emotion_tags"),
+            ReadOptionalObject<Dictionary<string, string>>(root, "speakerMapping", "speaker_mapping"));
     }
 
     private static string? AsString(JsonElement el) => el.ValueKind == JsonValueKind.String ? el.GetString() : null;
@@ -219,10 +230,15 @@ internal static class RequestParsing
     {
         foreach (string name in names)
         {
-            if (root.TryGetProperty(name, out JsonElement el) && el.ValueKind == JsonValueKind.Object)
+            if (!root.TryGetProperty(name, out JsonElement el) || el.ValueKind == JsonValueKind.Null)
             {
-                return JsonSerializer.Deserialize<T>(el.GetRawText(), JsonOptionsWeb);
+                continue;
             }
+            if (el.ValueKind != JsonValueKind.Object)
+            {
+                throw new InvalidOperationException($"'{name}' must be a JSON object.");
+            }
+            return JsonSerializer.Deserialize<T>(el.GetRawText(), JsonOptionsWeb);
         }
 
         return null;

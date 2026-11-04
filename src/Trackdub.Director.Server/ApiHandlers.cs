@@ -62,7 +62,12 @@ internal static class ApiHandlers
         }
     }
 
-    internal static async Task<IResult> RunAuditionAsync(MetaClient client, ITtsProvider tts, QaOptions options, AuditionApiRequest req, CancellationToken ct)
+    internal static async Task<IResult> RunAuditionAsync(MetaClient client, ITtsProvider tts, QaOptions options, AuditionApiRequest req, AuditionAudioStore audioStore, CancellationToken ct)
+    {
+        return await RunWithReasoningAsync(options, () => RunAuditionCoreAsync(client, tts, options, req, audioStore, ct)).ConfigureAwait(false);
+    }
+
+    private static async Task<IResult> RunAuditionCoreAsync(MetaClient client, ITtsProvider tts, QaOptions options, AuditionApiRequest req, AuditionAudioStore audioStore, CancellationToken ct)
     {
         string from = ResolveLanguage(req.SourceLanguage, "en");
         string to = ResolveLanguage(req.TargetLanguage, "es");
@@ -70,9 +75,13 @@ internal static class ApiHandlers
         try
         {
             var service = new AuditionService(client, tts, options, new AuditionRuntimeOptions(req.SpeedRetake, EmotionTags: req.EmotionTags));
-            AuditionReport report = await service.RunAsync(req.Segments, from, to, ct).ConfigureAwait(false);
+            AuditionSegmentInput[] segments = req.Segments.Select(segment => segment with
+            {
+                SpeakerId = SpeakerAssignment.Resolve(segment.SpeakerId, req.SpeakerMapping),
+            }).ToArray();
+            AuditionReport report = await service.RunAsync(segments, from, to, ct).ConfigureAwait(false);
             await TryWriteAuditionOutputsAsync(report, ct).ConfigureAwait(false);
-            return Results.Json(AuditionTransport.Enrich(report));
+            return Results.Json(audioStore.Enrich(report));
         }
         catch (TtsApiException ex)
         {
@@ -89,7 +98,51 @@ internal static class ApiHandlers
     }
 
     // MetaClient reads the reasoning effort from the process env at call time, so set it for this run and restore after.
+    internal static async Task<IResult> RunDirectorWithReasoningAsync(
+        MetaClient client,
+        QaOptions options,
+        IReadOnlyList<DirectorAdaptationSegmentInput> segments,
+        string from,
+        string to,
+        CancellationToken ct)
+    {
+        return await RunWithReasoningAsync(options, async () =>
+        {
+            var service = new DirectorAdaptationService(client, options);
+            DirectorAdaptationBatch batch = await service.RunAsync(segments, from, to, ct).ConfigureAwait(false);
+            return Results.Json(batch);
+        }).ConfigureAwait(false);
+    }
+
+    private static async Task<IResult> RunWithReasoningAsync(QaOptions options, Func<Task<IResult>> run)
+    {
+        string? previous = Environment.GetEnvironmentVariable(MetaAuth.ReasoningEffortEnv);
+        bool changed = options.ReasoningEffort is not null
+            && !string.Equals(previous, options.ReasoningEffort, StringComparison.OrdinalIgnoreCase);
+        if (changed)
+        {
+            Environment.SetEnvironmentVariable(MetaAuth.ReasoningEffortEnv, options.ReasoningEffort);
+        }
+
+        try
+        {
+            return await run().ConfigureAwait(false);
+        }
+        finally
+        {
+            if (changed)
+            {
+                Environment.SetEnvironmentVariable(MetaAuth.ReasoningEffortEnv, previous);
+            }
+        }
+    }
+
     internal static async Task<IResult> RunQaWithReasoningAsync(MetaClient client, QaOptions options, QaApiRequest req, string from, string to, CancellationToken ct)
+    {
+        return await RunWithReasoningAsync(options, () => RunQaWithReasoningCoreAsync(client, options, req, from, to, ct)).ConfigureAwait(false);
+    }
+
+    private static async Task<IResult> RunQaWithReasoningCoreAsync(MetaClient client, QaOptions options, QaApiRequest req, string from, string to, CancellationToken ct)
     {
         string? prevReasoning = Environment.GetEnvironmentVariable(MetaAuth.ReasoningEffortEnv);
         bool didSetReasoning = false;
@@ -113,7 +166,12 @@ internal static class ApiHandlers
     }
 
     // Same reasoning-effort shim as QA: the pipeline's QA and audition lanes read it at call time.
-    internal static async Task<IResult> RunPipelineWithReasoningAsync(MetaClient client, IMuseTranscribeClient transcribeClient, ITtsProvider tts, QaOptions options, PipelineRequest req, CancellationToken ct)
+    internal static async Task<IResult> RunPipelineWithReasoningAsync(MetaClient client, IMuseTranscribeClient transcribeClient, ITtsProvider tts, QaOptions options, PipelineRequest req, AuditionAudioStore audioStore, CancellationToken ct)
+    {
+        return await RunWithReasoningAsync(options, () => RunPipelineWithReasoningCoreAsync(client, transcribeClient, tts, options, req, audioStore, ct)).ConfigureAwait(false);
+    }
+
+    private static async Task<IResult> RunPipelineWithReasoningCoreAsync(MetaClient client, IMuseTranscribeClient transcribeClient, ITtsProvider tts, QaOptions options, PipelineRequest req, AuditionAudioStore audioStore, CancellationToken ct)
     {
         string? prevReasoning = Environment.GetEnvironmentVariable(MetaAuth.ReasoningEffortEnv);
         bool didSetReasoning = false;
@@ -130,7 +188,7 @@ internal static class ApiHandlers
             if (report.Audition is not null)
             {
                 await TryWriteAuditionOutputsAsync(report.Audition, ct).ConfigureAwait(false);
-                report = report with { Audition = AuditionTransport.Enrich(report.Audition) };
+                report = report with { Audition = audioStore.Enrich(report.Audition) };
             }
 
             return Results.Json(report);

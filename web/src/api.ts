@@ -1,3 +1,5 @@
+import { normalizeWavForTranscription } from "./transcriptionAudio";
+
 export type SegmentInput = {
   id: string;
   text: string;
@@ -18,6 +20,8 @@ export type SegmentInput = {
   source_text?: string | null;
   target_text?: string | null;
 };
+
+export type SpeakerMapping = Record<string, "anna" | "ashley" | "">;
 
 export type LocalisationBox = { x1: number; y1: number; x2: number; y2: number };
 
@@ -231,10 +235,10 @@ export type SceneContextBatch = {
   vision_usage_total?: VisionUsage;
 };
 
-async function postJson<T>(path: string, body: unknown): Promise<T> {
+async function postJson<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
   const r = await fetch(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
   if (!r.ok) {
@@ -377,6 +381,7 @@ export type AuditionTake = {
   emotion_tag?: string | null;
   audio_sha256?: string;
   audio_data_url?: string;
+  audio_url?: string;
   audio_transport_omitted?: string;
 };
 
@@ -413,31 +418,41 @@ export type AuditionReport = {
   speed_retake?: { enabled: boolean; cap: number; max_retakes_per_segment: number } | null;
 };
 
+type StageRequestOptions = AuditionRequestOptions & { speakerMapping?: SpeakerMapping; idempotencyKey?: string };
+
+function auditionSegmentBody(segment: SegmentInput, options?: StageRequestOptions) {
+  const labels = options?.labelsById?.get(segment.id);
+  return {
+    id: segment.id,
+    text: segment.text,
+    duration_seconds: segment.duration_seconds ?? null,
+    speaker_id: options?.speakerMapping?.[segment.speaker_id ?? ""] || segment.speaker_id || null,
+    emotion_tone_label: labels?.emotion_tone_label ?? segment.context?.emotion_tone_label ?? null,
+    pacing_label: labels?.pacing_label ?? segment.context?.pacing_label ?? null,
+  };
+}
+
+function stageOptionsBody(options?: StageRequestOptions): Record<string, unknown> {
+  return {
+    ...(options?.qaOptions ? { options: options.qaOptions } : {}),
+    ...(options?.speedRetake ? { speedRetake: options.speedRetake } : {}),
+    ...(options?.emotionTags ? { emotionTags: options.emotionTags } : {}),
+    ...(options?.speakerMapping ? { speaker_mapping: options.speakerMapping } : {}),
+  };
+}
+
 export async function postAudition(
   segments: SegmentInput[],
   from = "en",
   to = "es",
-  options?: AuditionRequestOptions,
+  options?: StageRequestOptions,
 ): Promise<AuditionReport> {
-  const auditionSegments = segments.map((s) => {
-    const labels = options?.labelsById?.get(s.id);
-    return {
-      id: s.id,
-      text: s.text,
-      duration_seconds: s.duration_seconds ?? null,
-      speaker_id: s.speaker_id ?? null,
-      emotion_tone_label: labels?.emotion_tone_label ?? s.context?.emotion_tone_label ?? null,
-      pacing_label: labels?.pacing_label ?? s.context?.pacing_label ?? null,
-    };
-  });
   return postJson<AuditionReport>("/api/audition", {
-    segments: auditionSegments,
+    segments: segments.map((segment) => auditionSegmentBody(segment, options)),
     sourceLanguage: from,
     targetLanguage: to,
-    ...(options?.speedRetake ? { speedRetake: options.speedRetake } : {}),
-    ...(options?.emotionTags ? { emotionTags: options.emotionTags } : {}),
-    ...(options?.qaOptions ? { options: options.qaOptions } : {}),
-  });
+    ...stageOptionsBody(options),
+  }, options?.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : undefined);
 }
 
 // Transcribe stage: WAV in, segments in the app input shape out. The ASR
@@ -496,8 +511,9 @@ export async function postDubExport(
 }
 
 export async function postTranscribe(audio: File): Promise<TranscribeResult> {
+  const supportedAudio = await normalizeWavForTranscription(audio);
   const form = new FormData();
-  form.append("audio", audio, audio.name || "audio.wav");
+  form.append("audio", supportedAudio, supportedAudio.name || "audio.wav");
   const r = await fetch("/api/transcribe", { method: "POST", body: form });
   if (!r.ok) {
     const bodyText = await r.text().catch(() => "");
@@ -526,6 +542,52 @@ export type PipelineReport = {
   audition?: AuditionReport | null;
 };
 
+function pipelineSegmentBody(segment: SegmentInput) {
+  return {
+    id: segment.id,
+    text: segment.text,
+    duration_seconds: segment.duration_seconds ?? null,
+    speaker: segment.speaker_id ?? null,
+    start_seconds: segment.start_seconds ?? null,
+  };
+}
+
+function pipelineSceneSegmentBody(segment: SegmentInput) {
+  return {
+    id: segment.id,
+    text: segment.text,
+    frame_image_data_url: segment.frame_image_data_url ?? null,
+    concepts: segment.concepts ?? null,
+    speaker_id: segment.speaker_id ?? null,
+    speaker_label: segment.speaker_label ?? null,
+    frame_id: segment.frame_id ?? null,
+    timecode_seconds: segment.timecode_seconds ?? null,
+    frame_sha256: segment.frame_sha256 ?? null,
+    vision_enrichment: segment.vision_enrichment ?? null,
+  };
+}
+
+function pipelineBaseBody(
+  flags: { scene: boolean; audition: boolean },
+  from: string,
+  to: string,
+  options?: StageRequestOptions,
+): Record<string, unknown> {
+  return {
+    scene: flags.scene,
+    audition: flags.audition,
+    sourceLanguage: from,
+    targetLanguage: to,
+    ...stageOptionsBody(options),
+  };
+}
+
+async function addPipelineAudio(body: Record<string, unknown>, audio: File): Promise<void> {
+  const supportedAudio = await normalizeWavForTranscription(audio);
+  body.audio_base64 = await fileToBase64(supportedAudio);
+  body.audio_file_name = supportedAudio.name || "audio.wav";
+}
+
 export async function postPipeline(
   audio: File | null,
   segments: SegmentInput[],
@@ -533,44 +595,14 @@ export async function postPipeline(
   flags: { scene: boolean; audition: boolean },
   from = "en",
   to = "es",
-  options?: AuditionRequestOptions,
+  options?: StageRequestOptions,
+  idempotencyKey?: string,
 ): Promise<PipelineReport> {
-  const body: Record<string, unknown> = {
-    scene: flags.scene,
-    audition: flags.audition,
-    sourceLanguage: from,
-    targetLanguage: to,
-    ...(options?.qaOptions ? { options: options.qaOptions } : {}),
-    ...(options?.speedRetake ? { speedRetake: options.speedRetake } : {}),
-    ...(options?.emotionTags ? { emotionTags: options.emotionTags } : {}),
-  };
-  if (audio) {
-    body.audio_base64 = await fileToBase64(audio);
-    body.audio_file_name = audio.name || "audio.wav";
-  } else {
-    body.segments = segments.map((s) => ({
-      id: s.id,
-      text: s.text,
-      duration_seconds: s.duration_seconds ?? null,
-      speaker: s.speaker_id ?? null,
-      start_seconds: s.start_seconds ?? null,
-    }));
-  }
-  if (sceneSegments.length > 0) {
-    body.scene_segments = sceneSegments.map((s) => ({
-      id: s.id,
-      text: s.text,
-      frame_image_data_url: s.frame_image_data_url ?? null,
-      concepts: s.concepts ?? null,
-      speaker_id: s.speaker_id ?? null,
-      speaker_label: s.speaker_label ?? null,
-      frame_id: s.frame_id ?? null,
-      timecode_seconds: s.timecode_seconds ?? null,
-      frame_sha256: s.frame_sha256 ?? null,
-      vision_enrichment: s.vision_enrichment ?? null,
-    }));
-  }
-  return postJson<PipelineReport>("/api/pipeline", body);
+  const body = pipelineBaseBody(flags, from, to, options);
+  if (audio) await addPipelineAudio(body, audio);
+  else body.segments = segments.map(pipelineSegmentBody);
+  if (sceneSegments.length > 0) body.scene_segments = sceneSegments.map(pipelineSceneSegmentBody);
+  return postJson<PipelineReport>("/api/pipeline", body, idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined);
 }
 
 function fileToBase64(file: File): Promise<string> {

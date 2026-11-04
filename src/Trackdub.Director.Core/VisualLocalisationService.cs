@@ -1,8 +1,8 @@
 namespace Trackdub.Director.Core;
 
 /// <summary>
-/// Frame-level visual localisation by crop-edit-composite. The sign box plus
-/// padding is cropped, edited by the image model (template image-edit-v1: the
+    /// Frame-level visual localisation by crop-edit-composite. The sign box plus
+    /// padding is cropped, edited by the image model (template image-edit-v2: the
 /// probe's working instruction, verbatim), resampled back to the crop size,
 /// and only the exact box interior is pasted into a copy of the source — so
 /// pixels outside the box provably come from the source, never from model
@@ -13,8 +13,8 @@ namespace Trackdub.Director.Core;
 /// </summary>
 public sealed class VisualLocalisationService : IDisposable
 {
-    /// <summary>Template "image-edit-v1": the probe's working instruction with source/target filled in.</summary>
-    public const string PromptTemplateVersion = "image-edit-v1";
+    /// <summary>Template "image-edit-v2": generic visible-sign text replacement with source/target filled in.</summary>
+    public const string PromptTemplateVersion = "image-edit-v2";
 
     /// <summary>Context padding (pixels) around the box sent to the model; only the box interior is composited back.</summary>
     public const int CropPaddingPixels = 20;
@@ -53,7 +53,7 @@ public sealed class VisualLocalisationService : IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceText);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetText);
-        return $"replace the text \"{sourceText.Trim()}\" on the shop door sign with \"{targetText.Trim()}\", preserve everything else in the image exactly";
+        return $"replace the visible sign text \"{sourceText.Trim()}\" with \"{targetText.Trim()}\", preserving everything else in the image exactly";
     }
 
     /// <summary>
@@ -212,6 +212,11 @@ public sealed class VisualLocalisationService : IDisposable
             return Failure($"Frame image exceeds the {MaxFrameBytes} byte limit.");
         }
 
+        if (!MatchesDeclaredImageType(segment.FrameImageDataUrl!.Trim(), frameBytes!))
+        {
+            return Failure("Frame image bytes do not match the declared PNG, JPEG, or WebP type.");
+        }
+
         RasterImage frame;
         try
         {
@@ -250,6 +255,37 @@ public sealed class VisualLocalisationService : IDisposable
         return null;
     }
 
+    private static bool IsSupportedImageDataUrl(string value)
+    {
+        return value.StartsWith("data:image/png;", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("data:image/jpeg;", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("data:image/webp;", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool MatchesDeclaredImageType(string dataUrl, byte[] bytes)
+    {
+        if (dataUrl.StartsWith("data:image/png;", StringComparison.OrdinalIgnoreCase)) return HasPngSignature(bytes);
+        if (dataUrl.StartsWith("data:image/jpeg;", StringComparison.OrdinalIgnoreCase)) return HasJpegSignature(bytes);
+        return HasWebpSignature(bytes);
+    }
+
+    private static bool HasPngSignature(byte[] bytes)
+    {
+        return bytes.Length >= 8 && bytes.AsSpan(0, 8).SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A });
+    }
+
+    private static bool HasJpegSignature(byte[] bytes)
+    {
+        return bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
+    }
+
+    private static bool HasWebpSignature(byte[] bytes)
+    {
+        return bytes.Length >= 12
+            && bytes.AsSpan(0, 4).SequenceEqual("RIFF"u8)
+            && bytes.AsSpan(8, 4).SequenceEqual("WEBP"u8);
+    }
+
     private static bool TryDecodeDataUrl(string? dataUrl, out byte[]? bytes, out string? error)
     {
         bytes = null;
@@ -262,7 +298,7 @@ public sealed class VisualLocalisationService : IDisposable
 
         string trimmed = dataUrl.Trim();
         int marker = trimmed.IndexOf(";base64,", StringComparison.OrdinalIgnoreCase);
-        if (!trimmed.StartsWith("data:image/png;", StringComparison.OrdinalIgnoreCase) && !trimmed.StartsWith("data:image/jpeg;", StringComparison.OrdinalIgnoreCase) && !trimmed.StartsWith("data:image/webp;", StringComparison.OrdinalIgnoreCase) || marker < 0)
+        if (!IsSupportedImageDataUrl(trimmed) || marker < 0)
         {
             error = "Frame image must be a base64 PNG, JPEG, or WebP data URL.";
             return false;

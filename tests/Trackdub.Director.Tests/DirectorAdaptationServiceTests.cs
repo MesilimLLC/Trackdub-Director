@@ -560,12 +560,12 @@ public sealed class DirectorAdaptationServiceTests
         {
             Assert.NotNull(result.Error);
             Assert.Contains(failure == TransportFailure.BodyRead ? "body read reset" : "HTTP 500", result.Error, StringComparison.Ordinal);
-            Assert.Equal((1, 0), (stub.AdaptationCalls, stub.MeaningCalls));
+            Assert.Equal(failure == TransportFailure.BodyRead ? (1, 0) : (3, 0), (stub.AdaptationCalls, stub.MeaningCalls));
             return;
         }
 
         Assert.Equal(QaVerdict.Pass, result.TimingVerdict);
         ExpectMeaning(result, MeaningVerdict.Error);
-        Assert.Equal((1, 1), (stub.AdaptationCalls, stub.MeaningCalls));
+        Assert.Equal((1, 3), (stub.AdaptationCalls, stub.MeaningCalls));
     }
 }

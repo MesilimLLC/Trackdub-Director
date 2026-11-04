@@ -31,7 +31,7 @@ public sealed class DubExportPlannerTests
         Assert.Contains("[1:a]", filter);
         Assert.Contains("adelay=250|250", filter);
         Assert.Contains("adelay=2500|2500", filter);
-        Assert.Contains("amix=inputs=2", filter);
+        Assert.Contains("amix=inputs=2:duration=longest:normalize=0", filter);
         Assert.Contains("[aout]", filter);
     }
 

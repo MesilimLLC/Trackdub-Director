@@ -53,26 +53,51 @@ function sameValue(a: unknown, b: unknown): boolean {
   return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 }
 
+function changed(a: unknown, b: unknown): boolean {
+  return !sameValue(a, b);
+}
+
+function sceneConfigChanged(a: SegmentInput, b: SegmentInput): boolean {
+  return changed(a.concepts, b.concepts)
+    || changed(a.vision_enrichment, b.vision_enrichment)
+    || changed(a.frame_id, b.frame_id)
+    || changed(a.timecode_seconds, b.timecode_seconds)
+    || changed(a.frame_sha256, b.frame_sha256);
+}
+
+function directorChanged(a: SegmentInput, b: SegmentInput): boolean {
+  return changed(a.director_adaptation, b.director_adaptation)
+    || changed(a.context, b.context)
+    || changed(a.translation, b.translation);
+}
+
+function visualChanged(a: SegmentInput, b: SegmentInput): boolean {
+  return changed(a.box, b.box) || changed(a.source_text, b.source_text) || changed(a.target_text, b.target_text);
+}
+
+function speakerChanged(a: SegmentInput, b: SegmentInput): boolean {
+  return changed(a.speaker_id, b.speaker_id) || changed(a.speaker_label, b.speaker_label);
+}
+
+function classifyPair(a: SegmentInput, b: SegmentInput, changes: Set<ChangeKind>): void {
+  if (a.text !== b.text) changes.add("text");
+  if (changed(a.duration_seconds, b.duration_seconds)) changes.add("duration");
+  if (changed(a.start_seconds, b.start_seconds)) changes.add("start");
+  if (speakerChanged(a, b)) changes.add("speaker");
+  if (changed(a.frame_image_data_url, b.frame_image_data_url)) changes.add("frame");
+  if (sceneConfigChanged(a, b)) changes.add("sceneConfig");
+  if (directorChanged(a, b)) changes.add("director");
+  if (visualChanged(a, b)) changes.add("visual");
+}
+
+function hasStructureChange(before: SegmentInput[], after: SegmentInput[]): boolean {
+  return before.length !== after.length || before.some((segment, i) => segment.id !== after[i]?.id);
+}
+
 export function classifySegmentChanges(before: SegmentInput[], after: SegmentInput[]): ChangeKind[] {
-  if (before.length !== after.length || before.some((segment, i) => segment.id !== after[i]?.id)) {
-    return ["structure"];
-  }
+  if (hasStructureChange(before, after)) return ["structure"];
   const changes = new Set<ChangeKind>();
-  for (let i = 0; i < before.length; i++) {
-    const a = before[i];
-    const b = after[i];
-    if (a.text !== b.text) changes.add("text");
-    if (!sameValue(a.duration_seconds, b.duration_seconds)) changes.add("duration");
-    if (!sameValue(a.start_seconds, b.start_seconds)) changes.add("start");
-    if (!sameValue(a.speaker_id, b.speaker_id) || !sameValue(a.speaker_label, b.speaker_label)) changes.add("speaker");
-    if (!sameValue(a.frame_image_data_url, b.frame_image_data_url)) changes.add("frame");
-    if (!sameValue(a.concepts, b.concepts) || !sameValue(a.vision_enrichment, b.vision_enrichment) ||
-        !sameValue(a.frame_id, b.frame_id) || !sameValue(a.timecode_seconds, b.timecode_seconds) ||
-        !sameValue(a.frame_sha256, b.frame_sha256)) changes.add("sceneConfig");
-    if (!sameValue(a.director_adaptation, b.director_adaptation) || !sameValue(a.context, b.context) ||
-        !sameValue(a.translation, b.translation)) changes.add("director");
-    if (!sameValue(a.box, b.box) || !sameValue(a.source_text, b.source_text) || !sameValue(a.target_text, b.target_text)) changes.add("visual");
-  }
+  before.forEach((segment, i) => classifyPair(segment, after[i], changes));
   return [...changes];
 }
 
@@ -124,56 +149,102 @@ export function callEstimates(segments: SegmentInput[], settings: RunSettings): 
   };
 }
 
+export function nextSegmentId(segments: SegmentInput[]): string {
+  const used = new Set(segments.map((segment) => segment.id));
+  let number = segments.length + 1;
+  while (used.has(`seg-${String(number).padStart(3, "0")}`)) number++;
+  return `seg-${String(number).padStart(3, "0")}`;
+}
+
 export interface DubExportPlacementDraft {
   id: string;
   start_seconds: number;
-  audio_data_url: string;
+  audio_data_url?: string;
+  audio_url?: string;
   file_name: string;
+}
+
+type AuditionSegment = AuditionReport["segments"][number];
+type AuditionTake = AuditionSegment["takes"][number];
+
+function duplicateProblems(segments: SegmentInput[]): string[] {
+  const seen = new Set<string>();
+  const problems: string[] = [];
+  if (segments.length === 0) problems.push("Add at least one segment.");
+  for (const segment of segments) {
+    if (seen.has(segment.id)) problems.push(`Duplicate segment id '${segment.id}'.`);
+    seen.add(segment.id);
+  }
+  return problems;
+}
+
+function auditionReportsById(audition: AuditionReport | null): Map<string, AuditionSegment> {
+  const reports = new Map<string, AuditionSegment>();
+  for (const report of audition?.segments ?? []) {
+    if (!reports.has(report.id)) reports.set(report.id, report);
+  }
+  return reports;
+}
+
+function validStart(segment: SegmentInput): number | null {
+  const start = segment.start_seconds;
+  return start != null && Number.isFinite(start) && start >= 0 ? start : null;
+}
+
+function winningTake(report: AuditionSegment | undefined): AuditionTake | null {
+  if (!report?.cast) return null;
+  const winner = report.takes.find((take) => take.is_winner);
+  return winner && report.winner_take_number === winner.take_number ? winner : null;
+}
+
+function placementFor(
+  segment: SegmentInput,
+  reports: Map<string, AuditionSegment>,
+): { placement: DubExportPlacementDraft } | { problem: string } {
+  const start = validStart(segment);
+  if (start === null) return { problem: `${segment.id} needs a start time.` };
+
+  const report = reports.get(segment.id);
+  const winner = winningTake(report);
+  if (!winner) return { problem: `${segment.id} has no winning audition take.` };
+  if (!winner.audio_data_url && !winner.audio_url) return { problem: `${segment.id} winner audio is unavailable from browser transport.` };
+
+  return {
+    placement: {
+      id: segment.id,
+      start_seconds: start,
+      ...(winner.audio_data_url ? { audio_data_url: winner.audio_data_url } : { audio_url: winner.audio_url }),
+      file_name: winner.audio_file_name ?? report!.winner_file_name ?? `${segment.id}-take${winner.take_number}.wav`,
+    },
+  };
 }
 
 export function buildDubExportPlacements(
   segments: SegmentInput[],
   audition: AuditionReport | null,
 ): { placements: DubExportPlacementDraft[]; problems: string[] } {
-  const problems: string[] = [];
+  const problems = duplicateProblems(segments);
+  const reports = auditionReportsById(audition);
   const placements: DubExportPlacementDraft[] = [];
-  if (segments.length === 0) problems.push("Add at least one segment.");
-  const seen = new Set<string>();
   for (const segment of segments) {
-    if (seen.has(segment.id)) problems.push(`Duplicate segment id '${segment.id}'.`);
-    seen.add(segment.id);
+    const result = placementFor(segment, reports);
+    if ("problem" in result) problems.push(result.problem);
+    else placements.push(result.placement);
   }
-
-  const reportsById = new Map<string, AuditionReport["segments"][number]>();
-  for (const report of audition?.segments ?? []) {
-    if (!reportsById.has(report.id)) reportsById.set(report.id, report);
-  }
-
-  for (const segment of segments) {
-    const start = segment.start_seconds;
-    if (start == null || !Number.isFinite(start) || start < 0) {
-      problems.push(`${segment.id} needs a start time.`);
-      continue;
-    }
-    const report = reportsById.get(segment.id);
-    const winner = report?.takes.find((take) => take.is_winner);
-    if (!report?.cast || !winner || report.winner_take_number !== winner.take_number) {
-      problems.push(`${segment.id} has no winning audition take.`);
-      continue;
-    }
-    if (!winner.audio_data_url) {
-      problems.push(`${segment.id} winner audio was omitted from browser transport.`);
-      continue;
-    }
-    placements.push({
-      id: segment.id,
-      start_seconds: start,
-      audio_data_url: winner.audio_data_url,
-      file_name: winner.audio_file_name ?? report.winner_file_name ?? `${segment.id}-take${winner.take_number}.wav`,
-    });
-  }
-
   return { placements: problems.length === 0 ? placements : [], problems };
+}
+
+export function dubExportReadiness(
+  video: File | null,
+  built: ReturnType<typeof buildDubExportPlacements>,
+  problems: string[],
+): string {
+  if (video && problems.length === 0) {
+    return `${built.placements.length} winning take${built.placements.length === 1 ? "" : "s"} ready at explicit start times. The backend renders with ffmpeg and omits the original audio.`;
+  }
+  return problems.length > 0
+    ? problems.join(" ")
+    : "Choose the original video. Every segment needs a start time and a winning audition take.";
 }
 
 export function wavDataUrlToBlob(dataUrl: string): Blob {
@@ -190,7 +261,7 @@ export function stripAudioTransport<T>(value: T): T {
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-      if (key !== "audio_data_url") out[key] = stripAudioTransport(child);
+      if (key !== "audio_data_url" && key !== "audio_url") out[key] = stripAudioTransport(child);
     }
     return out as T;
   }

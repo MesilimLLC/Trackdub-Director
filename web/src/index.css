@@ -75,6 +75,9 @@ a { color: #8ab4ff; }
 .pipeline-panel { margin-bottom: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .pipeline-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .pipeline-flag { display: flex; gap: 6px; align-items: center; font-size: 0.9rem; color: var(--text); }
+.speaker-mapping { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: 0.85rem; }
+.speaker-mapping label { display: flex; gap: 4px; align-items: center; color: var(--text); }
+.speaker-mapping select { max-width: 110px; }
 .pipeline-panel .line-meta { margin-top: 10px; }
 
 .lines { display: flex; flex-direction: column; gap: 10px; }

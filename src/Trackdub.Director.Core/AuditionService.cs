@@ -951,7 +951,7 @@ public sealed class AuditionService
         foreach (TakeWork take in takes.Where(IsWinnable))
         {
             double error = Math.Abs(take.MeasuredSeconds!.Value - windowSeconds);
-            if (error < bestError)
+            if (error + 1e-9 < bestError)
             {
                 bestError = error;
                 best = take;

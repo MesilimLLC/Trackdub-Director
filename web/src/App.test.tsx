@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import App from "./App";
+import { inspectWav } from "./transcriptionAudio";
 
 // Locate a segment card by its id so gate pills can be asserted per attempt.
 function getCard(segId: string): HTMLElement {
@@ -8,6 +9,38 @@ function getCard(segId: string): HTMLElement {
   const card = id.closest("article");
   if (!card) throw new Error(`No card found for ${segId}`);
   return card as HTMLElement;
+}
+
+function supportedWav(): ArrayBuffer {
+  const buffer = new ArrayBuffer(46);
+  const view = new DataView(buffer);
+  const tag = (offset: number, value: string) => [...value].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0)));
+  tag(0, "RIFF"); view.setUint32(4, 38, true); tag(8, "WAVE"); tag(12, "fmt ");
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, 16000, true); view.setUint32(28, 32000, true); view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true); tag(36, "data"); view.setUint32(40, 2, true);
+  view.setInt16(44, 1, true);
+  return buffer;
+}
+
+function mono24BitWav(): ArrayBuffer {
+  const buffer = new ArrayBuffer(48);
+  const view = new DataView(buffer);
+  const tag = (offset: number, value: string) => [...value].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0)));
+  tag(0, "RIFF"); view.setUint32(4, buffer.byteLength - 8, true); tag(8, "WAVE"); tag(12, "fmt ");
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, 44100, true); view.setUint32(28, 132300, true); view.setUint16(32, 3, true);
+  view.setUint16(34, 24, true); tag(36, "data"); view.setUint32(40, 3, true);
+  return buffer;
+}
+
+function readBlob(blob: Blob): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => reader.result instanceof ArrayBuffer ? resolve(reader.result) : reject(new Error("not an ArrayBuffer"));
+    reader.readAsArrayBuffer(blob);
+  });
 }
 
 // Mock sampleSegments so the test controls what the UI sees before any API call
@@ -161,8 +194,10 @@ function mockFetchForQa() {
 
 describe("App smoke", () => {
   beforeEach(() => {
+    localStorage.clear();
     vi.stubGlobal("fetch", mockFetchForQa());
   });
+  afterEach(() => vi.unstubAllGlobals());
 
   it("shows each visual result for duplicate segment ids in input order", async () => {
     const provenance = { model_id: "model", endpoint_host: "host", timestamp_utc: "time", prompt_template_version: "v1" };
@@ -662,7 +697,7 @@ describe("App smoke", () => {
           target_text: "CAFETERÍA",
           outside_box_diff: 0,
           error: null,
-          provenance: { model_id: "muse-image-1.0", endpoint_host: "api.meta.ai", timestamp_utc: "2026-10-31T00:00:00Z", prompt_template_version: "image-edit-v1" },
+          provenance: { model_id: "muse-image-1.0", endpoint_host: "api.meta.ai", timestamp_utc: "2026-10-31T00:00:00Z", prompt_template_version: "image-edit-v2" },
           usage: { prompt_tokens: 11868, completion_tokens: 637, total_tokens: 12505 },
           image_calls: 1,
         },
@@ -675,7 +710,7 @@ describe("App smoke", () => {
           target_text: "CAFETERÍA",
           outside_box_diff: null,
           error: "Meta Model API response carried no image (missing image_generation_call result).",
-          provenance: { model_id: "muse-image-1.0", endpoint_host: "api.meta.ai", timestamp_utc: "2026-10-31T00:00:00Z", prompt_template_version: "image-edit-v1" },
+          provenance: { model_id: "muse-image-1.0", endpoint_host: "api.meta.ai", timestamp_utc: "2026-10-31T00:00:00Z", prompt_template_version: "image-edit-v2" },
           usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
           image_calls: 1,
         },
@@ -703,7 +738,7 @@ describe("App smoke", () => {
     expect(within(seg1).getByAltText("Localised frame for seg-001")).toHaveAttribute("src", "data:image/png;base64,bG9jYWxpc2Vk");
     // Usage and the machine-checked diff are shown.
     expect(within(seg1).getByRole("link", { name: "Download PNG" })).toHaveAttribute("download", "seg-001-localised.png");
-    expect(within(seg1).getByText(/Visual gate: model muse-image-1\.0 · template image-edit-v1/)).toBeInTheDocument();
+    expect(within(seg1).getByText(/Visual gate: model muse-image-1\.0 · template image-edit-v2/)).toBeInTheDocument();
     expect(within(seg1).getByText(/tokens 12505 · image calls 1 · outside_box_diff 0/)).toBeInTheDocument();
 
     // A failed segment shows the reason and never an unmodified frame.
@@ -738,17 +773,29 @@ describe("App smoke", () => {
       scene: null,
       audition: null,
     };
+    const keys: string[] = [];
+    let pipelineAttempts = 0;
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = typeof input === "string" ? input : input.toString();
         if (url.includes("/api/status")) return new Response(JSON.stringify(statusOk), { status: 200 });
-        if (url.includes("/api/pipeline")) return new Response(JSON.stringify(pipelineMock), { status: 200 });
+        if (url.includes("/api/pipeline")) {
+          keys.push(new Headers(init?.headers).get("Idempotency-Key") ?? "");
+          pipelineAttempts++;
+          if (pipelineAttempts === 1) throw new TypeError("connection dropped");
+          return new Response(JSON.stringify(pipelineMock), { status: 200 });
+        }
         return new Response("not found", { status: 404 });
       }),
     );
-    render(<App />);
+    const firstRender = render(<App />);
     screen.getByRole("button", { name: "Run Pipeline" }).click();
+    await screen.findByRole("button", { name: "Retry / retrieve same Pipeline run" });
+    firstRender.unmount();
+
+    render(<App />);
+    screen.getByRole("button", { name: "Retry / retrieve same Pipeline run" }).click();
 
     // Per-stage status pills: a flag-skipped stage reads as skipped, never a pass.
     const statuses = await screen.findByLabelText("Pipeline stage status");
@@ -761,6 +808,9 @@ describe("App smoke", () => {
     expect(await screen.findByText("seg-100")).toBeInTheDocument();
     expect(screen.getAllByText("Transcribed line.")).toHaveLength(2);
     expect(screen.getByText("First-pass")).toBeInTheDocument();
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toMatch(/^\d+_[0-9a-f-]{36}$/);
+    expect(keys[1]).toBe(keys[0]);
   });
 
   it("shows read-only scene context after Run Scene", async () => {
@@ -904,9 +954,103 @@ describe("App smoke", () => {
       return new Response("not found", { status: 404 });
     }));
     const { container } = render(<App />);
-    const wav = new File([new Uint8Array([82, 73, 70, 70])], "line.wav", { type: "audio/wav" });
+    const wav = new File([supportedWav()], "line.wav", { type: "audio/wav" });
     fireEvent.change(container.querySelector('input[accept=".wav,audio/wav,audio/x-wav"]')!, { target: { files: [wav] } });
     screen.getByRole("button", { name: "Transcribe WAV" }).click();
     expect(await screen.findByDisplayValue("Transcribed in browser.")).toBeInTheDocument();
+    expect(screen.getByText("line.wav")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Map speaker A" })).toHaveValue("anna");
+  });
+
+  it("normalizes an ordinary 24-bit WAV before upload and keeps it selected after transcription", async () => {
+    const decoded = { duration: 0.000125 } as AudioBuffer;
+    class MockAudioContext {
+      decodeAudioData = vi.fn(async () => decoded);
+      close = vi.fn(async () => undefined);
+    }
+    class MockOfflineAudioContext {
+      destination = {} as AudioDestinationNode;
+      createBufferSource() {
+        return { buffer: null as AudioBuffer | null, connect: vi.fn(), start: vi.fn() };
+      }
+      async startRendering() {
+        return { getChannelData: () => new Float32Array([0.2, -0.2]) } as unknown as AudioBuffer;
+      }
+    }
+    vi.stubGlobal("AudioContext", MockAudioContext);
+    vi.stubGlobal("OfflineAudioContext", MockOfflineAudioContext);
+    let uploadedWav: File | null = null;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString();
+      if (url.includes("/api/status")) return new Response(JSON.stringify(statusOk), { status: 200 });
+      if (url.includes("/api/transcribe")) {
+        uploadedWav = (init?.body as FormData).get("audio") as File;
+        return new Response(JSON.stringify({
+          segments: [{ id: "seg-001", text: "Converted in browser.", duration_seconds: 1.4, speaker: "A" }],
+          usage_reported: false,
+        }), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    }));
+
+    const { container } = render(<App />);
+    const wav = new File([mono24BitWav()], "mono-24bit.wav", { type: "audio/wav" });
+    fireEvent.change(container.querySelector('input[accept=".wav,audio/wav,audio/x-wav"]')!, { target: { files: [wav] } });
+    screen.getByRole("button", { name: "Transcribe WAV" }).click();
+
+    expect(await screen.findByDisplayValue("Converted in browser.")).toBeInTheDocument();
+    expect(screen.getByText("mono-24bit.wav")).toBeInTheDocument();
+    expect(uploadedWav).not.toBeNull();
+    expect(uploadedWav!.name).toBe("mono-24bit.wav");
+    expect(inspectWav(await readBlob(uploadedWav!))).toMatchObject({ format: 1, channels: 1, sampleRate: 16000, bitsPerSample: 16 });
+  });
+
+  it("reuses the same audition idempotency key after a dropped response", async () => {
+    const keys: string[] = [];
+    let auditionAttempts = 0;
+    const auditionReport = {
+      source_language: "en",
+      target_language: "es",
+      cast: [],
+      segments: [],
+      totals: {
+        total_segments: 0,
+        lines_cast: 0,
+        takes_synthesized: 0,
+        meta_calls: 0,
+        translation_tokens: 0,
+        meaning_tokens: 0,
+        elevenlabs_characters: 0,
+        elevenlabs_cap_hit: false,
+        meta_cap_hit: false,
+      },
+    };
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/api/status")) return new Response(JSON.stringify(statusOk), { status: 200 });
+      if (url.includes("/api/audition")) {
+        keys.push(new Headers(init?.headers).get("Idempotency-Key") ?? "");
+        auditionAttempts++;
+        if (auditionAttempts === 1) throw new TypeError("connection dropped");
+        return new Response(JSON.stringify(auditionReport), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    }));
+
+    const firstRender = render(<App />);
+    screen.getByRole("button", { name: "Run Audition" }).click();
+    await screen.findByRole("button", { name: "Retry same Audition request" });
+    expect(screen.getByRole("button", { name: "Start a new audition" })).toBeInTheDocument();
+    firstRender.unmount();
+
+    render(<App />);
+    const retry = await screen.findByRole("button", { name: "Retry same Audition request" });
+    retry.click();
+    await waitFor(() => expect(keys).toHaveLength(2));
+
+    expect(keys[0]).not.toBe("");
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[0]).toMatch(/^\d+_[0-9a-f-]{36}$/);
+    expect(await screen.findByRole("button", { name: "Run Audition" })).toBeInTheDocument();
   });
 });

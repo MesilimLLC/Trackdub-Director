@@ -64,6 +64,7 @@ public sealed record AuditionTakeReport(
     [property: JsonPropertyName("audio_sha256"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AudioSha256 = null,
     [property: JsonIgnore] byte[]? AudioBytes = null,
     [property: JsonPropertyName("audio_data_url"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AudioDataUrl = null,
+    [property: JsonPropertyName("audio_url"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AudioUrl = null,
     [property: JsonPropertyName("audio_transport_omitted"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AudioTransportOmitted = null);
 
 public sealed record AuditionSegmentReport(

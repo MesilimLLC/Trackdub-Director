@@ -10,6 +10,7 @@ import {
   type SceneContextBatch,
   type SceneSegmentResult,
   type SegmentInput,
+  type SpeakerMapping,
   type StatusResponse,
   type TranslateBatch,
   type VisualLocalisationBatch,
@@ -27,6 +28,7 @@ import {
 } from "./api";
 import sampleSegments from "./sampleSegments.json";
 import { prepareDirectorInput, resolveScene } from "./directorInput";
+import { clearPendingIdempotencyKey, createIdempotencyKey, readPendingIdempotencyKey, savePendingIdempotencyKey } from "./idempotency";
 import { errorMessage, parseSegments } from "./format";
 import {
   type ReportKind,
@@ -87,15 +89,16 @@ export function useReports() {
   const [pipeline, setPipeline] = useState<PipelineReport | null>(null);
 
   const clearKinds = useCallback((kinds: Iterable<ReportKind>) => {
-    for (const kind of new Set(kinds)) {
-      if (kind === "qa") setQa(null);
-      if (kind === "batch") setBatch(null);
-      if (kind === "scene") setScene(null);
-      if (kind === "director") setDirector(null);
-      if (kind === "audition") setAudition(null);
-      if (kind === "visual") setVisual(null);
-      if (kind === "pipeline") setPipeline(null);
-    }
+    const setters: Record<ReportKind, () => void> = {
+      qa: () => setQa(null),
+      batch: () => setBatch(null),
+      scene: () => setScene(null),
+      director: () => setDirector(null),
+      audition: () => setAudition(null),
+      visual: () => setVisual(null),
+      pipeline: () => setPipeline(null),
+    };
+    for (const kind of new Set(kinds)) setters[kind]();
   }, []);
 
   const reset = useCallback(() => {
@@ -122,6 +125,24 @@ export function useSegments(onReset: () => void, setError: React.Dispatch<React.
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const segmentsRequestRef = useRef(0);
+  const segmentKeysRef = useRef(new WeakMap<SegmentInput, number>());
+  const segmentKeySequenceRef = useRef(0);
+
+  const keyForSegment = useCallback((segment: SegmentInput): number => {
+    let key = segmentKeysRef.current.get(segment);
+    if (key === undefined) {
+      key = ++segmentKeySequenceRef.current;
+      segmentKeysRef.current.set(segment, key);
+    }
+    return key;
+  }, []);
+
+  const inheritSegmentKeys = useCallback((previous: SegmentInput[], next: SegmentInput[]) => {
+    for (let i = 0; i < Math.min(previous.length, next.length); i++) {
+      if (next[i] !== previous[i]) segmentKeysRef.current.set(next[i], keyForSegment(previous[i]));
+    }
+    return next;
+  }, [keyForSegment]);
 
   const loadSegments = useCallback((next: SegmentInput[]) => {
     segmentsRequestRef.current++;
@@ -132,9 +153,9 @@ export function useSegments(onReset: () => void, setError: React.Dispatch<React.
 
   const replaceSegments = useCallback((next: SegmentInput[]) => {
     segmentsRequestRef.current++;
-    setSegments(next);
+    setSegments((previous) => inheritSegmentKeys(previous, next));
     setError(null);
-  }, [setError]);
+  }, [setError, inheritSegmentKeys]);
 
   const handleLoadSample = useCallback(() => {
     segmentsRequestRef.current++;
@@ -170,7 +191,7 @@ export function useSegments(onReset: () => void, setError: React.Dispatch<React.
     setExpanded((m) => ({ ...m, [id]: !m[id] }));
   }, []);
 
-  return { segments, expanded, fileInputRef, handleLoadSample, onFileChange, toggle, loadSegments, replaceSegments };
+  return { segments, expanded, fileInputRef, handleLoadSample, onFileChange, toggle, loadSegments, replaceSegments, keyForSegment };
 }
 
 export interface ActionsContext {
@@ -210,6 +231,8 @@ export function useActions(context: ActionsContext) {
     setVisual, setPipeline, loadSegments, audition, qaById, batchById, sceneById, sceneBySegId, setError,
   } = context;
   const [busy, setBusy] = useState<BusyState>(null);
+  const [auditionRetryPending, setAuditionRetryPending] = useState(() => Boolean(readPendingIdempotencyKey("audition")));
+  const auditionKeyRef = useRef<string | null>(readPendingIdempotencyKey("audition"));
   const busyRef = useRef<BusyState>(null);
 
   const run = useCallback(async (kind: Exclude<BusyState, null>, action: () => Promise<void>) => {
@@ -234,7 +257,6 @@ export function useActions(context: ActionsContext) {
     speedRetake: speedRetakeFromSettings(settings),
     emotionTags: emotionTagsFromSettings(settings),
   };
-
   const runTranslate = useCallback(async () => {
     const requestId = ++context.translateRequestRef.current;
     await run("translate", async () => {
@@ -269,8 +291,18 @@ export function useActions(context: ActionsContext) {
     });
   }, [context.directorRequestRef, run, segments, from, to, qaOptions.maxAttempts, qaOptions.toleranceFraction, qaOptions.targetCharactersPerSecond, setDirector, qaById, batchById, sceneById, sceneBySegId]);
 
-  const runAudition = useCallback(async () => {
+  const runAudition = useCallback(async (speakerMapping: SpeakerMapping = {}) => {
     const requestId = ++context.auditionRequestRef.current;
+    if (!auditionKeyRef.current) {
+      const key = createIdempotencyKey();
+      if (!savePendingIdempotencyKey("audition", key)) {
+        setError("Recovery storage is unavailable, so the paid Audition request was not sent.");
+        return;
+      }
+      auditionKeyRef.current = key;
+    }
+    const idempotencyKey = auditionKeyRef.current;
+    setAuditionRetryPending(true);
     await run("audition", async () => {
       const labelsById = new Map<string, { emotion_tone_label?: string | null; pacing_label?: string | null }>();
       segments.forEach((seg, idx) => {
@@ -280,10 +312,19 @@ export function useActions(context: ActionsContext) {
           pacing_label: scene?.context?.pacing_label ?? seg.context?.pacing_label ?? null,
         });
       });
-      const res = await postAudition(segments, from, to, { ...auditionOptions, labelsById });
+      const res = await postAudition(segments, from, to, { ...auditionOptions, labelsById, speakerMapping, idempotencyKey });
       if (requestId === context.auditionRequestRef.current) setAudition(res);
+      auditionKeyRef.current = null;
+      clearPendingIdempotencyKey("audition");
+      setAuditionRetryPending(false);
     });
   }, [context.auditionRequestRef, run, segments, from, to, settings, setAudition, sceneById, sceneBySegId]);
+
+  const startNewAudition = useCallback(() => {
+    auditionKeyRef.current = null;
+    clearPendingIdempotencyKey("audition");
+    setAuditionRetryPending(false);
+  }, []);
 
   const runVisual = useCallback(async () => {
     const requestId = ++context.visualRequestRef.current;
@@ -321,11 +362,11 @@ export function useActions(context: ActionsContext) {
   }, [context.copilotRequestRef, run]);
 
   const runPipeline = useCallback(
-    (audio: File | null, flags: { scene: boolean; audition: boolean }) =>
+    (audio: File | null, flags: { scene: boolean; audition: boolean }, speakerMapping: SpeakerMapping = {}, idempotencyKey?: string) =>
       run("pipeline", async () => {
         const requestId = ++context.pipelineRequestRef.current;
         const priorById = new Map(segments.map((s) => [s.id, s] as const));
-        const report = await postPipeline(audio, segments, segments, flags, from, to, auditionOptions);
+        const report = await postPipeline(audio, segments, segments, flags, from, to, { ...auditionOptions, speakerMapping }, idempotencyKey);
         if (requestId !== context.pipelineRequestRef.current) return;
         loadSegments(
           report.segments.map((s) => {
@@ -354,16 +395,29 @@ export function useActions(context: ActionsContext) {
       if (built.problems.length > 0) {
         throw new Error(`Cannot export dubbed MP4: ${built.problems.join(" ")}`);
       }
-      const placements = built.placements.map((placement) => ({
-        id: placement.id,
-        start_seconds: placement.start_seconds,
-        audio: wavDataUrlToBlob(placement.audio_data_url),
-        file_name: placement.file_name,
+      const placements = await Promise.all(built.placements.map(async (placement) => {
+        const audio = placement.audio_data_url
+          ? wavDataUrlToBlob(placement.audio_data_url)
+          : await fetchAuditionWav(placement.audio_url!);
+        return {
+          id: placement.id,
+          start_seconds: placement.start_seconds,
+          audio,
+          file_name: placement.file_name,
+        };
       }));
       const blob = await postDubExport(video, segments.map((segment) => segment.id), placements);
       downloadBlob("trackdub-dub.mp4", blob);
     });
   }, [run, segments, audition]);
 
-  return { busy, runTranslate, runQa, runScene, runDirector, runAudition, runVisual, runPipeline, runTranscribe, runCopilot, runExportDub };
+  return { busy, auditionRetryPending, runTranslate, runQa, runScene, runDirector, runAudition, startNewAudition, runVisual, runPipeline, runTranscribe, runCopilot, runExportDub };
+}
+
+async function fetchAuditionWav(url: string): Promise<Blob> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Audition audio download failed (${response.status}). The take may have expired.`);
+  const audio = await response.blob();
+  if (audio.size === 0) throw new Error("Audition audio download returned an empty file.");
+  return audio;
 }

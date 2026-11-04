@@ -38,7 +38,8 @@ internal sealed record AuditionApiRequest(
     string? TargetLanguage,
     SpeedRetakeOptions? SpeedRetake = null,
     EmotionTagOptions? EmotionTags = null,
-    QaOptionsDto? Options = null);
+    QaOptionsDto? Options = null,
+    IReadOnlyDictionary<string, string>? SpeakerMapping = null);
 
 internal sealed record QaOptionsDto(
     int? MaxAttempts,
@@ -62,4 +63,5 @@ internal sealed record PipelineApiRequest(
     string? TargetLanguage,
     QaOptionsDto? Options,
     SpeedRetakeOptions? SpeedRetake = null,
-    EmotionTagOptions? EmotionTags = null);
+    EmotionTagOptions? EmotionTags = null,
+    Dictionary<string, string>? SpeakerMapping = null);

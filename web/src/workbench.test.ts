@@ -3,6 +3,7 @@ import type { AuditionReport, SegmentInput } from "./api";
 import {
   buildDubExportPlacements,
   classifySegmentChanges,
+  nextSegmentId,
   normalizeBox,
   pointerToOriginal,
   reportsForChanges,
@@ -69,6 +70,13 @@ describe("visual upload limits", () => {
   });
 });
 
+describe("segment ids", () => {
+  it("chooses an unused id after removing a non-final line", () => {
+    expect(nextSegmentId([{ ...base, id: "seg-002" }])).toBe("seg-003");
+    expect(nextSegmentId([base, { ...base, id: "seg-002" }])).toBe("seg-003");
+  });
+});
+
 describe("dub export timing", () => {
   it("keeps existing stage evidence when only the export start changes", () => {
     const changes = classifySegmentChanges([base], [{ ...base, start_seconds: 1.25 }]);
@@ -115,7 +123,7 @@ describe("dub export placements", () => {
     expect(ready.problems).toEqual([]);
     expect(ready.placements).toMatchObject([{ id: "seg-1", start_seconds: 0.25, file_name: "seg-1-take2.wav" }]);
 
-    const blob = wavDataUrlToBlob(ready.placements[0].audio_data_url);
+    const blob = wavDataUrlToBlob(ready.placements[0].audio_data_url!);
     expect(blob.type).toBe("audio/wav");
     expect(blob.size).toBe(4);
   });

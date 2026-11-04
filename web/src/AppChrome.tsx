@@ -71,10 +71,12 @@ export interface ToolbarProps {
   onScene: () => Promise<void>;
   onDirector: () => Promise<void>;
   onAudition: () => Promise<void>;
+  auditionRetryPending: boolean;
+  onNewAudition: () => void;
   onVisual: () => Promise<void>;
 }
 
-export function Toolbar({ segments, from, to, busy, fileInputRef, onFileChange, onLoadSample, onTranslate, onQa, onScene, onDirector, onAudition, onVisual }: ToolbarProps) {
+export function Toolbar({ segments, from, to, busy, fileInputRef, onFileChange, onLoadSample, onTranslate, onQa, onScene, onDirector, onAudition, auditionRetryPending, onNewAudition, onVisual }: ToolbarProps) {
   const disabled = busy !== null || segments.length === 0;
   return (
     <div className="toolbar">
@@ -92,8 +94,10 @@ export function Toolbar({ segments, from, to, busy, fileInputRef, onFileChange, 
           {busy === "director" ? "Running Director…" : "Run Director"}
         </button>
         <button type="button" className="btn btn-primary" onClick={() => void onAudition()} disabled={disabled}>
-          {busy === "audition" ? "Running Audition…" : "Run Audition"}
+          {busy === "audition" ? "Running Audition…" : auditionRetryPending ? "Retry same Audition request" : "Run Audition"}
         </button>
+        {auditionRetryPending && <button type="button" className="btn" disabled={disabled} onClick={onNewAudition}>Start a new audition</button>}
+        {auditionRetryPending && <span className="toolbar-hint">A stored key is safe to retry for 20 minutes. After restart, the outcome may be unknown; a new audition can repeat paid calls.</span>}
         <button type="button" className="btn btn-primary" onClick={() => void onVisual()} disabled={disabled}>
           {busy === "visual" ? "Running Visual…" : "Run Visual"}
         </button>

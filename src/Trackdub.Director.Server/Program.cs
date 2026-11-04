@@ -33,6 +33,17 @@ builder.Services.AddTransient<VisualLocalisationService>(sp => new VisualLocalis
 builder.Services.AddSingleton<IMuseTranscribeClient>(sp => new MuseTranscribeClient(sp.GetRequiredService<HttpClient>()));
 builder.Services.AddTransient<TranscribeService>(sp => new TranscribeService(sp.GetRequiredService<IMuseTranscribeClient>()));
 builder.Services.AddSingleton<IDubExportService>(_ => new FfmpegDubExportService());
+string stateRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+if (string.IsNullOrWhiteSpace(stateRoot))
+{
+    stateRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share");
+}
+string? configuredIdempotencyPath = builder.Configuration["TRACKDUB_IDEMPOTENCY_PATH"];
+string idempotencyPath = string.IsNullOrWhiteSpace(configuredIdempotencyPath)
+    ? Path.Combine(stateRoot, "Trackdub.Director", "idempotency.json")
+    : Path.GetFullPath(configuredIdempotencyPath);
+builder.Services.AddSingleton(_ => new PipelineIdempotencyStore(idempotencyPath));
+builder.Services.AddSingleton(_ => new AuditionAudioStore());
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = 272L * 1024 * 1024;
@@ -67,6 +78,7 @@ app.MapPost("/api/qa", ApiEndpoints.QaAsync);
 app.MapPost("/api/scene-context", ApiEndpoints.SceneContextAsync);
 app.MapPost("/api/director-adaptation", ApiEndpoints.DirectorAdaptationAsync);
 app.MapPost("/api/audition", ApiEndpoints.AuditionAsync);
+app.MapGet("/api/audition-audio/{id}", ApiEndpoints.AuditionAudio);
 app.MapPost("/api/visual-localisation", ApiEndpoints.VisualLocalisationAsync);
 app.MapPost("/api/transcribe", ApiEndpoints.TranscribeAsync);
 app.MapPost("/api/pipeline", ApiEndpoints.PipelineAsync);

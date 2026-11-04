@@ -91,12 +91,12 @@ public sealed class CopilotService
 
     private static void ValidateRequest(CopilotRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Goal) || request.Goal.Length > 500)
+        if (IsInvalidGoal(request.Goal))
         {
             throw new ArgumentException("Copilot goal must be 1-500 characters.", nameof(request));
         }
 
-        if (request.Segments is null || request.Segments.Length > 100 || request.Segments.Any(s => s is null || string.IsNullOrWhiteSpace(s.Id)))
+        if (HasInvalidSegments(request.Segments))
         {
             throw new ArgumentException("Copilot state must include at most 100 identified segments.", nameof(request));
         }
@@ -105,6 +105,18 @@ public sealed class CopilotService
         {
             throw new ArgumentException("Copilot report summary exceeds 4000 characters.", nameof(request));
         }
+    }
+
+    private static bool IsInvalidGoal(string? goal) => string.IsNullOrWhiteSpace(goal) || goal.Length > 500;
+
+    private static bool HasInvalidSegments(CopilotSegmentSummary[]? segments)
+    {
+        return segments is null || segments.Length > 100 || segments.Any(IsInvalidSegment);
+    }
+
+    private static bool IsInvalidSegment(CopilotSegmentSummary? segment)
+    {
+        return segment is null || string.IsNullOrWhiteSpace(segment.Id);
     }
 
     private static CopilotSettingsProposal ParseSettings(JsonElement el, MetaClient.TokenUsage? usage)
@@ -135,29 +147,54 @@ public sealed class CopilotService
         var updates = new List<CopilotSegmentUpdate>();
         foreach (JsonElement item in array.EnumerateArray())
         {
-            if (item.ValueKind != JsonValueKind.Object) throw Bad("Copilot segment update must be an object.", usage);
-            RequireOnlyKeys(item, ["id", "concepts", "vision_enrichment", "director_register", "sign_source_text", "sign_target_text"], usage);
-            string id = RequiredString(item, "id", 200, usage);
-            if (!known.Contains(id) || !seen.Add(id)) throw Bad($"Copilot proposed an unknown or duplicate segment '{id}'.", usage);
-            string? register = OptionalNullableString(item, "director_register", 40, usage)?.Trim().ToLowerInvariant();
-            if (register is not null && register != "formal" && register != "informal")
-            {
-                throw Bad("Copilot director_register must be formal, informal, or null.", usage);
-            }
-
-            string[]? concepts = item.TryGetProperty("concepts", out JsonElement conceptsEl) && conceptsEl.ValueKind != JsonValueKind.Null
-                ? ParseStrings(conceptsEl, 8, 80, usage)
-                : null;
-            updates.Add(new CopilotSegmentUpdate(
-                id,
-                concepts,
-                OptionalBool(item, "vision_enrichment", usage),
-                register,
-                OptionalNullableString(item, "sign_source_text", 300, usage),
-                OptionalNullableString(item, "sign_target_text", 300, usage)));
+            updates.Add(ParseUpdate(item, known, seen, usage));
         }
 
         return updates.ToArray();
+    }
+
+    private static CopilotSegmentUpdate ParseUpdate(
+        JsonElement item,
+        HashSet<string> known,
+        HashSet<string> seen,
+        MetaClient.TokenUsage? usage)
+    {
+        if (item.ValueKind != JsonValueKind.Object) throw Bad("Copilot segment update must be an object.", usage);
+        RequireOnlyKeys(item, ["id", "concepts", "vision_enrichment", "director_register", "sign_source_text", "sign_target_text"], usage);
+        string id = RequireKnownSegmentId(item, known, seen, usage);
+        return new CopilotSegmentUpdate(
+            id,
+            ParseConcepts(item, usage),
+            OptionalBool(item, "vision_enrichment", usage),
+            ParseDirectorRegister(item, usage),
+            OptionalNullableString(item, "sign_source_text", 300, usage),
+            OptionalNullableString(item, "sign_target_text", 300, usage));
+    }
+
+    private static string RequireKnownSegmentId(
+        JsonElement item,
+        HashSet<string> known,
+        HashSet<string> seen,
+        MetaClient.TokenUsage? usage)
+    {
+        string id = RequiredString(item, "id", 200, usage);
+        return known.Contains(id) && seen.Add(id)
+            ? id
+            : throw Bad($"Copilot proposed an unknown or duplicate segment '{id}'.", usage);
+    }
+
+    private static string? ParseDirectorRegister(JsonElement item, MetaClient.TokenUsage? usage)
+    {
+        string? register = OptionalNullableString(item, "director_register", 40, usage)?.Trim().ToLowerInvariant();
+        return register is null || register == "formal" || register == "informal"
+            ? register
+            : throw Bad("Copilot director_register must be formal, informal, or null.", usage);
+    }
+
+    private static string[]? ParseConcepts(JsonElement item, MetaClient.TokenUsage? usage)
+    {
+        if (!item.TryGetProperty("concepts", out JsonElement concepts)) return null;
+        return concepts.ValueKind == JsonValueKind.Null ? null : ParseStrings(concepts, 8, 80, usage);
     }
 
     private static JsonElement RequiredObject(JsonElement root, string name, MetaClient.TokenUsage? usage)

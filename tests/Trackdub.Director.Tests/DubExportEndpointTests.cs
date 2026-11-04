@@ -18,19 +18,14 @@ public sealed class DubExportEndpointTests
         public IReadOnlyList<string> ExpectedIds { get; private set; } = [];
         public IReadOnlyList<DubExportSegmentInput> Segments { get; private set; } = [];
 
-        public async Task<Stream> RenderAsync(
-            Stream video,
-            string videoFileName,
-            IReadOnlyList<string> expectedSegmentIds,
-            IReadOnlyList<DubExportSegmentInput> segments,
-            CancellationToken cancellationToken = default)
+        public async Task<Stream> RenderAsync(DubExportRequest request, CancellationToken cancellationToken = default)
         {
-            VideoFileName = videoFileName;
+            VideoFileName = request.VideoFileName;
             using var copy = new MemoryStream();
-            await video.CopyToAsync(copy, cancellationToken);
+            await request.Video.CopyToAsync(copy, cancellationToken);
             VideoBytes = copy.ToArray();
-            ExpectedIds = expectedSegmentIds;
-            Segments = segments;
+            ExpectedIds = request.ExpectedSegmentIds;
+            Segments = request.Segments;
             return new MemoryStream(Encoding.ASCII.GetBytes("fake-mp4"));
         }
     }

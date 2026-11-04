@@ -5,7 +5,8 @@ import { LineList } from "./LineCard";
 import { PipelinePanel } from "./PipelinePanel";
 import { QaReportFooter } from "./QaReport";
 import { CopilotPanel, DubExportPanel, RunSettingsPanel, SegmentEditor, SegmentMediaEditor } from "./WorkbenchPanels";
-import type { CopilotProposal, CopilotRequest, SegmentInput } from "./api";
+import type { CopilotProposal, CopilotRequest, SegmentInput, SpeakerMapping } from "./api";
+import { applyCopilotUpdates, hasDuplicateSegmentIds, mergeCopilotSettings } from "./copilot";
 import { DEFAULT_FROM, DEFAULT_TO, useActions, useReports, useSegments, useStatus } from "./hooks";
 import {
   DEFAULT_RUN_SETTINGS,
@@ -23,6 +24,7 @@ export default function App() {
   const [from, setFrom] = useState(DEFAULT_FROM);
   const [to, setTo] = useState(DEFAULT_TO);
   const [settings, setSettings] = useState<RunSettings>(DEFAULT_RUN_SETTINGS);
+  const [speakerMapping, setSpeakerMapping] = useState<SpeakerMapping>({ A: "anna", B: "ashley" });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [copilotGoal, setCopilotGoal] = useState("");
   const [copilotProposal, setCopilotProposal] = useState<{ proposal: CopilotProposal; fingerprint: string } | null>(null);
@@ -75,6 +77,8 @@ export default function App() {
   }, [reports]);
 
   const input = useSegments(onReset, setError);
+  const segmentsRef = useRef(input.segments);
+  segmentsRef.current = input.segments;
 
   useEffect(() => {
     setSelectedIndex((current) => Math.max(0, Math.min(current, Math.max(0, input.segments.length - 1))));
@@ -88,6 +92,17 @@ export default function App() {
   const updateSegment = useCallback((next: SegmentInput) => {
     updateSegments(input.segments.map((segment, index) => (index === selectedIndex ? next : segment)));
   }, [input.segments, selectedIndex, updateSegments]);
+
+  const updateSegmentFrame = useCallback((expected: SegmentInput, patch: Partial<SegmentInput>): boolean => {
+    const key = input.keyForSegment(expected);
+    const current = segmentsRef.current;
+    const index = current.findIndex((candidate) => input.keyForSegment(candidate) === key);
+    if (index < 0) return false;
+    const next = current.map((segment, i) => (i === index ? { ...segment, ...patch } : segment));
+    invalidateChanges(classifySegmentChanges(current, next));
+    input.replaceSegments(next);
+    return true;
+  }, [input, invalidateChanges]);
 
   const updateFrom = useCallback((value: string) => {
     invalidateChanges(["language"]);
@@ -197,39 +212,17 @@ export default function App() {
       setError("Copilot proposal is stale because the workbench changed. Prepare a new proposal.");
       return;
     }
-    const proposed = copilotProposal.proposal.settings;
-    const nextSettings: RunSettings = {
-      ...settings,
-      maxRevisions: proposed.max_revisions ?? settings.maxRevisions,
-      tolerancePercent: proposed.tolerance_percent ?? settings.tolerancePercent,
-      targetCps: proposed.target_cps == null ? settings.targetCps : String(proposed.target_cps),
-      speedRetakeEnabled: proposed.speed_retake_enabled ?? settings.speedRetakeEnabled,
-      speedCap: proposed.speed_cap ?? settings.speedCap,
-      emotionTagsEnabled: proposed.emotion_tags_enabled ?? settings.emotionTagsEnabled,
-    };
-    const changes: ChangeKind[] = [];
-    if (nextSettings.maxRevisions !== settings.maxRevisions || nextSettings.tolerancePercent !== settings.tolerancePercent || nextSettings.targetCps !== settings.targetCps) changes.push("qaOptions");
-    if (nextSettings.speedRetakeEnabled !== settings.speedRetakeEnabled || nextSettings.speedCap !== settings.speedCap || nextSettings.emotionTagsEnabled !== settings.emotionTagsEnabled) changes.push("auditionOptions");
-    if (changes.length > 0) {
-      invalidateChanges(changes);
-      setSettings(nextSettings);
+    if (copilotProposal.proposal.segment_updates.length > 0 && hasDuplicateSegmentIds(input.segments)) {
+      setError("Copilot segment updates cannot be applied while segment IDs are duplicated. Make the segment IDs unique first.");
+      return;
+    }
+    const merged = mergeCopilotSettings(settings, copilotProposal.proposal.settings);
+    if (merged.changes.length > 0) {
+      invalidateChanges(merged.changes);
+      setSettings(merged.settings);
     }
     if (copilotProposal.proposal.segment_updates.length > 0) {
-      const byId = new Map(copilotProposal.proposal.segment_updates.map((update) => [update.id, update] as const));
-      updateSegments(input.segments.map((segment) => {
-        const update = byId.get(segment.id);
-        if (!update) return segment;
-        return {
-          ...segment,
-          concepts: update.concepts ?? segment.concepts,
-          vision_enrichment: update.vision_enrichment ?? segment.vision_enrichment,
-          director_adaptation: update.director_register === undefined
-            ? segment.director_adaptation
-            : update.director_register === null ? null : { target_register: update.director_register },
-          source_text: update.sign_source_text === undefined ? segment.source_text : update.sign_source_text,
-          target_text: update.sign_target_text === undefined ? segment.target_text : update.sign_target_text,
-        };
-      }));
+      updateSegments(applyCopilotUpdates(input.segments, copilotProposal.proposal.segment_updates));
     }
     setCopilotProposal(null);
   };
@@ -272,15 +265,23 @@ export default function App() {
           segment={input.segments[selectedIndex]}
           busy={actions.busy !== null}
           onChange={updateSegment}
+          onFrameLoaded={updateSegmentFrame}
           onError={setError}
         />
         <PipelinePanel
           busy={actions.busy}
           pipeline={reports.pipeline}
           resetGeneration={resetGeneration}
+          segments={input.segments}
+          speakerMapping={speakerMapping}
+          onSpeakerMappingChange={(mapping) => {
+            invalidateChanges(["auditionOptions"]);
+            setSpeakerMapping(mapping);
+          }}
           onRun={actions.runPipeline}
           onTranscribe={actions.runTranscribe}
           onAudioChange={() => invalidateChanges(["audio"])}
+          onRecoveryError={setError}
         />
         <DubExportPanel
           segments={input.segments}
@@ -302,7 +303,9 @@ export default function App() {
           onQa={actions.runQa}
           onScene={actions.runScene}
           onDirector={actions.runDirector}
-          onAudition={actions.runAudition}
+          onAudition={() => actions.runAudition(speakerMapping)}
+          auditionRetryPending={actions.auditionRetryPending}
+          onNewAudition={actions.startNewAudition}
           onVisual={actions.runVisual}
         />
         {reports.audition && <AuditionBudgetNotice totals={reports.audition.totals} />}

@@ -210,9 +210,13 @@ system. It supports two ordinary-input journeys without hand-written JSON:
 1. **Dub:** type segments or transcribe a WAV, set languages and the shared
    QA options, then run Translate, QA, Scene, Director, Audition, or the
    fixed Pipeline template (Transcribe when audio is supplied, then QA,
-   Scene, and optional Audition). Winning and losing audition takes can be
-   played and downloaded as WAV files when they fit the bounded browser
-   transport; audio data URLs are removed from downloadable evidence JSON.
+   Scene, and optional Audition). Valid WAVs are converted in the browser to
+   mono 16-bit PCM at 16 kHz when needed and checked again before the ASR
+   provider call. Transcribed speaker labels A/B default to Anna/Ashley; review
+   or change those mappings before audition. Winning and losing takes stream
+   from temporary server files with byte-range playback; files expire after an
+   hour, are capped at 512 MiB total, and are removed when the server stops.
+   Downloadable evidence JSON omits audio URLs.
    Set each segment's **Start** time (ASR turns supply `start_seconds`),
    choose the original MP4/MOV/M4V/WebM/MKV, and choose **Export dubbed
    MP4**. Export refuses unless every segment has a start and a winning
@@ -227,12 +231,28 @@ changing dialogue clears text-dependent reports and any pending Copilot
 proposal. The QA loop's `maxAttempts` setting is labelled **Maximum
 revisions**: it is the number of revisions allowed after the first attempt.
 
-The optional Copilot makes one disclosed Meta call and returns a bounded,
-revision-bound settings proposal. **Apply settings** is the only action it
-can lead to; it never runs a stage, and there is no "Approve & run" path.
-Verify-only remains a CLI/server check over captured run folders already on
-the server disk, not a verifier for the current browser session. Video-rate
-`sign-shot` packaging remains outside the browser workbench. Dub export
+Pipeline and standalone Audition reuse a browser-stored `Idempotency-Key` for
+20 minutes. In the running server process, retrying a dropped browser response
+returns the same result. The server also keeps a small local ledger of request
+keys, payload fingerprints, and timestamps (no request text or audio). After a
+server restart, reusing a recorded key reports an unknown provider outcome and
+does not execute the request again; if recovery storage is unavailable, paid
+requests fail closed. Set `TRACKDUB_IDEMPOTENCY_PATH` to choose the ledger path.
+Starting a new run can repeat paid stages, so check provider history first when
+the previous outcome is unknown.
+Meta chat retries HTTP 429 and 5xx responses that do not report billed usage,
+using bounded exponential backoff with jitter. Transcription retries 429 and
+one explicit HTTP 500. A 5xx response with usage data is surfaced without a
+retry. Timeouts and interrupted response bodies remain outcome-unknown and are
+not automatically resent. The optional Copilot makes one disclosed Meta call
+and returns a bounded, revision-bound settings proposal. **Apply settings** is
+the only action it can lead to; it never runs a stage, and there is no
+"Approve & run" path.
+Visual localisation edits one manually boxed still; moving, rotating,
+perspective-changing, and occluded signs are not tracked. Video-rate
+`sign-shot` packaging remains outside the browser workbench. Verify-only
+remains a CLI/server check over captured run folders already on
+the server disk, not a verifier for the current browser session. Dub export
 requires `ffmpeg` and `ffprobe` on the backend PATH (or `FFMPEG_PATH` and
 `FFPROBE_PATH`); the source video is capped at 200 MiB, and the output is
 H.264/AAC MP4 with no original audio track.

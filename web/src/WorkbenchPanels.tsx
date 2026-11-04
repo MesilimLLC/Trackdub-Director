@@ -7,6 +7,8 @@ import {
   MAX_IMAGE_BYTES,
   buildDubExportPlacements,
   callEstimates,
+  dubExportReadiness,
+  nextSegmentId,
   normalizeBox,
   pointerToOriginal,
   validateImageMetadata,
@@ -158,7 +160,7 @@ export function SegmentEditor({
       <div className="panel-heading">
         <h2>Dialogue segments</h2>
         <button type="button" className="btn" disabled={busy} onClick={() => {
-          const next = [...segments, { id: `seg-${String(segments.length + 1).padStart(3, "0")}`, text: "", start_seconds: null, duration_seconds: null, speaker_id: null }];
+          const next = [...segments, { id: nextSegmentId(segments), text: "", start_seconds: null, duration_seconds: null, speaker_id: null }];
           onChange(next);
           onSelect(next.length - 1);
         }}>Add line</button>
@@ -188,6 +190,56 @@ export function SegmentEditor({
   );
 }
 
+function DubExportControls({
+  video,
+  busy,
+  exporting,
+  ready,
+  onVideo,
+  onClear,
+  onExport,
+}: {
+  video: File | null;
+  busy: boolean;
+  exporting: boolean;
+  ready: boolean;
+  onVideo: (file: File | null) => void;
+  onClear: () => void;
+  onExport: (video: File) => Promise<void>;
+}) {
+  return (
+    <div className="workbench-actions">
+      <label className="btn file-btn">
+        {video ? video.name : "Choose original video"}
+        <input
+          aria-label="Original video"
+          type="file"
+          accept=".mp4,.mov,.m4v,.webm,.mkv,video/mp4,video/quicktime,video/webm,video/x-matroska"
+          hidden
+          disabled={busy}
+          onChange={(e) => {
+            onVideo(e.target.files?.[0] ?? null);
+            e.target.value = "";
+          }}
+        />
+      </label>
+      {video && (
+        <button type="button" className="btn" disabled={busy} onClick={onClear}>
+          Clear video
+        </button>
+      )}
+      <button
+        type="button"
+        className="btn btn-primary"
+        disabled={busy || !ready}
+        onClick={() => video && void onExport(video)}
+      >
+        {exporting ? "Exporting dubbed MP4…" : "Export dubbed MP4"}
+      </button>
+    </div>
+  );
+}
+
 export function DubExportPanel({
   segments,
   audition,
@@ -205,7 +257,6 @@ export function DubExportPanel({
 }) {
   const [video, setVideo] = useState<File | null>(null);
   const [seenGeneration, setSeenGeneration] = useState(resetGeneration);
-  const videoInputRef = useRef<HTMLInputElement>(null);
   if (seenGeneration !== resetGeneration) {
     setSeenGeneration(resetGeneration);
     setVideo(null);
@@ -222,48 +273,29 @@ export function DubExportPanel({
         <h2>Dub export</h2>
         <span className="toolbar-hint">Original audio muted · Winning takes only · MP4</span>
       </div>
-      <div className="workbench-actions">
-        <label className="btn file-btn">
-          {video ? video.name : "Choose original video"}
-          <input
-            ref={videoInputRef}
-            aria-label="Original video"
-            type="file"
-            accept=".mp4,.mov,.m4v,.webm,.mkv,video/mp4,video/quicktime,video/webm,video/x-matroska"
-            hidden
-            disabled={busy}
-            onChange={(e) => {
-              setVideo(e.target.files?.[0] ?? null);
-              e.target.value = "";
-            }}
-          />
-        </label>
-        {video && (
-          <button type="button" className="btn" disabled={busy} onClick={() => setVideo(null)}>
-            Clear video
-          </button>
-        )}
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={busy || !ready}
-          onClick={() => video && void onExport(video)}
-        >
-          {exporting ? "Exporting dubbed MP4…" : "Export dubbed MP4"}
-        </button>
-      </div>
+      <DubExportControls
+        video={video}
+        busy={busy}
+        exporting={exporting}
+        ready={ready}
+        onVideo={setVideo}
+        onClear={() => setVideo(null)}
+        onExport={onExport}
+      />
       <div className="token-usage" aria-label="Dub export readiness">
-        {ready
-          ? `${built.placements.length} winning take${built.placements.length === 1 ? "" : "s"} ready at explicit start times. The backend renders with ffmpeg and omits the original audio.`
-          : problems.length > 0
-            ? problems.join(" ")
-            : "Choose the original video. Every segment needs a start time and a winning audition take."}
+        {dubExportReadiness(video, built, problems)}
       </div>
     </section>
   );
 }
 
-async function readFrameFile(file: File): Promise<{ dataUrl: string; width: number; height: number }> {
+async function sha256Hex(file: File): Promise<string | null> {
+  if (!globalThis.crypto?.subtle) return null;
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function readFrameFile(file: File): Promise<{ dataUrl: string; width: number; height: number; sha256: string | null }> {
   const objectUrl = URL.createObjectURL(file);
   try {
     const dims = await new Promise<{ width: number; height: number }>((resolve, reject) => {
@@ -280,21 +312,143 @@ async function readFrameFile(file: File): Promise<{ dataUrl: string; width: numb
       reader.onerror = () => reject(new Error("Could not read frame image."));
       reader.readAsDataURL(file);
     });
-    return { dataUrl, ...dims };
+    return { dataUrl, ...dims, sha256: await sha256Hex(file) };
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
+}
+
+function SegmentMediaFields({
+  segment,
+  busy,
+  update,
+  onFrameLoaded,
+  onError,
+}: {
+  segment: SegmentInput;
+  busy: boolean;
+  update: (patch: Partial<SegmentInput>) => void;
+  onFrameLoaded: (expected: SegmentInput, patch: Partial<SegmentInput>) => boolean;
+  onError: (message: string | null) => void;
+}) {
+  return (
+    <div className="workbench-grid">
+      <label>Frame image
+        <input aria-label="Frame image" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file) return;
+          if (file.size > MAX_IMAGE_BYTES) { onError("Frame exceeds the 10 MiB limit."); return; }
+          const expected = segment;
+          void readFrameFile(file).then(({ dataUrl, sha256 }) => {
+            const applied = onFrameLoaded(expected, {
+              frame_image_data_url: dataUrl,
+              frame_id: expected.frame_id ?? file.name,
+              frame_sha256: sha256,
+            });
+            onError(applied ? null : "Frame upload finished after that segment was replaced. Choose the frame again.");
+          }).catch((error: unknown) => onError(error instanceof Error ? error.message : String(error)));
+        }} />
+      </label>
+      <label>Scene concepts (comma separated)
+        <input aria-label="Scene concepts" value={(segment.concepts ?? []).join(", ")} disabled={busy}
+          onChange={(e) => update({ concepts: e.target.value.split(",").map((v) => v.trim()).filter(Boolean) })} />
+      </label>
+      <label>Speaker label
+        <input aria-label="Speaker label" value={segment.speaker_label ?? ""} disabled={busy}
+          onChange={(e) => update({ speaker_label: e.target.value || null })} />
+      </label>
+      <label>Frame timecode seconds
+        <input aria-label="Frame timecode seconds" type="number" min="0" step="0.01" value={segment.timecode_seconds ?? ""} disabled={busy}
+          onChange={(e) => update({ timecode_seconds: e.target.value === "" ? null : Number(e.target.value) })} />
+      </label>
+      <label>Director register
+        <select aria-label="Director register" value={segment.director_adaptation?.target_register ?? ""} disabled={busy}
+          onChange={(e) => update({ director_adaptation: e.target.value ? { target_register: e.target.value } : null })}>
+          <option value="">Not requested</option>
+          <option value="formal">Formal</option>
+          <option value="informal">Informal</option>
+        </select>
+      </label>
+      <label className="check-field">
+        <input type="checkbox" checked={segment.vision_enrichment ?? false} disabled={busy}
+          onChange={(e) => update({ vision_enrichment: e.target.checked })} /> Vision enrichment (1 Meta call)
+      </label>
+      <label>Sign source text
+        <input aria-label="Sign source text" value={segment.source_text ?? ""} disabled={busy}
+          onChange={(e) => update({ source_text: e.target.value || null })} />
+      </label>
+      <label>Sign target text
+        <input aria-label="Sign target text" value={segment.target_text ?? ""} disabled={busy}
+          onChange={(e) => update({ target_text: e.target.value || null })} />
+      </label>
+    </div>
+  );
+}
+
+function VisualBoxEditor({
+  segment,
+  natural,
+  shownBox,
+  frameRef,
+  onNatural,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+}: {
+  segment: SegmentInput;
+  natural: { width: number; height: number } | null;
+  shownBox: LocalisationBox | null | undefined;
+  frameRef: React.RefObject<HTMLDivElement | null>;
+  onNatural: (size: { width: number; height: number }) => void;
+  onPointerDown: (event: React.PointerEvent) => void;
+  onPointerMove: (event: React.PointerEvent) => void;
+  onPointerUp: (event: React.PointerEvent) => void;
+}) {
+  if (!segment.frame_image_data_url) {
+    return <div className="token-usage">Upload a frame to enable Scene visual context and the sign box editor.</div>;
+  }
+  return (
+    <>
+      <div
+        ref={frameRef}
+        className="visual-editor"
+        role="application"
+        aria-label="Draw sign box"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+      >
+        <img src={segment.frame_image_data_url} alt={`Frame for ${segment.id}`} draggable={false}
+          onLoad={(e) => onNatural({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })} />
+        {shownBox && natural && (
+          <div className="visual-box" style={{
+            left: `${(shownBox.x1 / natural.width) * 100}%`,
+            top: `${(shownBox.y1 / natural.height) * 100}%`,
+            width: `${((shownBox.x2 - shownBox.x1) / natural.width) * 100}%`,
+            height: `${((shownBox.y2 - shownBox.y1) / natural.height) * 100}%`,
+          }} />
+        )}
+      </div>
+      <div className="token-usage">
+        Drag on the frame to draw the sign box. Coordinates use original pixels; x2/y2 are exclusive.
+        {segment.box ? ` Current: (${segment.box.x1},${segment.box.y1})–(${segment.box.x2},${segment.box.y2}).` : " No box selected."}
+      </div>
+    </>
+  );
 }
 
 export function SegmentMediaEditor({
   segment,
   busy,
   onChange,
+  onFrameLoaded,
   onError,
 }: {
   segment: SegmentInput | undefined;
   busy: boolean;
   onChange: (next: SegmentInput) => void;
+  onFrameLoaded: (expected: SegmentInput, patch: Partial<SegmentInput>) => boolean;
   onError: (message: string | null) => void;
 }) {
   const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
@@ -314,94 +468,29 @@ export function SegmentMediaEditor({
   return (
     <section className="workbench-panel" aria-label="Segment media editor">
       <div className="panel-heading"><h2>Scene, Director, and Visual — {segment.id || "selected line"}</h2></div>
-      <div className="workbench-grid">
-        <label>Frame image
-          <input aria-label="Frame image" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = "";
-            if (!file) return;
-            if (file.size > MAX_IMAGE_BYTES) { onError("Frame exceeds the 10 MiB limit."); return; }
-            void readFrameFile(file).then(({ dataUrl }) => {
-              onError(null);
-              update({ frame_image_data_url: dataUrl, frame_id: segment.frame_id ?? file.name, frame_sha256: null });
-            }).catch((error: unknown) => onError(error instanceof Error ? error.message : String(error)));
-          }} />
-        </label>
-        <label>Scene concepts (comma separated)
-          <input aria-label="Scene concepts" value={(segment.concepts ?? []).join(", ")} disabled={busy}
-            onChange={(e) => update({ concepts: e.target.value.split(",").map((v) => v.trim()).filter(Boolean) })} />
-        </label>
-        <label>Speaker label
-          <input aria-label="Speaker label" value={segment.speaker_label ?? ""} disabled={busy}
-            onChange={(e) => update({ speaker_label: e.target.value || null })} />
-        </label>
-        <label>Frame timecode seconds
-          <input aria-label="Frame timecode seconds" type="number" min="0" step="0.01" value={segment.timecode_seconds ?? ""} disabled={busy}
-            onChange={(e) => update({ timecode_seconds: e.target.value === "" ? null : Number(e.target.value) })} />
-        </label>
-        <label>Director register
-          <select aria-label="Director register" value={segment.director_adaptation?.target_register ?? ""} disabled={busy}
-            onChange={(e) => update({ director_adaptation: e.target.value ? { target_register: e.target.value } : null })}>
-            <option value="">Not requested</option>
-            <option value="formal">Formal</option>
-            <option value="informal">Informal</option>
-          </select>
-        </label>
-        <label className="check-field">
-          <input type="checkbox" checked={segment.vision_enrichment ?? false} disabled={busy}
-            onChange={(e) => update({ vision_enrichment: e.target.checked })} /> Vision enrichment (1 Meta call)
-        </label>
-        <label>Sign source text
-          <input aria-label="Sign source text" value={segment.source_text ?? ""} disabled={busy}
-            onChange={(e) => update({ source_text: e.target.value || null })} />
-        </label>
-        <label>Sign target text
-          <input aria-label="Sign target text" value={segment.target_text ?? ""} disabled={busy}
-            onChange={(e) => update({ target_text: e.target.value || null })} />
-        </label>
-      </div>
-      {segment.frame_image_data_url ? (
-        <>
-          <div
-            ref={frameRef}
-            className="visual-editor"
-            role="application"
-            aria-label="Draw sign box"
-            onPointerDown={(e) => { const p = pointFromEvent(e); if (p) { setDragStart(p); setDraftBox(null); } }}
-            onPointerMove={(e) => {
-              if (!dragStart || !natural) return;
-              const p = pointFromEvent(e);
-              if (p) setDraftBox(normalizeBox(dragStart, p, natural));
-            }}
-            onPointerUp={(e) => {
-              if (!dragStart || !natural) return;
-              const p = pointFromEvent(e);
-              const box = p ? normalizeBox(dragStart, p, natural) : null;
-              setDragStart(null);
-              setDraftBox(null);
-              if (box) update({ box });
-              else onError("Sign box must be at least 8×8 original pixels.");
-            }}
-          >
-            <img src={segment.frame_image_data_url} alt={`Frame for ${segment.id}`} draggable={false}
-              onLoad={(e) => setNatural({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })} />
-            {shownBox && natural && (
-              <div className="visual-box" style={{
-                left: `${(shownBox.x1 / natural.width) * 100}%`,
-                top: `${(shownBox.y1 / natural.height) * 100}%`,
-                width: `${((shownBox.x2 - shownBox.x1) / natural.width) * 100}%`,
-                height: `${((shownBox.y2 - shownBox.y1) / natural.height) * 100}%`,
-              }} />
-            )}
-          </div>
-          <div className="token-usage">
-            Drag on the frame to draw the sign box. Coordinates use original pixels; x2/y2 are exclusive.
-            {segment.box ? ` Current: (${segment.box.x1},${segment.box.y1})–(${segment.box.x2},${segment.box.y2}).` : " No box selected."}
-          </div>
-        </>
-      ) : (
-        <div className="token-usage">Upload a frame to enable Scene visual context and the sign box editor.</div>
-      )}
+      <SegmentMediaFields segment={segment} busy={busy} update={update} onFrameLoaded={onFrameLoaded} onError={onError} />
+      <VisualBoxEditor
+        segment={segment}
+        natural={natural}
+        shownBox={shownBox}
+        frameRef={frameRef}
+        onNatural={setNatural}
+        onPointerDown={(e) => { const p = pointFromEvent(e); if (p) { setDragStart(p); setDraftBox(null); } }}
+        onPointerMove={(e) => {
+          if (!dragStart || !natural) return;
+          const p = pointFromEvent(e);
+          if (p) setDraftBox(normalizeBox(dragStart, p, natural));
+        }}
+        onPointerUp={(e) => {
+          if (!dragStart || !natural) return;
+          const p = pointFromEvent(e);
+          const box = p ? normalizeBox(dragStart, p, natural) : null;
+          setDragStart(null);
+          setDraftBox(null);
+          if (box) update({ box });
+          else onError("Sign box must be at least 8×8 original pixels.");
+        }}
+      />
     </section>
   );
 }

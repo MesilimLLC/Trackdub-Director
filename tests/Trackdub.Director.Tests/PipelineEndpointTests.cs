@@ -1,4 +1,5 @@
 using System.Net;
+using System.Buffers.Binary;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,6 +18,25 @@ namespace Trackdub.Director.Tests;
 /// </summary>
 public sealed class PipelineEndpointTests
 {
+    private static byte[] SupportedWav()
+    {
+        byte[] wav = new byte[46];
+        "RIFF"u8.CopyTo(wav);
+        BinaryPrimitives.WriteUInt32LittleEndian(wav.AsSpan(4), (uint)(wav.Length - 8));
+        "WAVE"u8.CopyTo(wav.AsSpan(8));
+        "fmt "u8.CopyTo(wav.AsSpan(12));
+        BinaryPrimitives.WriteUInt32LittleEndian(wav.AsSpan(16), 16);
+        BinaryPrimitives.WriteUInt16LittleEndian(wav.AsSpan(20), 1);
+        BinaryPrimitives.WriteUInt16LittleEndian(wav.AsSpan(22), 1);
+        BinaryPrimitives.WriteUInt32LittleEndian(wav.AsSpan(24), 16000);
+        BinaryPrimitives.WriteUInt32LittleEndian(wav.AsSpan(28), 32000);
+        BinaryPrimitives.WriteUInt16LittleEndian(wav.AsSpan(32), 2);
+        BinaryPrimitives.WriteUInt16LittleEndian(wav.AsSpan(34), 16);
+        "data"u8.CopyTo(wav.AsSpan(36));
+        BinaryPrimitives.WriteUInt32LittleEndian(wav.AsSpan(40), 2);
+        return wav;
+    }
+
     private static HttpMessageHandler PipelineHandler(Queue<string> translations, Queue<string> meaningJsons, List<string> callOrder)
     {
         return new DelegatingHandlerStub(async (request, cancellationToken) =>
@@ -122,12 +142,18 @@ public sealed class PipelineEndpointTests
 
         var body = new
         {
-            audio_base64 = Convert.ToBase64String([82, 73, 70, 70, 1, 0, 0, 0]),
+            audio_base64 = Convert.ToBase64String(SupportedWav()),
             audio_file_name = "clip.wav",
             scene = false,
         };
+        string idempotencyKey = NewIdempotencyKey();
 
-        HttpResponseMessage resp = await client.PostAsJsonAsync("/api/pipeline", body);
+        using var firstRequest = new HttpRequestMessage(HttpMethod.Post, "/api/pipeline")
+        {
+            Content = JsonContent.Create(body),
+        };
+        firstRequest.Headers.Add("Idempotency-Key", idempotencyKey);
+        using HttpResponseMessage resp = await client.SendAsync(firstRequest);
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 
         string json = await resp.Content.ReadAsStringAsync();
@@ -138,6 +164,25 @@ public sealed class PipelineEndpointTests
 
         int segmentCount = root.GetProperty("segments").GetArrayLength();
         Assert.Equal(2, segmentCount);
+        Assert.Equal(["transcribe", "translate", "meaning", "translate", "meaning"], callOrder);
+
+        using var retryRequest = new HttpRequestMessage(HttpMethod.Post, "/api/pipeline")
+        {
+            Content = JsonContent.Create(body),
+        };
+        retryRequest.Headers.Add("Idempotency-Key", idempotencyKey);
+        using HttpResponseMessage replay = await client.SendAsync(retryRequest);
+        Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
+        Assert.Equal(json, await replay.Content.ReadAsStringAsync());
+        Assert.Equal(["transcribe", "translate", "meaning", "translate", "meaning"], callOrder);
+
+        using var conflictingRequest = new HttpRequestMessage(HttpMethod.Post, "/api/pipeline")
+        {
+            Content = JsonContent.Create(new { audio_base64 = body.audio_base64, audio_file_name = "different.wav", scene = false }),
+        };
+        conflictingRequest.Headers.Add("Idempotency-Key", idempotencyKey);
+        using HttpResponseMessage conflict = await client.SendAsync(conflictingRequest);
+        Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
         Assert.Equal(["transcribe", "translate", "meaning", "translate", "meaning"], callOrder);
     }
 

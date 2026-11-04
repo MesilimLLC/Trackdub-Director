@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text.Json;
 using Trackdub.Director.Core;
 using static ApiResults;
 using static AuditionOutputs;
@@ -120,12 +122,9 @@ internal static class ApiEndpoints
         }
 
         IReadOnlyList<DirectorAdaptationSegmentInput> segments = req.Segments;
-        return await ApiHandlers.GuardAsync(async () =>
-        {
-            var service = new DirectorAdaptationService(client, options);
-            DirectorAdaptationBatch batch = await service.RunAsync(segments, from, to, ct).ConfigureAwait(false);
-            return Results.Json(batch);
-        }).ConfigureAwait(false);
+        return await ApiHandlers.RunSerializedAsync(
+            () => ApiHandlers.GuardAsync(() => ApiHandlers.RunDirectorWithReasoningAsync(client, options, segments, from, to, ct)),
+            ct).ConfigureAwait(false);
     }
 
     internal static Task<IResult> VisualLocalisationAsync(HttpRequest request, VisualLocalisationService service, CancellationToken ct)
@@ -167,7 +166,14 @@ internal static class ApiEndpoints
         }).ConfigureAwait(false);
     }
 
-    internal static async Task<IResult> AuditionAsync(HttpRequest request, MetaClient client, ITtsProvider tts, CancellationToken ct)
+    internal static async Task<IResult> AuditionAsync(
+        HttpRequest request,
+        MetaClient client,
+        ITtsProvider tts,
+        AuditionAudioStore audioStore,
+        PipelineIdempotencyStore idempotency,
+        IHostApplicationLifetime lifetime,
+        CancellationToken ct)
     {
         var (req, readError) = await ApiHandlers.ReadOrBadRequestAsync(() => ReadAuditionRequestAsync(request, ct));
         if (readError is not null)
@@ -192,7 +198,25 @@ internal static class ApiEndpoints
             return Results.BadRequest(new { error = auditionOptionsError });
         }
 
-        return await ApiHandlers.RunSerializedAsync(() => ApiHandlers.RunAuditionAsync(client, tts, auditionOptions, req, ct), ct).ConfigureAwait(false);
+        string? idempotencyKey = request.Headers["Idempotency-Key"].FirstOrDefault();
+        if (idempotencyKey is not null && !PipelineIdempotencyStore.TryParseKey(idempotencyKey, out _))
+        {
+            return Results.BadRequest(new { error = "Idempotency-Key must be a timestamped UUID." });
+        }
+
+        if (idempotencyKey is null)
+        {
+            return await RunAuditionAsync(ct).ConfigureAwait(false);
+        }
+
+        byte[] requestBody = JsonSerializer.SerializeToUtf8Bytes(req, RequestParsing.JsonOptionsWeb);
+        string fingerprint = Convert.ToHexString(SHA256.HashData(requestBody));
+        return await idempotency.RunAsync("audition:" + idempotencyKey, fingerprint, () => RunAuditionAsync(lifetime.ApplicationStopping)).ConfigureAwait(false);
+
+        Task<IResult> RunAuditionAsync(CancellationToken runCt)
+        {
+            return ApiHandlers.RunSerializedAsync(() => ApiHandlers.RunAuditionAsync(client, tts, auditionOptions, req, audioStore, runCt), runCt);
+        }
     }
 
     internal static async Task<IResult> CopilotProposeAsync(HttpRequest request, CopilotService service, CancellationToken ct)
@@ -226,78 +250,146 @@ internal static class ApiEndpoints
             return Results.BadRequest(new { error = "Request must be multipart/form-data with 'video', 'segment_ids', 'placements', and winner WAV fields." });
         }
 
-        var bodyLimit = request.HttpContext.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
-        if (bodyLimit is { IsReadOnly: false })
-        {
-            bodyLimit.MaxRequestBodySize = 272L * 1024 * 1024;
-        }
+        SetExportBodyLimit(request);
+        var (form, formError) = await ReadExportFormAsync(request, ct).ConfigureAwait(false);
+        if (formError is not null) return formError;
 
-        IFormCollection form;
+        var (video, videoError) = RequireExportVideo(form!);
+        if (videoError is not null) return videoError;
+
+        var (metadata, metadataError) = ReadExportMetadata(form!);
+        if (metadataError is not null) return metadataError;
+
+        var (segments, segmentsError) = await ReadExportSegmentsAsync(form!, metadata!.Placements, ct).ConfigureAwait(false);
+        if (segmentsError is not null) return segmentsError;
+
+        return await RenderExportAsync(exportService, video!, metadata.ExpectedIds, segments!, ct).ConfigureAwait(false);
+    }
+
+    private static void SetExportBodyLimit(HttpRequest request)
+    {
+        var bodyLimit = request.HttpContext.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
+        if (bodyLimit is { IsReadOnly: false }) bodyLimit.MaxRequestBodySize = 272L * 1024 * 1024;
+    }
+
+    private static async Task<(IFormCollection? Form, IResult? Error)> ReadExportFormAsync(HttpRequest request, CancellationToken ct)
+    {
         try
         {
-            form = await request.ReadFormAsync(ct).ConfigureAwait(false);
+            return (await request.ReadFormAsync(ct).ConfigureAwait(false), null);
         }
-        catch (Exception ex) when (ex is InvalidOperationException or IOException)
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or InvalidDataException)
         {
-            return Results.BadRequest(new { error = $"Invalid form body: {ex.Message}" });
+            return (null, Results.BadRequest(new { error = $"Invalid form body: {ex.Message}" }));
         }
+    }
 
+    private static (IFormFile? Video, IResult? Error) RequireExportVideo(IFormCollection form)
+    {
         IFormFile? video = form.Files.GetFile("video");
         if (video is null || video.Length == 0)
         {
-            return Results.BadRequest(new { error = "Request must include a non-empty original video in the 'video' field." });
+            return (null, Results.BadRequest(new { error = "Request must include a non-empty original video in the 'video' field." }));
         }
-        if (video.Length > FfmpegDubExportService.MaxVideoBytes)
-        {
-            return Results.BadRequest(new { error = $"Original video exceeds the {FfmpegDubExportService.MaxVideoBytes} byte export limit." });
-        }
+        return video.Length <= FfmpegDubExportService.MaxVideoBytes
+            ? (video, null)
+            : (null, Results.BadRequest(new { error = $"Original video exceeds the {FfmpegDubExportService.MaxVideoBytes} byte export limit." }));
+    }
 
-        string[] expectedIds;
-        DubExportPlacementDto[] placements;
+    private sealed record ExportMetadata(string[] ExpectedIds, DubExportPlacementDto[] Placements);
+
+    private static (ExportMetadata? Metadata, IResult? Error) ReadExportMetadata(IFormCollection form)
+    {
         try
         {
-            expectedIds = System.Text.Json.JsonSerializer.Deserialize<string[]>(form["segment_ids"].ToString(), RequestParsing.JsonOptionsWeb)
-                ?? throw new InvalidOperationException("Missing segment_ids.");
-            placements = System.Text.Json.JsonSerializer.Deserialize<DubExportPlacementDto[]>(form["placements"].ToString(), RequestParsing.JsonOptionsWeb)
-                ?? throw new InvalidOperationException("Missing placements.");
+            string[] expected = DeserializeExportField<string[]>(form, "segment_ids", "Missing segment_ids.");
+            DubExportPlacementDto[] placements = DeserializeExportField<DubExportPlacementDto[]>(form, "placements", "Missing placements.");
+            return (new ExportMetadata(expected, placements), null);
         }
         catch (Exception ex) when (ex is System.Text.Json.JsonException or InvalidOperationException)
         {
-            return Results.BadRequest(new { error = $"Invalid export metadata: {ex.Message}" });
+            return (null, Results.BadRequest(new { error = $"Invalid export metadata: {ex.Message}" }));
         }
+    }
 
+    private static T DeserializeExportField<T>(IFormCollection form, string field, string missingMessage)
+    {
+        return System.Text.Json.JsonSerializer.Deserialize<T>(form[field].ToString(), RequestParsing.JsonOptionsWeb)
+            ?? throw new InvalidOperationException(missingMessage);
+    }
+
+    private static async Task<(DubExportSegmentInput[]? Segments, IResult? Error)> ReadExportSegmentsAsync(
+        IFormCollection form,
+        DubExportPlacementDto[] placements,
+        CancellationToken ct)
+    {
         var segments = new List<DubExportSegmentInput>(placements.Length);
         long totalAudioBytes = 0;
         foreach (DubExportPlacementDto placement in placements)
         {
-            if (string.IsNullOrWhiteSpace(placement.AudioField))
+            if (placement is null)
             {
-                return Results.BadRequest(new { error = $"Placement for segment '{placement.Id}' is missing audio_field." });
+                return (null, Results.BadRequest(new { error = "Export placements must not contain null entries." }));
             }
-            IFormFile? audio = form.Files.GetFile(placement.AudioField);
-            if (audio is null || audio.Length == 0)
-            {
-                return Results.BadRequest(new { error = $"Missing winning audio for segment '{placement.Id}'." });
-            }
-            if (audio.Length > DubExportPlanner.MaxAudioBytesPerSegment)
-            {
-                return Results.BadRequest(new { error = $"Winning audio for segment '{placement.Id}' exceeds the per-segment export limit." });
-            }
-            totalAudioBytes += audio.Length;
-            if (totalAudioBytes > DubExportPlanner.MaxTotalAudioBytes)
-            {
-                return Results.BadRequest(new { error = "Winner audio exceeds the total export limit." });
-            }
-            await using Stream audioStream = audio.OpenReadStream();
-            using var copy = new MemoryStream();
-            await audioStream.CopyToAsync(copy, ct).ConfigureAwait(false);
-            segments.Add(new DubExportSegmentInput(placement.Id, placement.StartSeconds, copy.ToArray()));
+            var (segment, error) = await ReadExportSegmentAsync(form, placement, totalAudioBytes, ct).ConfigureAwait(false);
+            if (error is not null) return (null, error);
+            totalAudioBytes += segment!.WavAudio!.Length;
+            segments.Add(segment);
+        }
+        return (segments.ToArray(), null);
+    }
+
+    private static async Task<(DubExportSegmentInput? Segment, IResult? Error)> ReadExportSegmentAsync(
+        IFormCollection form,
+        DubExportPlacementDto placement,
+        long totalAudioBytes,
+        CancellationToken ct)
+    {
+        var (audio, error) = RequireExportAudio(form, placement, totalAudioBytes);
+        if (error is not null) return (null, error);
+
+        await using Stream audioStream = audio!.OpenReadStream();
+        using var copy = new MemoryStream();
+        await audioStream.CopyToAsync(copy, ct).ConfigureAwait(false);
+        return (new DubExportSegmentInput(placement.Id, placement.StartSeconds, copy.ToArray()), null);
+    }
+
+    private static (IFormFile? Audio, IResult? Error) RequireExportAudio(
+        IFormCollection form,
+        DubExportPlacementDto placement,
+        long totalAudioBytes)
+    {
+        if (string.IsNullOrWhiteSpace(placement.AudioField))
+        {
+            return (null, Results.BadRequest(new { error = $"Placement for segment '{placement.Id}' is missing audio_field." }));
         }
 
+        IFormFile? audio = form.Files.GetFile(placement.AudioField);
+        if (audio is null || audio.Length == 0)
+        {
+            return (null, Results.BadRequest(new { error = $"Missing winning audio for segment '{placement.Id}'." }));
+        }
+        if (audio.Length > DubExportPlanner.MaxAudioBytesPerSegment)
+        {
+            return (null, Results.BadRequest(new { error = $"Winning audio for segment '{placement.Id}' exceeds the per-segment export limit." }));
+        }
+        return totalAudioBytes + audio.Length <= DubExportPlanner.MaxTotalAudioBytes
+            ? (audio, null)
+            : (null, Results.BadRequest(new { error = "Winner audio exceeds the total export limit." }));
+    }
+
+    private static async Task<IResult> RenderExportAsync(
+        IDubExportService exportService,
+        IFormFile video,
+        string[] expectedIds,
+        DubExportSegmentInput[] segments,
+        CancellationToken ct)
+    {
         try
         {
             await using Stream videoStream = video.OpenReadStream();
-            Stream rendered = await exportService.RenderAsync(videoStream, video.FileName, expectedIds, segments, ct).ConfigureAwait(false);
+            var exportRequest = new DubExportRequest(videoStream, Path.GetFileName(video.FileName), expectedIds, segments);
+            Stream rendered = await exportService.RenderAsync(exportRequest, ct).ConfigureAwait(false);
             return Results.Stream(rendered, "video/mp4", "trackdub-dub.mp4");
         }
         catch (ArgumentException ex)
@@ -333,15 +425,37 @@ internal static class ApiEndpoints
             return Results.BadRequest(new { error = "Request must include a non-empty WAV file in the 'audio' field." });
         }
 
+        byte[] audioBytes;
+        await using (Stream uploaded = audio.OpenReadStream())
+        using (var buffer = new MemoryStream())
+        {
+            await uploaded.CopyToAsync(buffer, ct).ConfigureAwait(false);
+            audioBytes = buffer.ToArray();
+        }
+
+        string? formatError = WavAudioFormat.ValidateForTranscription(audioBytes);
+        if (formatError is not null)
+        {
+            return Results.BadRequest(new { error = formatError });
+        }
+
         return await ApiHandlers.GuardAsync(async () =>
         {
-            await using Stream stream = audio.OpenReadStream();
+            await using Stream stream = new MemoryStream(audioBytes, writable: false);
             TranscribeResult result = await transcribeService.TranscribeAsync(stream, audio.FileName, ct).ConfigureAwait(false);
             return Results.Json(result);
         }).ConfigureAwait(false);
     }
 
-    internal static async Task<IResult> PipelineAsync(HttpRequest request, MetaClient client, IMuseTranscribeClient transcribeClient, ITtsProvider tts, CancellationToken ct)
+    internal static async Task<IResult> PipelineAsync(
+        HttpRequest request,
+        MetaClient client,
+        IMuseTranscribeClient transcribeClient,
+        ITtsProvider tts,
+        PipelineIdempotencyStore idempotency,
+        AuditionAudioStore audioStore,
+        IHostApplicationLifetime lifetime,
+        CancellationToken ct)
     {
         var (req, readError) = await ApiHandlers.ReadOrBadRequestAsync(() => ReadPipelineRequestAsync(request, ct));
         if (readError is not null)
@@ -371,8 +485,43 @@ internal static class ApiEndpoints
 
         var pipelineRequest = ToPipelineRequest(req, audio, from, to);
 
-        return await ApiHandlers.RunSerializedAsync(
-            () => ApiHandlers.RunPipelineWithReasoningAsync(client, transcribeClient, tts, options, pipelineRequest, ct), ct).ConfigureAwait(false);
+        string? idempotencyKey = request.Headers["Idempotency-Key"].FirstOrDefault();
+        if (idempotencyKey is not null && !PipelineIdempotencyStore.TryParseKey(idempotencyKey, out _))
+        {
+            return Results.BadRequest(new { error = "Idempotency-Key must be a timestamped UUID." });
+        }
+
+        if (idempotencyKey is null)
+        {
+            return await RunPipelineAsync(ct).ConfigureAwait(false);
+        }
+
+        string fingerprint = BuildPipelineFingerprint(req, audio);
+        return await idempotency.RunAsync(idempotencyKey, fingerprint, () => RunPipelineAsync(lifetime.ApplicationStopping)).ConfigureAwait(false);
+
+        Task<IResult> RunPipelineAsync(CancellationToken runCt)
+        {
+            return ApiHandlers.RunSerializedAsync(
+                () => ApiHandlers.RunPipelineWithReasoningAsync(client, transcribeClient, tts, options, pipelineRequest, audioStore, runCt), runCt);
+        }
+    }
+
+    internal static IResult AuditionAudio(string id, AuditionAudioStore audioStore)
+    {
+        string? path = audioStore.ResolvePath(id);
+        return path is null
+            ? Results.NotFound(new { error = "Audition audio is unavailable or expired." })
+            : Results.File(path, "audio/wav", enableRangeProcessing: true);
+    }
+
+    private static string BuildPipelineFingerprint(PipelineApiRequest request, byte[]? audio)
+    {
+        byte[] metadata = JsonSerializer.SerializeToUtf8Bytes(request with { AudioBase64 = null }, RequestParsing.JsonOptionsWeb);
+        byte[] audioHash = audio is null ? [] : SHA256.HashData(audio);
+        byte[] combined = new byte[metadata.Length + audioHash.Length];
+        metadata.CopyTo(combined, 0);
+        audioHash.CopyTo(combined, metadata.Length);
+        return Convert.ToHexString(SHA256.HashData(combined));
     }
 
     private static PipelineRequest ToPipelineRequest(PipelineApiRequest req, byte[]? audio, string from, string to)
@@ -387,7 +536,8 @@ internal static class ApiEndpoints
             TargetLanguage: to,
             AudioFileName: req.AudioFileName,
             SpeedRetake: req.SpeedRetake,
-            EmotionTags: req.EmotionTags);
+            EmotionTags: req.EmotionTags,
+            SpeakerMapping: req.SpeakerMapping);
     }
 
     // Validates audio/segments/scene input; decodes audio when present. Returns an error message or null.
@@ -401,6 +551,10 @@ internal static class ApiEndpoints
             {
                 return audioError;
             }
+        if (audio is not null && WavAudioFormat.ValidateForTranscription(audio) is { } formatError)
+        {
+            return formatError;
+        }
         }
 
         string? segmentError = audio is null ? ValidatePipelineSegments(req.Segments) : null;

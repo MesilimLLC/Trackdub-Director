@@ -89,7 +89,7 @@ public sealed class VisualLocalisationServiceTests
         // Crop sent to the model is the box plus 20px padding: (10,0)-(80,70).
         Assert.Equal((70, 70), fake.LastCropSize);
         Assert.Equal(
-            "replace the text \"COFFEE SHOP\" on the shop door sign with \"CAFETERÍA\", preserve everything else in the image exactly",
+            "replace the visible sign text \"COFFEE SHOP\" with \"CAFETERÍA\", preserving everything else in the image exactly",
             fake.LastInstruction);
         Assert.Equal(VisualLocalisationStatus.Localised, result.Status);
         Assert.Equal(0, result.OutsideBoxDiff);
@@ -218,6 +218,26 @@ public sealed class VisualLocalisationServiceTests
             Assert.Equal(VisualLocalisationStatus.Failed, result.Segments[0].Status);
             Assert.Contains("PNG, JPEG, or WebP", result.Segments[0].Error ?? string.Empty);
         }
+    }
+
+    [Fact]
+    public async Task Declared_image_type_must_match_payload_signature()
+    {
+        var fake = new FakeImageClient(crop => new MuseImageEditResult(crop, "muse-image-1.0", null, null));
+        var service = new VisualLocalisationService(fake);
+        string dataUrl = "data:image/png;base64," + Convert.ToBase64String(new byte[] { 0xFF, 0xD8, 0xFF, 0x00 });
+        var input = new VisualLocalisationSegmentInput(
+            "seg-1",
+            dataUrl,
+            new LocalisationBox(10, 10, 40, 40),
+            "COFFEE SHOP",
+            "CAFETERÍA");
+
+        VisualLocalisationBatch result = await service.RunAsync([input]);
+
+        Assert.Equal(0, fake.Calls);
+        Assert.Equal(VisualLocalisationStatus.Failed, result.Segments[0].Status);
+        Assert.Contains("do not match the declared", result.Segments[0].Error ?? string.Empty);
     }
 
     [Fact]

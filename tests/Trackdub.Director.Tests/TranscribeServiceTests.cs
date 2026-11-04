@@ -66,14 +66,24 @@ public sealed class TranscribeServiceTests
         Assert.Equal("seg-001", first.Id);
         Assert.Equal("Hi, Ashley.", first.Text);
         Assert.Equal(1.2, first.DurationSeconds);
-        Assert.Equal(0.06, first.StartSeconds);
         Assert.Equal("A", first.Speaker);
 
         TranscribeSegment second = result.Segments[1];
         Assert.Equal("seg-002", second.Id);
         Assert.Equal(4.4, second.DurationSeconds);
-        Assert.Equal(1.66, second.StartSeconds);
         Assert.Equal("B", second.Speaker);
+    }
+
+    [Fact]
+    public async Task Turns_preserve_asr_start_times()
+    {
+        var fake = new FakeTranscribeClient(CannedRaw());
+        var service = new TranscribeService(fake);
+
+        TranscribeResult result = await service.TranscribeAsync(new MemoryStream([1]), "clip.wav");
+
+        Assert.Equal(0.06, result.Segments[0].StartSeconds);
+        Assert.Equal(1.66, result.Segments[1].StartSeconds);
     }
 
     [Fact]
@@ -156,6 +166,65 @@ public sealed class TranscribeServiceTests
         Assert.Contains("\"audioEncoding\":\"WAV\"", seenBody, StringComparison.Ordinal);
         Assert.Equal(2, raw.Turns.Length);
         Assert.Equal("B", raw.Turns[1].Speaker);
+    }
+
+    [Fact]
+    public async Task Client_retries_transient_responses_but_keeps_ambiguous_timeout_single_shot()
+    {
+        using var key = EnvShim(MetaAuth.PrimaryApiKeyEnv, "test-fake-key");
+        int calls = 0;
+        var handler = new DelegatingHandlerStub((_, _) =>
+        {
+            calls++;
+            if (calls == 1)
+            {
+                var limited = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+                limited.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.Zero);
+                return Task.FromResult(limited);
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(CannedBody, Encoding.UTF8, "application/json"),
+            });
+        });
+        var client = new MuseTranscribeClient(new HttpClient(handler));
+
+        _ = await client.TranscribeAsync(new MemoryStream([82, 73, 70, 70]), "clip.wav");
+        Assert.Equal(2, calls);
+
+        int serverErrorCalls = 0;
+        var serverErrorHandler = new DelegatingHandlerStub((_, _) =>
+        {
+            serverErrorCalls++;
+            if (serverErrorCalls == 1)
+            {
+                var unavailable = new HttpResponseMessage(HttpStatusCode.InternalServerError);
+                unavailable.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.Zero);
+                return Task.FromResult(unavailable);
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(CannedBody, Encoding.UTF8, "application/json"),
+            });
+        });
+        var serverErrorClient = new MuseTranscribeClient(new HttpClient(serverErrorHandler));
+        _ = await serverErrorClient.TranscribeAsync(new MemoryStream([82, 73, 70, 70]), "clip.wav");
+        Assert.Equal(2, serverErrorCalls);
+
+        int timeoutCalls = 0;
+        var timeoutHandler = new DelegatingHandlerStub((_, _) =>
+        {
+            timeoutCalls++;
+            throw new TaskCanceledException("ambiguous timeout");
+        });
+        var timeoutClient = new MuseTranscribeClient(new HttpClient(timeoutHandler));
+        MetaApiException timeout = await Assert.ThrowsAsync<MetaApiException>(
+            () => timeoutClient.TranscribeAsync(new MemoryStream([82, 73, 70, 70]), "clip.wav"));
+
+        Assert.Contains("outcome is unknown", timeout.Message, StringComparison.Ordinal);
+        Assert.Equal(1, timeoutCalls);
     }
 
     [Theory]
