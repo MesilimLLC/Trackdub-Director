@@ -72,7 +72,17 @@ public sealed class EmotionTagTests
         }
     }
 
-    private sealed record TagScenario(EmotionTagOptions Options, string? Label);
+    private sealed record TagScenario(EmotionTagOptions Options)
+    {
+        public string? Label { get; init; }
+    }
+
+    private sealed record ModelCase
+    {
+        public string ModelId { get; init; } = string.Empty;
+
+        public bool Tagged { get; init; }
+    }
 
     private static async Task<AuditionReport> RunAsync(FakeTagTts tts, TagScenario scenario)
     {
@@ -94,7 +104,7 @@ public sealed class EmotionTagTests
     public async Task Tag_is_prepended_at_synthesis_only_on_tag_honoring_models()
     {
         var tts = new FakeTagTts(supportsTags: true);
-        AuditionReport report = await RunAsync(tts, new TagScenario(new EmotionTagOptions(Enabled: true), "cheerful"));
+        AuditionReport report = await RunAsync(tts, new TagScenario(new EmotionTagOptions(Enabled: true)) { Label = "cheerful" });
 
         AuditionTakeReport take = Assert.Single(report.Segments[0].Takes, t => t.Synthesized);
         Assert.Equal("[cheerfully]", take.EmotionTag);
@@ -108,22 +118,7 @@ public sealed class EmotionTagTests
     public async Task Tag_is_never_sent_to_a_model_that_would_speak_it()
     {
         var tts = new FakeTagTts(supportsTags: false);
-        AuditionReport report = await RunAsync(tts, new TagScenario(new EmotionTagOptions(Enabled: true), "cheerful"));
-
-        AuditionTakeReport take = Assert.Single(report.Segments[0].Takes, t => t.Synthesized);
-        Assert.Null(take.EmotionTag);
-        Assert.Equal("Hola, Ashley.", tts.Texts[0]);
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("neutral")]
-    [InlineData("contemplative")] // unmappable: never invent a tag
-    public async Task No_tag_without_a_mappable_label(string? label)
-    {
-        var tts = new FakeTagTts(supportsTags: true);
-        AuditionReport report = await RunAsync(tts, new TagScenario(new EmotionTagOptions(Enabled: true), label));
+        AuditionReport report = await RunAsync(tts, new TagScenario(new EmotionTagOptions(Enabled: true)) { Label = "cheerful" });
 
         AuditionTakeReport take = Assert.Single(report.Segments[0].Takes, t => t.Synthesized);
         Assert.Null(take.EmotionTag);
@@ -131,10 +126,25 @@ public sealed class EmotionTagTests
     }
 
     [Fact]
+    public async Task No_tag_without_a_mappable_label()
+    {
+        string?[] labels = [null, "", "neutral", "contemplative"];
+        foreach (string? label in labels)
+        {
+            var tts = new FakeTagTts(supportsTags: true);
+            AuditionReport report = await RunAsync(tts, new TagScenario(new EmotionTagOptions(Enabled: true)) { Label = label });
+
+            AuditionTakeReport take = Assert.Single(report.Segments[0].Takes, t => t.Synthesized);
+            Assert.Null(take.EmotionTag);
+            Assert.Equal("Hola, Ashley.", tts.Texts[0]);
+        }
+    }
+
+    [Fact]
     public async Task Default_applies_tags_since_adoption_and_disabled_does_not()
     {
         var first = new FakeTagTts(supportsTags: true);
-        AuditionReport disabled = await RunAsync(first, new TagScenario(EmotionTagOptions.Disabled, "cheerful"));
+        AuditionReport disabled = await RunAsync(first, new TagScenario(EmotionTagOptions.Disabled) { Label = "cheerful" });
         Assert.All(disabled.Segments[0].Takes, t => Assert.Null(t.EmotionTag));
 
         var second = new FakeTagTts(supportsTags: true);
@@ -155,17 +165,24 @@ public sealed class EmotionTagTests
         Assert.Equal("[cheerfully]", baselineTake.EmotionTag);
     }
 
-    [Theory]
-    [InlineData("cheerful", "[cheerfully]")]
-    [InlineData("Warm, friendly tone", "[warmly]")]
-    [InlineData("surprised realization", "[surprised]")]
-    [InlineData("A curious question", "[curiously]")]
-    [InlineData("sheepish", "[sheepishly]")]
-    [InlineData("melancholy", "[melancholically]")]
-    [InlineData("deadpan delivery", "[deadpan]")]
-    public void Label_mapping_covers_probe_labels(string label, string expected)
+    [Fact]
+    public void Label_mapping_covers_probe_labels()
     {
-        Assert.Equal(expected, EmotionTagMap.ForLabel(label));
+        (string Label, string Expected)[] cases =
+        [
+            ("cheerful", "[cheerfully]"),
+            ("Warm, friendly tone", "[warmly]"),
+            ("surprised realization", "[surprised]"),
+            ("A curious question", "[curiously]"),
+            ("sheepish", "[sheepishly]"),
+            ("melancholy", "[melancholically]"),
+            ("deadpan delivery", "[deadpan]"),
+        ];
+
+        foreach ((string label, string expected) in cases)
+        {
+            Assert.Equal(expected, EmotionTagMap.ForLabel(label));
+        }
     }
 
     [Fact]
@@ -176,14 +193,14 @@ public sealed class EmotionTagTests
         Assert.Empty(EmotionTagMap.TagsForLabel("contemplative"));
     }
 
-    [Theory]
-    [InlineData("unhappy")] // keyword inside a larger word: never matches
-    [InlineData("not happy")] // negated keyword: never matches
-    [InlineData("no joyful mood")]
-    [InlineData("neutral")] // neutral maps to nothing by itself
-    public void Keyword_inside_a_word_or_negated_maps_to_no_tag(string label)
+    [Fact]
+    public void Keyword_inside_a_word_or_negated_maps_to_no_tag()
     {
-        Assert.Null(EmotionTagMap.ForLabel(label));
+        string[] labels = ["unhappy", "not happy", "no joyful mood", "neutral"];
+        foreach (string label in labels)
+        {
+            Assert.Null(EmotionTagMap.ForLabel(label));
+        }
     }
 
     [Fact]
@@ -217,10 +234,7 @@ public sealed class EmotionTagTests
         Assert.Equal("Hola, Ashley.", take.Text);
     }
 
-    [Theory]
-    [InlineData("eleven_v3", true)]
-    [InlineData("eleven_multilingual_v2", false)]
-    public async Task Real_provider_model_id_decides_tag_at_synthesis(string modelId, bool tagged)
+    private static async Task AssertModelTagAsync(ModelCase modelCase)
     {
         var handler = new HandlerStub(async (request, cancellationToken) =>
         {
@@ -236,7 +250,7 @@ public sealed class EmotionTagTests
             // 1.0 s of raw PCM mono 16-bit at 16 kHz, accepted as audio by the provider.
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[16000 * 2]) };
         });
-        using var provider = new ElevenLabsTtsProvider(new HttpClient(handler), modelId);
+        using var provider = new ElevenLabsTtsProvider(new HttpClient(handler), modelCase.ModelId);
 
         string? previousMeta = Environment.GetEnvironmentVariable(MetaAuth.PrimaryApiKeyEnv);
         string? previousEleven = Environment.GetEnvironmentVariable(ElevenLabsAuth.ApiKeyEnv);
@@ -249,7 +263,7 @@ public sealed class EmotionTagTests
                 [new AuditionSegmentInput("seg-1", "Hi Ashley!", 2.0, "anna", "cheerful")], "en", "es");
 
             AuditionTakeReport take = Assert.Single(report.Segments[0].Takes, t => t.Synthesized);
-            if (tagged)
+            if (modelCase.Tagged)
             {
                 Assert.Equal("[cheerfully]", take.EmotionTag);
             }
@@ -265,15 +279,37 @@ public sealed class EmotionTagTests
         }
     }
 
-    [Theory]
-    [InlineData("eleven_v3", true)]
-    [InlineData("eleven_v4", true)]
-    [InlineData("eleven_v4_turbo", false)]
-    [InlineData("eleven_multilingual_v2", false)]
-    [InlineData("eleven_flash_v2_5", false)]
-    public void ElevenLabs_tag_support_is_v3_and_v4_only(string modelId, bool expected)
+    [Fact]
+    public async Task Real_provider_model_id_decides_tag_at_synthesis()
     {
-        using var provider = new ElevenLabsTtsProvider(new HttpClient(), modelId);
-        Assert.Equal(expected, provider.SupportsEmotionTags(modelId));
+        ModelCase[] cases =
+        [
+            new() { ModelId = "eleven_v3", Tagged = true },
+            new() { ModelId = "eleven_multilingual_v2", Tagged = false },
+        ];
+
+        foreach (ModelCase modelCase in cases)
+        {
+            await AssertModelTagAsync(modelCase);
+        }
+    }
+
+    [Fact]
+    public void ElevenLabs_tag_support_is_v3_and_v4_only()
+    {
+        (string ModelId, bool Expected)[] cases =
+        [
+            ("eleven_v3", true),
+            ("eleven_v4", true),
+            ("eleven_v4_turbo", false),
+            ("eleven_multilingual_v2", false),
+            ("eleven_flash_v2_5", false),
+        ];
+
+        foreach ((string modelId, bool expected) in cases)
+        {
+            using var provider = new ElevenLabsTtsProvider(new HttpClient(), modelId);
+            Assert.Equal(expected, provider.SupportsEmotionTags(modelId));
+        }
     }
 }

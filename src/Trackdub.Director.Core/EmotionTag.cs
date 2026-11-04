@@ -18,6 +18,92 @@ public sealed record EmotionTagOptions(
     public static readonly EmotionTagOptions EnabledDefault = new(true);
 }
 
+public readonly record struct EmotionLabel
+{
+    internal string? Normalized { get; init; }
+
+    public bool IsEmpty => string.IsNullOrEmpty(Normalized);
+
+    public static implicit operator EmotionLabel(string? value)
+        => new() { Normalized = value?.Trim().ToLowerInvariant() };
+
+    internal string? FirstMatch((string Keyword, string Tag)[] map)
+        => new LabelScanner(this, map).FirstMatch();
+
+    private sealed class LabelScanner(EmotionLabel label, (string Keyword, string Tag)[] map)
+    {
+        private static readonly string[] Negators = ["not", "no", "never", "without"];
+
+        private readonly string _text = label.Normalized ?? string.Empty;
+        private readonly (string Keyword, string Tag)[] _map = map;
+
+        public string? FirstMatch()
+        {
+            foreach (var entry in _map)
+            {
+                if (HasUnnegatedWholeWord(entry))
+                {
+                    return entry.Tag;
+                }
+            }
+
+            return null;
+        }
+
+        private bool HasUnnegatedWholeWord((string Keyword, string Tag) entry)
+        {
+            int index = _text.IndexOf(entry.Keyword, StringComparison.Ordinal);
+            while (index >= 0)
+            {
+                var occurrence = new WordOccurrence { Start = index, Length = entry.Keyword.Length };
+                if (IsWholeWordAt(occurrence) && !IsNegatedAt(occurrence))
+                {
+                    return true;
+                }
+
+                index = _text.IndexOf(entry.Keyword, index + 1, StringComparison.Ordinal);
+            }
+
+            return false;
+        }
+
+        private bool IsWholeWordAt(WordOccurrence occurrence)
+        {
+            bool startOk = occurrence.Start == 0
+                || !(char.IsLetterOrDigit(_text[occurrence.Start - 1]) || _text[occurrence.Start - 1] is '-' or '_');
+            int end = occurrence.Start + occurrence.Length;
+            bool endOk = end == _text.Length
+                || !(char.IsLetterOrDigit(_text[end]) || _text[end] is '-' or '_');
+            return startOk && endOk;
+        }
+
+        private bool IsNegatedAt(WordOccurrence occurrence)
+        {
+            int wordEnd = occurrence.Start;
+            while (wordEnd > 0 && _text[wordEnd - 1] == ' ')
+            {
+                wordEnd--;
+            }
+
+            int wordStart = wordEnd;
+            while (wordStart > 0 && _text[wordStart - 1] != ' ')
+            {
+                wordStart--;
+            }
+
+            string preceding = _text[wordStart..wordEnd];
+            return Negators.Contains(preceding, StringComparer.Ordinal);
+        }
+
+        private sealed class WordOccurrence
+        {
+            public int Start { get; init; }
+
+            public int Length { get; init; }
+        }
+    }
+}
+
 /// <summary>
 /// Maps a free-text detected delivery label (emotion, pacing, pauses, as
 /// extracted by the scene/Director Muse passes) to provider audio tags.
@@ -109,85 +195,22 @@ public static class EmotionTagMap
     /// "unhappy" or "not happy" never maps to "[happily]" and a neutral
     /// emotion label still lets a pacing label through (e.g. "neutral, brisk").
     /// </summary>
-    public static IReadOnlyList<string> TagsForLabel(string? emotionToneLabel)
+    public static IReadOnlyList<string> TagsForLabel(EmotionLabel label)
     {
-        if (string.IsNullOrWhiteSpace(emotionToneLabel))
+        if (label.IsEmpty)
         {
             return [];
         }
 
-        string normalized = emotionToneLabel.Trim().ToLowerInvariant();
-        string? emotion = FirstMatch(normalized, EmotionMap);
-        string? pacing = FirstMatch(normalized, PacingMap);
+        string? emotion = label.FirstMatch(EmotionMap);
+        string? pacing = label.FirstMatch(PacingMap);
         return new[] { emotion, pacing }.Where(t => t is not null).Cast<string>().ToArray();
     }
 
     /// <summary>The single joined tag string for a label, or null when unmappable.</summary>
-    public static string? ForLabel(string? emotionToneLabel)
+    public static string? ForLabel(EmotionLabel label)
     {
-        IReadOnlyList<string> tags = TagsForLabel(emotionToneLabel);
+        IReadOnlyList<string> tags = TagsForLabel(label);
         return tags.Count == 0 ? null : string.Join(" ", tags);
-    }
-
-    private static readonly string[] Negators = ["not", "no", "never", "without"];
-
-    private static string? FirstMatch(string normalized, (string Keyword, string Tag)[] map)
-    {
-        foreach ((string keyword, string tag) in map)
-        {
-            if (HasUnnegatedWholeWord(normalized, keyword))
-            {
-                return tag;
-            }
-        }
-
-        return null;
-    }
-
-    // A keyword counts only when it appears as a whole word (never inside
-    // "unhappy") and when no negator directly precedes it ("not happy" is not
-    // a happy line). Keywords and text are already lowercase.
-    private static bool HasUnnegatedWholeWord(string text, string keyword)
-    {
-        int index = text.IndexOf(keyword, StringComparison.Ordinal);
-        while (index >= 0)
-        {
-            if (IsWholeWord(text, index, keyword.Length) && !IsNegated(text, index))
-            {
-                return true;
-            }
-
-            index = text.IndexOf(keyword, index + 1, StringComparison.Ordinal);
-        }
-
-        return false;
-    }
-
-    private static bool IsWholeWord(string text, int start, int length)
-    {
-        bool startOk = start == 0 || !IsWordChar(text[start - 1]);
-        int end = start + length;
-        return startOk && (end == text.Length || !IsWordChar(text[end]));
-    }
-
-    private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c is '-' or '_';
-
-    // The word immediately before the keyword occurrence, when it is a negator.
-    private static bool IsNegated(string text, int index)
-    {
-        int wordEnd = index;
-        while (wordEnd > 0 && text[wordEnd - 1] == ' ')
-        {
-            wordEnd--;
-        }
-
-        int wordStart = wordEnd;
-        while (wordStart > 0 && text[wordStart - 1] != ' ')
-        {
-            wordStart--;
-        }
-
-        string preceding = text[wordStart..wordEnd];
-        return Negators.Contains(preceding, StringComparer.Ordinal);
     }
 }
