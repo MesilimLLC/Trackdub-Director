@@ -97,14 +97,18 @@ export function useSegments(onReset: () => void, setError: React.Dispatch<React.
   const [segments, setSegments] = useState<SegmentInput[]>(() => sampleSegments as SegmentInput[]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Bumped on every load so a slow file read cannot overwrite a newer load.
+  const segmentsRequestRef = useRef(0);
 
   const loadSegments = useCallback((next: SegmentInput[]) => {
+    segmentsRequestRef.current++;
     setSegments(next);
     setError(null);
     onReset();
   }, [onReset, setError]);
 
   const handleLoadSample = useCallback(() => {
+    segmentsRequestRef.current++;
     setSegments(sampleSegments as SegmentInput[]);
     setError(null);
     onReset();
@@ -112,10 +116,14 @@ export function useSegments(onReset: () => void, setError: React.Dispatch<React.
 
   const handleFile = useCallback(async (file: File) => {
     setError(null);
+    const requestId = ++segmentsRequestRef.current;
     try {
-      setSegments(parseSegments(await file.text()));
+      const parsed = parseSegments(await file.text());
+      if (requestId !== segmentsRequestRef.current) return;
+      setSegments(parsed);
       onReset();
     } catch (e) {
+      if (requestId !== segmentsRequestRef.current) return;
       setError(errorMessage(e));
     }
   }, [onReset, setError]);
