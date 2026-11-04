@@ -283,9 +283,29 @@ internal static class ApiEndpoints
             return segmentError;
         }
 
-        return req.SceneSegments is { Count: > 0 } sceneSegments
-            ? ValidateSceneSegments(sceneSegments.ToArray())
-            : null;
+        return ValidatePipelineScene(req.SceneSegments);
+    }
+
+    // Framed scene results are matched back to lines by id, so duplicate framed ids would
+    // hand an earlier line a later line's scene context.
+    private static string? ValidatePipelineScene(IReadOnlyList<SceneSegmentInput>? sceneSegments)
+    {
+        if (sceneSegments is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        string? sceneError = ValidateSceneSegments(sceneSegments.ToArray());
+        if (sceneError is not null)
+        {
+            return sceneError;
+        }
+
+        bool hasDuplicateFramedId = sceneSegments
+            .Where(s => !string.IsNullOrWhiteSpace(s.FrameImageDataUrl))
+            .GroupBy(s => s.Id, StringComparer.Ordinal)
+            .Any(g => g.Count() > 1);
+        return hasDuplicateFramedId ? "Framed scene segment ids must be unique." : null;
     }
 
     private static string? TryDecodeAudio(string base64, out byte[]? audio)

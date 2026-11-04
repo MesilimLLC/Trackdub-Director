@@ -210,4 +210,26 @@ public sealed class PipelineEndpointTests
 
         Assert.Equal(HttpStatusCode.BadRequest, status);
     }
+
+    [Fact]
+    public async Task Pipeline_rejects_duplicate_framed_scene_segment_ids()
+    {
+        using var auth = FakeAuth();
+        using var factory = new ServerFactory(new DelegatingHandlerStub((_, _) => Task.FromResult(UpstreamError(HttpStatusCode.InternalServerError))));
+        using HttpClient client = factory.CreateClient();
+
+        const string body = """
+            {
+              "segments": [{ "id": "seg-001", "text": "Hi.", "duration_seconds": 1.0 }],
+              "scene_segments": [
+                { "id": "seg-001", "frame_image_data_url": "data:image/png;base64,iVBORw0KGgo=" },
+                { "id": "seg-001", "frame_image_data_url": "data:image/png;base64,iVBORw0KGgo=" }
+              ]
+            }
+            """;
+        (HttpStatusCode status, JsonElement root) = await PostRawAsync(client, "/api/pipeline", body);
+
+        Assert.Equal(HttpStatusCode.BadRequest, status);
+        Assert.Contains("unique", root.GetProperty("error").GetString(), StringComparison.Ordinal);
+    }
 }
