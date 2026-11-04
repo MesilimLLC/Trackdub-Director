@@ -28,11 +28,11 @@ public sealed class PacingExtractionTests
     }
 
     [Theory]
-    [InlineData("brisk", "[briskly]")]
-    [InlineData("halting with pauses", "[pauses]")]
-    [InlineData("halting", "[hesitantly]")]
-    [InlineData("unhurried", "[slowly]")]
-    public void Pacing_keywords_map_to_pacing_tags(string label, string expected)
+    [InlineData("brisk", "[brisk]")]
+    [InlineData("halting with pauses", "[halting with pauses]")]
+    [InlineData("halting", "[halting]")]
+    [InlineData("unhurried", "[unhurried]")]
+    public void Pacing_labels_pass_through_as_tags(string label, string expected)
     {
         Assert.Equal(expected, EmotionTagMap.ForLabel(label));
     }
@@ -41,7 +41,7 @@ public sealed class PacingExtractionTests
     public void Emotion_and_pacing_labels_combine_into_one_tag_string()
     {
         string combined = string.Join(", ", new[] { "cheerful", "unhurried, with pauses" });
-        Assert.Equal("[cheerfully] [slowly]", EmotionTagMap.ForLabel(combined));
+        Assert.Equal("[cheerful, unhurried, with pauses]", EmotionTagMap.ForLabel(combined));
     }
 
     [Fact]

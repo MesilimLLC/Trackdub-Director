@@ -107,8 +107,8 @@ public sealed class EmotionTagTests
         AuditionReport report = await RunAsync(tts, new TagScenario(new EmotionTagOptions(Enabled: true)) { Label = "cheerful" });
 
         AuditionTakeReport take = Assert.Single(report.Segments[0].Takes, t => t.Synthesized);
-        Assert.Equal("[cheerfully]", take.EmotionTag);
-        Assert.Equal("[cheerfully] Hola, Ashley.", tts.Texts[0]);
+        Assert.Equal("[cheerful]", take.EmotionTag);
+        Assert.Equal("[cheerful] Hola, Ashley.", tts.Texts[0]);
         // The gated text is byte-identical: no tag in the take text.
         Assert.Equal("Hola, Ashley.", take.Text);
         Assert.Equal(MeaningVerdict.Pass, take.MeaningVerdict);
@@ -126,9 +126,9 @@ public sealed class EmotionTagTests
     }
 
     [Fact]
-    public async Task No_tag_without_a_mappable_label()
+    public async Task No_tag_without_a_label()
     {
-        string?[] labels = [null, "", "neutral", "contemplative"];
+        string?[] labels = [null, "", "   "];
         foreach (string? label in labels)
         {
             var tts = new FakeTagTts(supportsTags: true);
@@ -162,21 +162,21 @@ public sealed class EmotionTagTests
         }
 
         AuditionTakeReport baselineTake = Assert.Single(baseline.Segments[0].Takes, t => t.Synthesized);
-        Assert.Equal("[cheerfully]", baselineTake.EmotionTag);
+        Assert.Equal("[cheerful]", baselineTake.EmotionTag);
     }
 
     [Fact]
-    public void Label_mapping_covers_probe_labels()
+    public void Labels_pass_through_in_their_own_words()
     {
         (string Label, string Expected)[] cases =
         [
-            ("cheerful", "[cheerfully]"),
-            ("Warm, friendly tone", "[warmly]"),
-            ("surprised realization", "[surprised]"),
-            ("A curious question", "[curiously]"),
-            ("sheepish", "[sheepishly]"),
-            ("melancholy", "[melancholically]"),
-            ("deadpan delivery", "[deadpan]"),
+            ("cheerful", "[cheerful]"),
+            ("Warm, friendly tone", "[Warm, friendly tone]"),
+            ("surprised realization", "[surprised realization]"),
+            ("A curious question", "[A curious question]"),
+            ("sheepish", "[sheepish]"),
+            ("melancholy", "[melancholy]"),
+            ("deadpan delivery", "[deadpan delivery]"),
         ];
 
         foreach ((string label, string expected) in cases)
@@ -186,17 +186,20 @@ public sealed class EmotionTagTests
     }
 
     [Fact]
-    public void Emotion_and_pacing_keywords_combine()
+    public void Combined_label_passes_through_as_one_grouped_tag()
     {
-        Assert.Equal("[warmly] [slowly]", EmotionTagMap.ForLabel("warm, unhurried"));
-        Assert.Equal("[pauses]", EmotionTagMap.ForLabel("with long pauses"));
-        Assert.Empty(EmotionTagMap.TagsForLabel("contemplative"));
+        Assert.Equal("[warm, unhurried]", EmotionTagMap.ForLabel("warm, unhurried"));
+        Assert.Equal("[with long pauses]", EmotionTagMap.ForLabel("with long pauses"));
+        Assert.Equal("[contemplative]", EmotionTagMap.ForLabel("contemplative"));
     }
 
     [Fact]
-    public void Keyword_inside_a_word_or_negated_maps_to_no_tag()
+    public void Sanitization_is_mechanical_only()
     {
-        string[] labels = ["unhappy", "not happy", "no joyful mood", "neutral"];
+        Assert.Equal("[cheerful]", EmotionTagMap.ForLabel("[cheerful]"));
+        Assert.Equal("[warm and friendly]", EmotionTagMap.ForLabel("  warm\n  and   friendly "));
+        Assert.Equal("[not happy]", EmotionTagMap.ForLabel("not happy"));
+        string[] labels = ["", "   ", "[]"];
         foreach (string label in labels)
         {
             Assert.Null(EmotionTagMap.ForLabel(label));
@@ -204,9 +207,9 @@ public sealed class EmotionTagTests
     }
 
     [Fact]
-    public void Neutral_emotion_label_still_lets_pacing_through()
+    public void Neutral_and_plain_labels_pass_through_too()
     {
-        Assert.Equal("[briskly]", EmotionTagMap.ForLabel("neutral, brisk"));
+        Assert.Equal("[neutral, brisk]", EmotionTagMap.ForLabel("neutral, brisk"));
     }
 
     [Fact]
@@ -228,8 +231,8 @@ public sealed class EmotionTagTests
         }
 
         AuditionTakeReport take = Assert.Single(report.Segments[0].Takes, t => t.Synthesized);
-        Assert.Equal("[cheerfully] [slowly]", take.EmotionTag);
-        Assert.Equal("[cheerfully] [slowly] Hola, Ashley.", tts.Texts[0]);
+        Assert.Equal("[cheerful, unhurried]", take.EmotionTag);
+        Assert.Equal("[cheerful, unhurried] Hola, Ashley.", tts.Texts[0]);
         // The gated text is byte-identical: no tag in the take text.
         Assert.Equal("Hola, Ashley.", take.Text);
     }
@@ -265,7 +268,7 @@ public sealed class EmotionTagTests
             AuditionTakeReport take = Assert.Single(report.Segments[0].Takes, t => t.Synthesized);
             if (modelCase.Tagged)
             {
-                Assert.Equal("[cheerfully]", take.EmotionTag);
+                Assert.Equal("[cheerful]", take.EmotionTag);
             }
             else
             {

@@ -1,0 +1,111 @@
+{
+  "model_id": "eleven_v4",
+  "source_report": "samples/voa10/pipeline-run/e2e-v4-scene-2026-11-02.json",
+  "total_elevenlabs_characters": 437,
+  "segments": [
+    {
+      "id": "voa10-001",
+      "text": "Hola Ashley.",
+      "voice_id": "Xb7hH8MSUJpSbSDYk0k2",
+      "voice_name": "Alice - Clear, Engaging Educator",
+      "variants": [
+        {
+          "kind": "mapped",
+          "tag": "[cheerfully]",
+          "synthesis_text": "[cheerfully] Hola Ashley.",
+          "file": "voa10-001-mapped.wav",
+          "measured_seconds": 1.36,
+          "characters": 25,
+          "wall_seconds": 1.02
+        },
+        {
+          "kind": "passthrough",
+          "tag": "[cheerful and animated]",
+          "synthesis_text": "[cheerful and animated] Hola Ashley.",
+          "file": "voa10-001-passthrough.wav",
+          "measured_seconds": 1.44,
+          "characters": 36,
+          "wall_seconds": 0.8
+        }
+      ]
+    },
+    {
+      "id": "voa10-002",
+      "text": "Anna, ¿cuál cafetería? Hay tres cafeterías.",
+      "voice_id": "hpp4J3VqNfWAUOO0d1Us",
+      "voice_name": "Bella - Professional, Bright, Warm",
+      "variants": [
+        {
+          "kind": "mapped",
+          "tag": "[briskly]",
+          "synthesis_text": "[briskly] Anna, ¿cuál cafetería? Hay tres cafeterías.",
+          "file": "voa10-002-mapped.wav",
+          "measured_seconds": 3.2,
+          "characters": 53,
+          "wall_seconds": 1.31
+        },
+        {
+          "kind": "passthrough",
+          "tag": "[animated and expressive, brisk with emphasis]",
+          "synthesis_text": "[animated and expressive, brisk with emphasis] Anna, ¿cuál cafetería? Hay tres cafeterías.",
+          "file": "voa10-002-passthrough.wav",
+          "measured_seconds": 3.36,
+          "characters": 90,
+          "wall_seconds": 1.58
+        }
+      ]
+    },
+    {
+      "id": "voa10-003",
+      "text": "Bueno, mi apartamento está frente a unos grandes almacenes.",
+      "voice_id": "Xb7hH8MSUJpSbSDYk0k2",
+      "voice_name": "Alice - Clear, Engaging Educator",
+      "variants": [
+        {
+          "kind": "mapped",
+          "tag": "[cheerfully]",
+          "synthesis_text": "[cheerfully] Bueno, mi apartamento está frente a unos grandes almacenes.",
+          "file": "voa10-003-mapped.wav",
+          "measured_seconds": 4.4,
+          "characters": 72,
+          "wall_seconds": 1.6
+        },
+        {
+          "kind": "passthrough",
+          "tag": "[cheerful, conversational]",
+          "synthesis_text": "[cheerful, conversational] Bueno, mi apartamento está frente a unos grandes almacenes.",
+          "file": "voa10-003-passthrough.wav",
+          "measured_seconds": 4.32,
+          "characters": 86,
+          "wall_seconds": 1.26
+        }
+      ]
+    },
+    {
+      "id": "voa10-006",
+      "text": "Vale. Nos vemos pronto.",
+      "voice_id": "hpp4J3VqNfWAUOO0d1Us",
+      "voice_name": "Bella - Professional, Bright, Warm",
+      "variants": [
+        {
+          "kind": "mapped",
+          "tag": null,
+          "synthesis_text": "Vale. Nos vemos pronto.",
+          "file": "voa10-006-mapped.wav",
+          "measured_seconds": 2.08,
+          "characters": 23,
+          "wall_seconds": 0.79
+        },
+        {
+          "kind": "passthrough",
+          "tag": "[engaged and conversational]",
+          "synthesis_text": "[engaged and conversational] Vale. Nos vemos pronto.",
+          "file": "voa10-006-passthrough.wav",
+          "measured_seconds": 2.24,
+          "characters": 52,
+          "wall_seconds": 0.9
+        }
+      ]
+    }
+  ]
+}
