@@ -415,6 +415,15 @@ function VisualBoxEditor({
   const [dragStart, setDragStart] = useState<PointerPoint | null>(null);
   const [draftBox, setDraftBox] = useState<LocalisationBox | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
+  const dragContext: VisualBoxDragContext = {
+    frameRef,
+    natural,
+    dragStart,
+    setDragStart,
+    setDraftBox,
+    onBox,
+    onError,
+  };
   const shownBox = draftBox ?? segment.box;
   if (!segment.frame_image_data_url) {
     return <div className="token-usage">Upload a frame to enable Scene visual context and the sign box editor.</div>;
@@ -426,9 +435,9 @@ function VisualBoxEditor({
         className="visual-editor"
         role="application"
         aria-label="Draw sign box"
-        onPointerDown={(event) => startBoxDrag(event, frameRef, natural, setDragStart, setDraftBox)}
-        onPointerMove={(event) => moveBoxDraft(event, frameRef, natural, dragStart, setDraftBox)}
-        onPointerUp={(event) => finishBoxDrag(event, frameRef, natural, dragStart, setDragStart, setDraftBox, onBox, onError)}
+        onPointerDown={(event) => startBoxDrag(event, dragContext)}
+        onPointerMove={(event) => moveBoxDraft(event, dragContext)}
+        onPointerUp={(event) => finishBoxDrag(event, dragContext)}
       >
         <img src={segment.frame_image_data_url} alt={`Frame for ${segment.id}`} draggable={false}
           onLoad={(e) => setNatural({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })} />
@@ -451,59 +460,47 @@ function VisualBoxEditor({
 
 type FrameElementRef = React.RefObject<HTMLDivElement | null>;
 type FrameSize = { width: number; height: number };
+type VisualBoxDragContext = {
+  frameRef: FrameElementRef;
+  natural: FrameSize | null;
+  dragStart: PointerPoint | null;
+  setDragStart: React.Dispatch<React.SetStateAction<PointerPoint | null>>;
+  setDraftBox: React.Dispatch<React.SetStateAction<LocalisationBox | null>>;
+  onBox: (box: LocalisationBox) => void;
+  onError: (message: string | null) => void;
+};
 
-function pointFromEvent(event: React.PointerEvent<HTMLDivElement>, frameRef: FrameElementRef, natural: FrameSize | null): PointerPoint | null {
-  const rect = frameRef.current?.getBoundingClientRect();
-  if (!rect || !natural) return null;
-  return pointerToOriginal(event.clientX, event.clientY, rect, natural);
+function pointFromEvent(event: React.PointerEvent<HTMLDivElement>, context: VisualBoxDragContext): PointerPoint | null {
+  const rect = context.frameRef.current?.getBoundingClientRect();
+  if (!rect || !context.natural) return null;
+  return pointerToOriginal(event.clientX, event.clientY, rect, context.natural);
 }
 
-function startBoxDrag(
-  event: React.PointerEvent<HTMLDivElement>,
-  frameRef: FrameElementRef,
-  natural: FrameSize | null,
-  setDragStart: React.Dispatch<React.SetStateAction<PointerPoint | null>>,
-  setDraftBox: React.Dispatch<React.SetStateAction<LocalisationBox | null>>,
-): void {
-  const point = pointFromEvent(event, frameRef, natural);
+function startBoxDrag(event: React.PointerEvent<HTMLDivElement>, context: VisualBoxDragContext): void {
+  const point = pointFromEvent(event, context);
   if (!point) return;
-  setDragStart(point);
-  setDraftBox(null);
+  context.setDragStart(point);
+  context.setDraftBox(null);
 }
 
-function moveBoxDraft(
-  event: React.PointerEvent<HTMLDivElement>,
-  frameRef: FrameElementRef,
-  natural: FrameSize | null,
-  dragStart: PointerPoint | null,
-  setDraftBox: React.Dispatch<React.SetStateAction<LocalisationBox | null>>,
-): void {
-  if (!dragStart || !natural) return;
-  const point = pointFromEvent(event, frameRef, natural);
+function moveBoxDraft(event: React.PointerEvent<HTMLDivElement>, context: VisualBoxDragContext): void {
+  if (!context.dragStart || !context.natural) return;
+  const point = pointFromEvent(event, context);
   if (!point) return;
-  setDraftBox(normalizeBox(dragStart, point, natural));
+  context.setDraftBox(normalizeBox(context.dragStart, point, context.natural));
 }
 
-function finishBoxDrag(
-  event: React.PointerEvent<HTMLDivElement>,
-  frameRef: FrameElementRef,
-  natural: FrameSize | null,
-  dragStart: PointerPoint | null,
-  setDragStart: React.Dispatch<React.SetStateAction<PointerPoint | null>>,
-  setDraftBox: React.Dispatch<React.SetStateAction<LocalisationBox | null>>,
-  onBox: (box: LocalisationBox) => void,
-  onError: (message: string | null) => void,
-): void {
-  if (!dragStart || !natural) return;
-  const point = pointFromEvent(event, frameRef, natural);
-  const box = point ? normalizeBox(dragStart, point, natural) : null;
-  setDragStart(null);
-  setDraftBox(null);
+function finishBoxDrag(event: React.PointerEvent<HTMLDivElement>, context: VisualBoxDragContext): void {
+  if (!context.dragStart || !context.natural) return;
+  const point = pointFromEvent(event, context);
+  const box = point ? normalizeBox(context.dragStart, point, context.natural) : null;
+  context.setDragStart(null);
+  context.setDraftBox(null);
   if (!box) {
-    onError("Sign box must be at least 8×8 original pixels.");
+    context.onError("Sign box must be at least 8×8 original pixels.");
     return;
   }
-  onBox(box);
+  context.onBox(box);
 }
 
 export function SegmentMediaEditor({
