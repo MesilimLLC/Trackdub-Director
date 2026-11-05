@@ -80,5 +80,4 @@ internal static class DubExportProcess
         try { await Task.WhenAll(stdout, stderr).ConfigureAwait(false); }
         catch (Exception) { }
     }
-
 }

@@ -28,5 +28,4 @@ public static partial class DubExportPlanner
         for (int i = 0; i < count; i++) inputs.Append(CultureInfo.InvariantCulture, $"[a{i}]");
         return $"{inputs}amix=inputs={count}:duration=longest:normalize=0:dropout_transition=0,atrim=0:{wholeDuration}[aout]";
     }
-
 }

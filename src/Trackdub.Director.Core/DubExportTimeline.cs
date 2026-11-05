@@ -92,5 +92,4 @@ public static partial class DubExportPlanner
     private static bool HasRiffHeader(WinnerAudio audio) => audio.Bytes.AsSpan(0, 4).SequenceEqual("RIFF"u8);
 
     private static bool HasWaveHeader(WinnerAudio audio) => audio.Bytes.AsSpan(8, 4).SequenceEqual("WAVE"u8);
-
 }
