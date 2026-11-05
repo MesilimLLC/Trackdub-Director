@@ -783,7 +783,7 @@ describe("App smoke", () => {
         if (url.includes("/api/pipeline")) {
           keys.push(new Headers(init?.headers).get("Idempotency-Key") ?? "");
           pipelineAttempts++;
-          if (pipelineAttempts === 1) throw new TypeError("connection dropped");
+          if (pipelineAttempts === 1 || pipelineAttempts === 3) throw new TypeError("connection dropped");
           return new Response(JSON.stringify(pipelineMock), { status: 200 });
         }
         return new Response("not found", { status: 404 });
@@ -811,6 +811,23 @@ describe("App smoke", () => {
     expect(keys).toHaveLength(2);
     expect(keys[0]).toMatch(/^\d+_[0-9a-f-]{36}$/);
     expect(keys[1]).toBe(keys[0]);
+
+    screen.getByRole("button", { name: "Run Pipeline" }).click();
+    await screen.findByRole("button", { name: "Retry / retrieve same Pipeline run" });
+    expect(keys).toHaveLength(3);
+    expect(keys[2]).not.toBe(keys[1]);
+    screen.getByRole("button", { name: "Retry / retrieve same Pipeline run" }).click();
+    await waitFor(() => expect(keys).toHaveLength(4));
+    expect(keys[3]).toBe(keys[2]);
+    await waitFor(() => expect(localStorage.getItem("trackdub-director.pending-pipeline-idempotency-key")).toBeNull());
+
+    fireEvent.change(screen.getByLabelText("Source text 1"), { target: { value: "Edited after success" } });
+    expect(screen.queryByLabelText("Pipeline stage status")).not.toBeInTheDocument();
+    screen.getByRole("button", { name: "Run Pipeline" }).click();
+    await waitFor(() => expect(keys).toHaveLength(5));
+    expect(keys[4]).not.toBe(keys[3]);
+    await screen.findByLabelText("Pipeline stage status");
+    await waitFor(() => expect(localStorage.getItem("trackdub-director.pending-pipeline-idempotency-key")).toBeNull());
   });
 
   it("shows read-only scene context after Run Scene", async () => {
