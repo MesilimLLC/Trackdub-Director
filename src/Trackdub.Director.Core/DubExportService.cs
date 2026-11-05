@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 
@@ -16,7 +15,6 @@ public sealed class FfmpegDubExportService : IDubExportService
     public const long MaxVideoBytes = 200L * 1024 * 1024;
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan EncodeTimeout = TimeSpan.FromMinutes(10);
-    private static readonly SemaphoreSlim ProcessSlots = new(2, 2);
 
     private static readonly HashSet<string> SupportedVideoExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -43,10 +41,10 @@ public sealed class FfmpegDubExportService : IDubExportService
     {
         ArgumentNullException.ThrowIfNull(request);
         string extension = ValidateRequest(request);
-        string directory = CreateTempDirectory();
+        DirectoryInfo directory = CreateTempDirectory();
         try
         {
-            DubExportRenderFiles files = await PrepareFilesAsync(request, extension, directory, cancellationToken).ConfigureAwait(false);
+            DubExportRenderFiles files = await PrepareFilesAsync(request, new(directory, extension), cancellationToken).ConfigureAwait(false);
             DubExportPlan plan = DubExportPlanner.Build(request.ExpectedSegmentIds, request.Segments, files.VideoDurationSeconds);
             await EncodeAsync(files, plan, cancellationToken).ConfigureAwait(false);
             await VerifyOutputAsync(files, cancellationToken).ConfigureAwait(false);
@@ -69,36 +67,36 @@ public sealed class FfmpegDubExportService : IDubExportService
             : throw new ArgumentException("Original video must be MP4, MOV, M4V, WebM, or MKV.", nameof(request));
     }
 
-    private static string CreateTempDirectory()
+    private static DirectoryInfo CreateTempDirectory()
     {
         string directory = Path.Combine(Path.GetTempPath(), "trackdub-dub-export", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        return directory;
+        return Directory.CreateDirectory(directory);
     }
+
+    private sealed record ExportWorkspace(DirectoryInfo Directory, string Extension);
 
     private async Task<DubExportRenderFiles> PrepareFilesAsync(
         DubExportRequest request,
-        string extension,
-        string directory,
+        ExportWorkspace workspace,
         CancellationToken cancellationToken)
     {
-        string videoPath = Path.Combine(directory, "source" + extension);
-        await CopyBoundedAsync(request.Video, videoPath, MaxVideoBytes, cancellationToken).ConfigureAwait(false);
-        double duration = await ProbeDurationAsync(videoPath, cancellationToken).ConfigureAwait(false);
+        var video = new FileInfo(Path.Combine(workspace.Directory.FullName, "source" + workspace.Extension));
+        await CopyBoundedAsync(request.Video, video, cancellationToken).ConfigureAwait(false);
+        double duration = await ProbeDurationAsync(video, cancellationToken).ConfigureAwait(false);
         DubExportPlan plan = DubExportPlanner.Build(request.ExpectedSegmentIds, request.Segments, duration);
-        string[] audioPaths = await WriteAudioFilesAsync(plan, directory, cancellationToken).ConfigureAwait(false);
-        return new DubExportRenderFiles(videoPath, audioPaths, Path.Combine(directory, "trackdub-dub.mp4"), duration);
+        string[] audioPaths = await WriteAudioFilesAsync(plan, workspace.Directory, cancellationToken).ConfigureAwait(false);
+        return new DubExportRenderFiles(video.FullName, audioPaths, Path.Combine(workspace.Directory.FullName, "trackdub-dub.mp4"), duration);
     }
 
     private static async Task<string[]> WriteAudioFilesAsync(
         DubExportPlan plan,
-        string directory,
+        DirectoryInfo directory,
         CancellationToken cancellationToken)
     {
         var paths = new string[plan.Placements.Count];
         for (int i = 0; i < plan.Placements.Count; i++)
         {
-            paths[i] = Path.Combine(directory, $"take-{i:000}.wav");
+            paths[i] = Path.Combine(directory.FullName, $"take-{i:000}.wav");
             await File.WriteAllBytesAsync(paths[i], plan.Placements[i].WavAudio, cancellationToken).ConfigureAwait(false);
         }
         return paths;
@@ -106,17 +104,17 @@ public sealed class FfmpegDubExportService : IDubExportService
 
     private async Task EncodeAsync(DubExportRenderFiles files, DubExportPlan plan, CancellationToken cancellationToken)
     {
-        ProcessResult result = await RunProcessAsync(
-            _ffmpeg, BuildFfmpegArguments(files, plan), EncodeTimeout, cancellationToken).ConfigureAwait(false);
-        if (result.ExitCode != 0 || !HasOutput(files.OutputPath))
+        DubExportProcessResult result = await DubExportProcess.RunAsync(
+            new(_ffmpeg, BuildFfmpegArguments(files, plan), EncodeTimeout), cancellationToken).ConfigureAwait(false);
+        if (result.ExitCode != 0 || !HasOutput(new FileInfo(files.OutputPath)))
         {
-            throw new InvalidOperationException($"ffmpeg could not render the dubbed MP4: {Truncate(result.StandardError)}");
+            throw new InvalidOperationException($"ffmpeg could not render the dubbed MP4: {DescribeError(result)}");
         }
     }
 
     private async Task VerifyOutputAsync(DubExportRenderFiles files, CancellationToken cancellationToken)
     {
-        double outputDuration = await ProbeDurationAsync(files.OutputPath, cancellationToken).ConfigureAwait(false);
+        double outputDuration = await ProbeDurationAsync(new FileInfo(files.OutputPath), cancellationToken).ConfigureAwait(false);
         if (Math.Abs(outputDuration - files.VideoDurationSeconds) > 0.75)
         {
             throw new InvalidOperationException(
@@ -124,7 +122,7 @@ public sealed class FfmpegDubExportService : IDubExportService
         }
     }
 
-    private static bool HasOutput(string path) => File.Exists(path) && new FileInfo(path).Length > 0;
+    private static bool HasOutput(FileInfo file) => file.Exists && file.Length > 0;
 
     internal static string[] BuildFfmpegArguments(DubExportRenderFiles files, DubExportPlan plan)
     {
@@ -153,19 +151,17 @@ public sealed class FfmpegDubExportService : IDubExportService
         return args.ToArray();
     }
 
-    private async Task<double> ProbeDurationAsync(string path, CancellationToken cancellationToken)
+    private async Task<double> ProbeDurationAsync(FileInfo video, CancellationToken cancellationToken)
     {
-        ProcessResult result = await RunProcessAsync(
-            _ffprobe,
-            ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration:format=duration", "-of", "json", path],
-            ProbeTimeout,
+        DubExportProcessResult result = await DubExportProcess.RunAsync(
+            new(_ffprobe, ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration:format=duration", "-of", "json", video.FullName], ProbeTimeout),
             cancellationToken).ConfigureAwait(false);
         return TryParseDuration(result, out double duration)
             ? duration
-            : throw new InvalidOperationException($"ffprobe could not read a positive video-stream duration from the source video: {Truncate(result.StandardError)}");
+            : throw new InvalidOperationException($"ffprobe could not read a positive video-stream duration from the source video: {DescribeError(result)}");
     }
 
-    private static bool TryParseDuration(ProcessResult result, out double duration)
+    private static bool TryParseDuration(DubExportProcessResult result, out double duration)
     {
         duration = 0;
         if (result.ExitCode != 0) return false;
@@ -196,14 +192,14 @@ public sealed class FfmpegDubExportService : IDubExportService
             && duration > 0;
     }
 
-    private static async Task CopyBoundedAsync(Stream source, string destination, long maxBytes, CancellationToken cancellationToken)
+    private static async Task CopyBoundedAsync(Stream source, FileInfo destination, CancellationToken cancellationToken)
     {
-        await using var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true);
-        long total = await CopyCountingAsync(source, output, maxBytes, cancellationToken).ConfigureAwait(false);
+        await using var output = new FileStream(destination.FullName, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+        long total = await CopyCountingAsync(source, output, cancellationToken).ConfigureAwait(false);
         if (total == 0) throw new ArgumentException("Original video is empty.", nameof(source));
     }
 
-    private static async Task<long> CopyCountingAsync(Stream source, Stream destination, long maxBytes, CancellationToken cancellationToken)
+    private static async Task<long> CopyCountingAsync(Stream source, Stream destination, CancellationToken cancellationToken)
     {
         byte[] buffer = new byte[81920];
         long total = 0;
@@ -211,99 +207,26 @@ public sealed class FfmpegDubExportService : IDubExportService
         while ((read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
         {
             total += read;
-            if (total > maxBytes) throw new ArgumentException($"Original video exceeds the {maxBytes} byte export limit.", nameof(source));
+            if (total > MaxVideoBytes) throw new ArgumentException($"Original video exceeds the {MaxVideoBytes} byte export limit.", nameof(source));
             await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
         }
         return total;
     }
 
-    private static async Task<ProcessResult> RunProcessAsync(
-        string exe,
-        IReadOnlyList<string> args,
-        TimeSpan timeout,
-        CancellationToken cancellationToken)
-    {
-        await ProcessSlots.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutSource.CancelAfter(timeout);
-            CancellationToken processToken = timeoutSource.Token;
-            using var process = StartProcess(exe, args);
-            Task<string> stdout = process.StandardOutput.ReadToEndAsync(processToken);
-            Task<string> stderr = process.StandardError.ReadToEndAsync(processToken);
-            try
-            {
-                await Task.WhenAll(process.WaitForExitAsync(processToken), stdout, stderr).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && timeoutSource.IsCancellationRequested)
-            {
-                KillProcess(process);
-                await DrainQuietlyAsync(stdout, stderr).ConfigureAwait(false);
-                throw new InvalidOperationException($"'{exe}' timed out after {timeout.TotalSeconds:0} seconds.");
-            }
-            catch (OperationCanceledException)
-            {
-                KillProcess(process);
-                await DrainQuietlyAsync(stdout, stderr).ConfigureAwait(false);
-                throw;
-            }
-            return new ProcessResult(process.ExitCode, await stdout.ConfigureAwait(false), await stderr.ConfigureAwait(false));
-        }
-        finally
-        {
-            ProcessSlots.Release();
-        }
-    }
-
-    private static Process StartProcess(string exe, IReadOnlyList<string> args)
-    {
-        var start = new ProcessStartInfo(exe)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        };
-        foreach (string arg in args) start.ArgumentList.Add(arg);
-
-        var process = new Process { StartInfo = start };
-        try
-        {
-            if (!process.Start()) throw new InvalidOperationException($"Could not start '{exe}'.");
-            return process;
-        }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
-        {
-            process.Dispose();
-            throw new InvalidOperationException($"Could not start '{exe}'. Install ffmpeg/ffprobe or set FFMPEG_PATH and FFPROBE_PATH.", ex);
-        }
-    }
-
-    private static void KillProcess(Process process)
-    {
-        try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
-    }
-
-    private static async Task DrainQuietlyAsync(Task<string> stdout, Task<string> stderr)
-    {
-        try { await Task.WhenAll(stdout, stderr).ConfigureAwait(false); }
-        catch (Exception) { }
-    }
-
     private static string FormatSeconds(double seconds) => seconds.ToString("0.###", CultureInfo.InvariantCulture);
 
-    private static string Truncate(string value)
+    private static string DescribeError(DubExportProcessResult result)
     {
+        string value = result.StandardError;
         string text = string.IsNullOrWhiteSpace(value) ? "no diagnostic output" : value.Trim();
         return text.Length <= 1000 ? text : text[..1000];
     }
 
-    private static void TryDeleteDirectory(string directory)
+    private static void TryDeleteDirectory(DirectoryInfo directory)
     {
         try
         {
-            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+            if (directory.Exists) directory.Delete(recursive: true);
         }
         catch (IOException)
         {
@@ -313,14 +236,12 @@ public sealed class FfmpegDubExportService : IDubExportService
         }
     }
 
-    private sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError);
-
     private sealed class DeleteOnDisposeFileStream : FileStream
     {
-        private readonly string _directory;
+        private readonly DirectoryInfo _directory;
         private int _disposed;
 
-        public DeleteOnDisposeFileStream(string path, string directory)
+        public DeleteOnDisposeFileStream(string path, DirectoryInfo directory)
             : base(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true)
         {
             _directory = directory;

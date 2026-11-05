@@ -92,6 +92,10 @@ function mapSegmentsByIndex<T, V>(segments: T[] | undefined, value: (segment: T)
   return segments ? new Map(segments.map((segment, index) => [index, value(segment)] as const)) : null;
 }
 
+function reportSegments<T>(report: { segments: T[] } | null): T[] | undefined {
+  return report?.segments;
+}
+
 export function useReports() {
   const [qa, setQa] = useState<QaReport | null>(null);
   const [batch, setBatch] = useState<TranslateBatch | null>(null);
@@ -118,13 +122,13 @@ export function useReports() {
     clearKinds(["batch", "qa", "scene", "director", "audition", "visual", "pipeline"]);
   }, [clearKinds]);
 
-  const sceneById = useMemo(() => (scene ? new Map(scene.segments.map((s, i) => [i, s] as const)) : null), [scene]);
-  const sceneBySegId = useMemo(() => (scene ? new Map(scene.segments.map((s) => [s.id, s] as const)) : null), [scene]);
-  const qaById = useMemo(() => mapSegmentsById(qa?.segments, (s) => s), [qa]);
-  const batchById = useMemo(() => mapSegmentsById(batch?.segments, (s) => s.translation), [batch]);
-  const directorById = useMemo(() => mapSegmentsById(director?.segments, (s) => s), [director]);
-  const auditionById = useMemo(() => mapSegmentsById(audition?.segments, (s) => s), [audition]);
-  const visualById = useMemo(() => mapSegmentsByIndex(visual?.segments, (s) => s), [visual]);
+  const sceneById = useMemo(() => mapSegmentsByIndex(reportSegments(scene), (s) => s), [scene]);
+  const sceneBySegId = useMemo(() => mapSegmentsById(reportSegments(scene), (s) => s), [scene]);
+  const qaById = useMemo(() => mapSegmentsById(reportSegments(qa), (s) => s), [qa]);
+  const batchById = useMemo(() => mapSegmentsById(reportSegments(batch), (s) => s.translation), [batch]);
+  const directorById = useMemo(() => mapSegmentsById(reportSegments(director), (s) => s), [director]);
+  const auditionById = useMemo(() => mapSegmentsById(reportSegments(audition), (s) => s), [audition]);
+  const visualById = useMemo(() => mapSegmentsByIndex(reportSegments(visual), (s) => s), [visual]);
 
   return {
     qa, setQa, batch, setBatch, scene, setScene, director, setDirector,
@@ -193,11 +197,7 @@ export function useSegments(onReset: () => void, setError: React.Dispatch<React.
   }, [onReset, setError]);
 
   const onFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const f = e.target.files?.[0];
-      if (f) void handleFile(f);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    },
+    (e: React.ChangeEvent<HTMLInputElement>) => handleSegmentFileSelection(e, fileInputRef, handleFile),
     [handleFile],
   );
 
@@ -206,6 +206,16 @@ export function useSegments(onReset: () => void, setError: React.Dispatch<React.
   }, []);
 
   return { segments, expanded, fileInputRef, handleLoadSample, onFileChange, toggle, loadSegments, replaceSegments, keyForSegment };
+}
+
+function handleSegmentFileSelection(
+  event: React.ChangeEvent<HTMLInputElement>,
+  inputRef: React.RefObject<HTMLInputElement | null>,
+  handleFile: (file: File) => Promise<void>,
+): void {
+  const file = event.target.files?.[0];
+  if (file) void handleFile(file);
+  if (inputRef.current) inputRef.current.value = "";
 }
 
 export interface ActionsContext {
@@ -265,12 +275,12 @@ export function useActions(context: ActionsContext) {
     }
   }, [refreshStatus, setError]);
 
-  const qaOptions = qaOptionsFromSettings(settings);
-  const auditionOptions = {
+  const qaOptions = useMemo(() => qaOptionsFromSettings(settings), [settings]);
+  const auditionOptions = useMemo(() => ({
     qaOptions,
     speedRetake: speedRetakeFromSettings(settings),
     emotionTags: emotionTagsFromSettings(settings),
-  };
+  }), [qaOptions, settings]);
   const runTranslate = useCallback(async () => {
     const requestId = nextRequestId(context.translateRequestRef);
     await run("translate", async () => {

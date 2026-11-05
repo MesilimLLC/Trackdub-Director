@@ -3,8 +3,9 @@ import { AppFooter, AppHeader, Toolbar } from "./AppChrome";
 import { AuditionBudgetNotice } from "./AuditionPanel";
 import { LineList } from "./LineCard";
 import { PipelinePanel } from "./PipelinePanel";
+import { SegmentMediaEditor } from "./SegmentMediaEditor";
 import { QaReportFooter } from "./QaReport";
-import { CopilotPanel, DubExportPanel, RunSettingsPanel, SegmentEditor, SegmentMediaEditor } from "./WorkbenchPanels";
+import { CopilotPanel, DubExportPanel, RunSettingsPanel, SegmentEditor } from "./WorkbenchPanels";
 import type { CopilotProposal, SegmentInput, SpeakerMapping } from "./api";
 import { buildCopilotRequest, planCopilotApply } from "./copilot";
 import { DEFAULT_FROM, DEFAULT_TO, useActions, useReports, useSegments, useStatus } from "./hooks";
@@ -46,14 +47,14 @@ export default function App() {
     setCopilotProposal(null);
     const unique = [...new Set(kinds)];
     reports.clearKinds(unique);
+    const requestRefs: Partial<Record<ReportKind, { current: number }>> = {
+      batch: translateRequestRef, qa: qaRequestRef, scene: sceneRequestRef,
+      director: directorRequestRef, audition: auditionRequestRef,
+      visual: visualRequestRef, pipeline: pipelineRequestRef,
+    };
     for (const kind of unique) {
-      if (kind === "batch") translateRequestRef.current++;
-      if (kind === "qa") qaRequestRef.current++;
-      if (kind === "scene") sceneRequestRef.current++;
-      if (kind === "director") directorRequestRef.current++;
-      if (kind === "audition") auditionRequestRef.current++;
-      if (kind === "visual") visualRequestRef.current++;
-      if (kind === "pipeline") pipelineRequestRef.current++;
+      const requestRef = requestRefs[kind];
+      if (requestRef) requestRef.current++;
     }
   }, [reports]);
 

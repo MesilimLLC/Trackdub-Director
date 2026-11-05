@@ -299,7 +299,10 @@ export const MIN_BOX_PIXELS = 8;
 export function validateImageMetadata(file: { size: number; type: string }, width: number, height: number): string | null {
   if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) return "Frame must be PNG, JPEG, or WebP.";
   if (file.size > MAX_IMAGE_BYTES) return "Frame exceeds the 10 MiB limit.";
-  if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION || width * height > MAX_IMAGE_PIXELS) {
+  if (Math.max(width, height) > MAX_IMAGE_DIMENSION) {
+    return "Frame dimensions exceed 4096×4096 or 16 megapixels.";
+  }
+  if (width * height > MAX_IMAGE_PIXELS) {
     return "Frame dimensions exceed 4096×4096 or 16 megapixels.";
   }
   return null;
