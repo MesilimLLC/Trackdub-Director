@@ -129,7 +129,13 @@ public sealed class AuditionService
         SpeedCalibrationSample[] newSamples = run.Calibration.Skip(_priorCalibration.Count).ToArray();
         return new AuditionReport(
             sourceLanguage, targetLanguage, cast, segmentReports.ToArray(), totals,
-            SpeedRetake: _speedRetake, SpeedCalibration: newSamples);
+            SpeedRetake: _speedRetake, SpeedCalibration: newSamples,
+            QaOptions: new QaReportOptions(
+                _options.MaxAttempts,
+                _options.ToleranceFraction,
+                _options.GetCharactersPerSecond(targetLanguage),
+                _options.GetCharactersPerSecond(sourceLanguage),
+                _options.ReasoningEffort));
     }
 
     private static void ValidateSegments(IReadOnlyList<AuditionSegmentInput> segments)
@@ -945,7 +951,7 @@ public sealed class AuditionService
         foreach (TakeWork take in takes.Where(IsWinnable))
         {
             double error = Math.Abs(take.MeasuredSeconds!.Value - windowSeconds);
-            if (error < bestError)
+            if (error + 1e-9 < bestError)
             {
                 bestError = error;
                 best = take;

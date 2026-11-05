@@ -79,6 +79,69 @@ public sealed class MetaClientResponseTests
         Assert.Contains("HTTP 500", ex.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Chat_retries_transient_responses_but_does_not_retry_ambiguous_timeouts()
+    {
+        using var auth = FakeAuth();
+        int calls = 0;
+        using var http = new HttpClient(new StubHandler((_, _) =>
+        {
+            calls++;
+            return calls == 1
+                ? Respond(HttpStatusCode.TooManyRequests, "{\"error\":{\"message\":\"slow down\"}}")
+                : Respond(HttpStatusCode.OK, "{\"choices\":[{\"message\":{\"content\":\"Hola\"}}]}");
+        }));
+        var client = new MetaClient(http);
+
+        string result = await client.ChatCompletionAsync(Chat());
+
+        Assert.Equal("Hola", result);
+        Assert.Equal(2, calls);
+
+        int serverErrorCalls = 0;
+        using var serverErrorHttp = new HttpClient(new StubHandler((_, _) =>
+        {
+            serverErrorCalls++;
+            if (serverErrorCalls == 1)
+            {
+                var unavailable = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                {
+                    Content = new StringContent("temporary failure"),
+                };
+                unavailable.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.Zero);
+                return Task.FromResult(unavailable);
+            }
+
+            return Respond(HttpStatusCode.OK, "{\"choices\":[{\"message\":{\"content\":\"Hola\"}}]}");
+        }));
+        var serverErrorClient = new MetaClient(serverErrorHttp);
+        Assert.Equal("Hola", await serverErrorClient.ChatCompletionAsync(Chat()));
+        Assert.Equal(2, serverErrorCalls);
+
+        int billedErrorCalls = 0;
+        using var billedErrorHttp = new HttpClient(new StubHandler((_, _) =>
+        {
+            billedErrorCalls++;
+            return Respond(HttpStatusCode.BadGateway,
+                "{\"error\":{\"message\":\"generation failed\"},\"usage\":{\"prompt_tokens\":4,\"completion_tokens\":5,\"total_tokens\":9}}");
+        }));
+        var billedErrorClient = new MetaClient(billedErrorHttp);
+        MetaApiException billedError = await Assert.ThrowsAsync<MetaApiException>(() => billedErrorClient.ChatCompletionAsync(Chat()));
+        Assert.Equal(new MetaClient.TokenUsage(4, 5, 9), billedError.Usage);
+        Assert.Equal(1, billedErrorCalls);
+
+        int timeoutCalls = 0;
+        using var timeoutHttp = new HttpClient(new StubHandler((_, _) =>
+        {
+            timeoutCalls++;
+            throw new TaskCanceledException("ambiguous timeout");
+        }));
+        var timeoutClient = new MetaClient(timeoutHttp);
+        MetaApiException timeout = await Assert.ThrowsAsync<MetaApiException>(() => timeoutClient.ChatCompletionAsync(Chat()));
+        Assert.Contains("outcome is unknown", timeout.Message, StringComparison.Ordinal);
+        Assert.Equal(1, timeoutCalls);
+    }
+
     [Theory]
     [InlineData("not json")]
     [InlineData("[]")]
@@ -103,6 +166,25 @@ public sealed class MetaClientResponseTests
         MetaApiException ex = await Assert.ThrowsAsync<MetaApiException>(() => client.SegmentConceptAsync(Segmentation()));
 
         Assert.Contains("HTTP 500", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Responses_does_not_retry_a_billed_server_error()
+    {
+        using var auth = FakeAuth();
+        int calls = 0;
+        using var http = new HttpClient(new StubHandler((_, _) =>
+        {
+            calls++;
+            return Respond(HttpStatusCode.BadGateway,
+                "{\"error\":{\"message\":\"generation failed\"},\"usage\":{\"input_tokens\":7,\"output_tokens\":2,\"total_tokens\":9}}");
+        }));
+        var client = new MetaClient(http);
+
+        MetaApiException ex = await Assert.ThrowsAsync<MetaApiException>(() => client.SegmentConceptAsync(Segmentation()));
+
+        Assert.Equal(new MetaClient.TokenUsage(7, 2, 9), ex.Usage);
+        Assert.Equal(1, calls);
     }
 
     [Fact]

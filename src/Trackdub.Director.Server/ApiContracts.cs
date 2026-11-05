@@ -29,20 +29,28 @@ internal sealed record QaApiRequest(
 internal sealed record AdaptationApiRequest(
     IReadOnlyList<DirectorAdaptationSegmentInput> Segments,
     string? SourceLanguage,
-    string? TargetLanguage);
+    string? TargetLanguage,
+    QaOptionsDto? Options = null);
 
 internal sealed record AuditionApiRequest(
     IReadOnlyList<AuditionSegmentInput> Segments,
     string? SourceLanguage,
     string? TargetLanguage,
     SpeedRetakeOptions? SpeedRetake = null,
-    EmotionTagOptions? EmotionTags = null);
+    EmotionTagOptions? EmotionTags = null,
+    QaOptionsDto? Options = null,
+    IReadOnlyDictionary<string, string>? SpeakerMapping = null);
 
 internal sealed record QaOptionsDto(
     int? MaxAttempts,
     double? ToleranceFraction,
     double? TargetCharactersPerSecond,
     string? ReasoningEffort);
+
+internal sealed record DubExportPlacementDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("start_seconds")] double? StartSeconds,
+    [property: JsonPropertyName("audio_field")] string AudioField);
 
 internal sealed record PipelineApiRequest(
     string? AudioBase64,
@@ -55,4 +63,5 @@ internal sealed record PipelineApiRequest(
     string? TargetLanguage,
     QaOptionsDto? Options,
     SpeedRetakeOptions? SpeedRetake = null,
-    EmotionTagOptions? EmotionTags = null);
+    EmotionTagOptions? EmotionTags = null,
+    Dictionary<string, string>? SpeakerMapping = null);

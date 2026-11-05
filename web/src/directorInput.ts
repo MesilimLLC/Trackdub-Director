@@ -25,6 +25,7 @@ export function toDirectorContext(c: SceneContext): NonNullable<DirectorAdaptati
     speaker_id: c.speaker_id ?? null,
     speaker_label: c.speaker_label ?? null,
     emotion_tone_label: c.emotion_tone_label ?? null,
+    pacing_label: c.pacing_label ?? null,
     on_screen_text: c.on_screen_text ?? null,
     scene_summary: c.scene_summary ?? null,
     speaker_description: c.speaker_description ?? null,

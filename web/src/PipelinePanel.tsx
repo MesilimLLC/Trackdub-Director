@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  type PipelineReport,
-} from "./api";
-import { type BusyState } from "./hooks";
+import type { PipelineReport, SegmentInput, SpeakerMapping } from "./api";
+import type { BusyState } from "./hooks";
+import { clearPendingIdempotencyKey, createIdempotencyKey, readPendingIdempotencyKey, savePendingIdempotencyKey } from "./idempotency";
 
 export function PipelineStagePill({ stage }: { stage: PipelineReport["stages"][number] }) {
   const cls =
@@ -16,28 +15,47 @@ export function PipelineStagePill({ stage }: { stage: PipelineReport["stages"][n
   );
 }
 
-export function PipelinePanel({ busy, pipeline, resetGeneration, onRun }: {
+export function PipelinePanel({ busy, pipeline, resetGeneration, segments, speakerMapping, onSpeakerMappingChange, onRun, onTranscribe, onAudioChange, onRecoveryError }: {
   busy: BusyState;
   pipeline: PipelineReport | null;
   resetGeneration: number;
-  onRun: (audio: File | null, flags: { scene: boolean; audition: boolean }) => Promise<void>;
+  segments: SegmentInput[];
+  speakerMapping: SpeakerMapping;
+  onSpeakerMappingChange: (mapping: SpeakerMapping) => void;
+  onRun: (audio: File | null, flags: { scene: boolean; audition: boolean }, mapping: SpeakerMapping, recovery: { key: string; onSuccess: () => void }) => Promise<void>;
+  onTranscribe: (audio: File) => Promise<void>;
+  onAudioChange: () => void;
+  onRecoveryError: (message: string) => void;
 }) {
   const [audio, setAudio] = useState<File | null>(null);
   const [sceneOn, setSceneOn] = useState(true);
   const [auditionOn, setAuditionOn] = useState(false);
+  const [retryKey, setRetryKey] = useState<string | null>(() => readPendingIdempotencyKey("pipeline"));
   const audioInputRef = useRef<HTMLInputElement>(null);
-
-  // Reset the chosen file when the parent bumps resetGeneration: adjust state
-  // during render, and clear the uncontrolled input element in an effect.
-  const [seenGeneration, setSeenGeneration] = useState(resetGeneration);
-  if (seenGeneration !== resetGeneration) {
-    setSeenGeneration(resetGeneration);
-    setAudio(null);
-  }
+  const speakerLabels = [...new Set(["A", "B", ...segments.map((segment) => segment.speaker_id).filter((speaker): speaker is string => Boolean(speaker?.trim()))])];
 
   useEffect(() => {
     if (audioInputRef.current) audioInputRef.current.value = "";
   }, [resetGeneration]);
+
+  const chooseAudio = (next: File | null) => {
+    setAudio(next);
+    onAudioChange();
+    if (audioInputRef.current) audioInputRef.current.value = "";
+  };
+
+  const runWithKey = (key: string) => {
+    if (!savePendingIdempotencyKey("pipeline", key)) {
+      onRecoveryError("Recovery storage is unavailable, so the paid Pipeline request was not sent.");
+      return;
+    }
+    setRetryKey(key);
+    const onSuccess = () => {
+      if (readPendingIdempotencyKey("pipeline") === key) clearPendingIdempotencyKey("pipeline");
+      setRetryKey((current) => current === key ? null : current);
+    };
+    void onRun(audio, { scene: sceneOn, audition: auditionOn }, speakerMapping, { key, onSuccess });
+  };
 
   return (
     <section className="pipeline-panel" aria-label="Pipeline">
@@ -49,44 +67,55 @@ export function PipelinePanel({ busy, pipeline, resetGeneration, onRun }: {
             type="file"
             accept=".wav,audio/wav,audio/x-wav"
             hidden
-            onChange={(e) => {
-              setAudio(e.target.files?.[0] ?? null);
-              if (audioInputRef.current) audioInputRef.current.value = "";
-            }}
+            onChange={(e) => chooseAudio(e.target.files?.[0] ?? null)}
           />
         </label>
         {audio && (
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              setAudio(null);
-              if (audioInputRef.current) audioInputRef.current.value = "";
-            }}
-          >
+          <button type="button" className="btn" disabled={busy !== null} onClick={() => chooseAudio(null)}>
             Clear WAV
           </button>
         )}
+        <button type="button" className="btn" disabled={busy !== null || !audio}
+          onClick={() => audio && void onTranscribe(audio)}>
+          {busy === "transcribe" ? "Transcribing…" : "Transcribe WAV"}
+        </button>
         <label className="pipeline-flag">
-          <input type="checkbox" checked={sceneOn} onChange={(e) => setSceneOn(e.target.checked)} />
+          <input type="checkbox" checked={sceneOn} disabled={busy !== null} onChange={(e) => setSceneOn(e.target.checked)} />
           Scene
         </label>
+        <div className="speaker-mapping" aria-label="Transcription speaker mapping">
+          <span>ASR voices</span>
+          {speakerLabels.map((speaker) => (
+            <label key={speaker}>
+              {speaker} →
+              <select aria-label={`Map speaker ${speaker}`} value={speakerMapping[speaker] ?? ""} disabled={busy !== null}
+                onChange={(event) => onSpeakerMappingChange({ ...speakerMapping, [speaker]: event.target.value as SpeakerMapping[string] })}>
+                <option value="">Unmapped</option>
+                <option value="anna">Anna</option>
+                <option value="ashley">Ashley</option>
+              </select>
+            </label>
+          ))}
+        </div>
         <label className="pipeline-flag">
-          <input type="checkbox" checked={auditionOn} onChange={(e) => setAuditionOn(e.target.checked)} />
+          <input type="checkbox" checked={auditionOn} disabled={busy !== null} onChange={(e) => setAuditionOn(e.target.checked)} />
           Audition
         </label>
         <button
           type="button"
           className="btn btn-primary"
           disabled={busy !== null}
-          onClick={() => void onRun(audio, { scene: sceneOn, audition: auditionOn })}
+          onClick={() => runWithKey(retryKey ?? createIdempotencyKey())}
         >
-          {busy === "pipeline" ? "Running Pipeline…" : "Run Pipeline"}
+          {busy === "pipeline" ? "Running Pipeline…" : retryKey ? "Retry / retrieve same Pipeline run" : "Run Pipeline"}
         </button>
+        {retryKey && <button type="button" className="btn" disabled={busy !== null}
+          onClick={() => runWithKey(createIdempotencyKey())}>Start a new run</button>}
         <span className="toolbar-hint">
           {audio ? "transcribe → translation + QA" : "translation + QA"} · scene {sceneOn ? "on" : "off"} · audition {auditionOn ? "on" : "off"}
         </span>
       </div>
+      {retryKey && <div className="token-usage">The same key is retained for 20 minutes. After a server restart, its provider outcome may be unknown; retrying that key will not rerun it. Starting a new run can repeat paid stages.</div>}
       {pipeline && (
         <div className="line-meta" aria-label="Pipeline stage status">
           {pipeline.stages.map((s) => (

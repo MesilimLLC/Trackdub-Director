@@ -434,6 +434,43 @@ public sealed class CoreEndpointTests
         Assert.Equal(HttpStatusCode.BadRequest, status);
     }
 
+    [Fact]
+    public async Task Director_uses_browser_qa_options_and_echoes_effective_options()
+    {
+        using var auth = FakeAuth();
+        var adaptations = new Queue<string>(["Hola, muy buenos días a todos."]);
+        var meanings = new Queue<string>([JsonSerializer.Serialize(new { verdict = "pass", issues = Array.Empty<string>(), explanation = "ok" })]);
+        using var factory = new ServerFactory(DualHandler(adaptations, meanings, new ChatStubOptions()));
+        using HttpClient client = factory.CreateClient();
+
+        var body = new
+        {
+            segments = new[]
+            {
+                new
+                {
+                    id = "seg-001",
+                    text = "Hello, everyone.",
+                    translation = "Hola.",
+                    duration_seconds = (double?)1.0,
+                    director_adaptation = new { target_register = "formal" },
+                },
+            },
+            sourceLanguage = "en",
+            targetLanguage = "es",
+            options = new { maxAttempts = 3, toleranceFraction = 2.0 },
+        };
+
+        HttpResponseMessage resp = await client.PostAsJsonAsync("/api/director-adaptation", body);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        using JsonDocument doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+        JsonElement root = doc.RootElement;
+        Assert.Equal(2.0, root.GetProperty("qa_options").GetProperty("tolerance_fraction").GetDouble());
+        JsonElement segment = root.GetProperty("segments")[0];
+        Assert.Equal("Pass", segment.GetProperty("timing_verdict").GetString());
+        Assert.Equal("Pass", segment.GetProperty("meaning").GetProperty("verdict").GetString());
+    }
+
     [Theory]
     [InlineData("\"maxAttempts\":-1", "maxAttempts must be >= 0.")]
     [InlineData("\"toleranceFraction\":-0.1", "toleranceFraction must be >= 0.")]

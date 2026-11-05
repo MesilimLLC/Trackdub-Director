@@ -62,7 +62,10 @@ public sealed record AuditionTakeReport(
     [property: JsonPropertyName("emotion_tag")] string? EmotionTag = null,
     // Set by AuditionOutputWriter when it writes the take: SHA-256 of the file as written (lowercase hex).
     [property: JsonPropertyName("audio_sha256"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AudioSha256 = null,
-    [property: JsonIgnore] byte[]? AudioBytes = null);
+    [property: JsonIgnore] byte[]? AudioBytes = null,
+    [property: JsonPropertyName("audio_data_url"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AudioDataUrl = null,
+    [property: JsonPropertyName("audio_url"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AudioUrl = null,
+    [property: JsonPropertyName("audio_transport_omitted"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? AudioTransportOmitted = null);
 
 public sealed record AuditionSegmentReport(
     [property: JsonPropertyName("id")] string Id,
@@ -96,4 +99,5 @@ public sealed record AuditionReport(
     // Per-run speed-retake configuration as recorded for this run (disabled by default).
     [property: JsonPropertyName("speed_retake")] SpeedRetakeOptions? SpeedRetake = null,
     // Calibration samples this run produced (also appended to speed-calibration.json by the writer).
-    [property: JsonPropertyName("speed_calibration")] SpeedCalibrationSample[]? SpeedCalibration = null);
+    [property: JsonPropertyName("speed_calibration")] SpeedCalibrationSample[]? SpeedCalibration = null,
+    [property: JsonPropertyName("qa_options")] QaReportOptions? QaOptions = null);

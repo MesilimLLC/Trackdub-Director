@@ -1,7 +1,10 @@
+import { normalizeWavForTranscription } from "./transcriptionAudio";
+
 export type SegmentInput = {
   id: string;
   text: string;
   duration_seconds?: number | null;
+  start_seconds?: number | null;
   frame_image_data_url?: string | null;
   concepts?: string[] | null;
   speaker_id?: string | null;
@@ -17,6 +20,8 @@ export type SegmentInput = {
   source_text?: string | null;
   target_text?: string | null;
 };
+
+export type SpeakerMapping = Record<string, "anna" | "ashley" | "">;
 
 export type LocalisationBox = { x1: number; y1: number; x2: number; y2: number };
 
@@ -59,6 +64,7 @@ export type DirectorContextInput = {
   speaker_id?: string | null;
   speaker_label?: string | null;
   emotion_tone_label?: string | null;
+  pacing_label?: string | null;
   on_screen_text?: string[] | null;
   scene_summary?: string | null;
   speaker_description?: string | null;
@@ -181,6 +187,7 @@ export type DirectorContext = {
   speaker_id?: string;
   speaker_label?: string;
   emotion_tone_label?: string;
+  pacing_label?: string;
   on_screen_text?: string[];
   scene_summary?: string;
   regions?: SceneRegion[];
@@ -228,10 +235,10 @@ export type SceneContextBatch = {
   vision_usage_total?: VisionUsage;
 };
 
-async function postJson<T>(path: string, body: unknown): Promise<T> {
+async function postJson<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
   const r = await fetch(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
   if (!r.ok) {
@@ -302,6 +309,7 @@ export type DirectorAdaptationBatch = {
   segments: DirectorAdaptationSegmentResult[];
   usage_total: DirectorAdaptationUsage;
   meaning_usage_total: TranslationUsage;
+  qa_options?: QaReport["qa_options"];
 };
 
 export type DirectorAdaptationInput = {
@@ -313,15 +321,31 @@ export type DirectorAdaptationInput = {
   director_adaptation: { target_register: string | null } | null;
 };
 
+export interface QaRequestOptions {
+  maxAttempts?: number;
+  toleranceFraction?: number;
+  targetCharactersPerSecond?: number;
+  reasoningEffort?: string;
+}
+
+export interface AuditionRequestOptions {
+  speedRetake?: { enabled: boolean; cap: number; max_retakes_per_segment: number };
+  emotionTags?: { enabled: boolean };
+  qaOptions?: QaRequestOptions;
+  labelsById?: Map<string, { emotion_tone_label?: string | null; pacing_label?: string | null }>;
+}
+
 export async function postDirectorAdaptation(
   segments: DirectorAdaptationInput[],
   from = "en",
   to = "es",
+  options?: QaRequestOptions,
 ): Promise<DirectorAdaptationBatch> {
   return postJson<DirectorAdaptationBatch>("/api/director-adaptation", {
     segments,
     sourceLanguage: from,
     targetLanguage: to,
+    ...(options ? { options } : {}),
   });
 }
 
@@ -351,6 +375,14 @@ export type AuditionTake = {
   meaning_tokens: number;
   elevenlabs_characters: number;
   speed_factor?: number | null; // set only on the speed-variant take
+  speed_requested?: number;
+  computed_factor?: number | null;
+  calibration_corrected?: boolean;
+  emotion_tag?: string | null;
+  audio_sha256?: string;
+  audio_data_url?: string;
+  audio_url?: string;
+  audio_transport_omitted?: string;
 };
 
 export type AuditionSegmentReport = {
@@ -382,24 +414,61 @@ export type AuditionReport = {
     elevenlabs_cap_hit: boolean;
     meta_cap_hit: boolean;
   };
+  qa_options?: QaReport["qa_options"];
+  speed_retake?: { enabled: boolean; cap: number; max_retakes_per_segment: number } | null;
 };
+
+type StageRequestOptions = AuditionRequestOptions & { speakerMapping?: SpeakerMapping; idempotencyKey?: string };
+
+// The server resolves speaker_mapping (SpeakerAssignment.Resolve); send the raw label.
+function mappedSpeaker(segment: SegmentInput): string | null {
+  return segment.speaker_id || null;
+}
+
+function emotionLabel(segment: SegmentInput, options?: StageRequestOptions): string | null {
+  return options?.labelsById?.get(segment.id)?.emotion_tone_label ?? segment.context?.emotion_tone_label ?? null;
+}
+
+function pacingLabel(segment: SegmentInput, options?: StageRequestOptions): string | null {
+  return options?.labelsById?.get(segment.id)?.pacing_label ?? segment.context?.pacing_label ?? null;
+}
+
+function auditionSegmentBody(segment: SegmentInput, options?: StageRequestOptions) {
+  return {
+    id: segment.id,
+    text: segment.text,
+    duration_seconds: segment.duration_seconds ?? null,
+    speaker_id: mappedSpeaker(segment),
+    emotion_tone_label: emotionLabel(segment, options),
+    pacing_label: pacingLabel(segment, options),
+  };
+}
+
+function addOption(body: Record<string, unknown>, key: string, value: unknown): void {
+  if (value !== undefined) body[key] = value;
+}
+
+function stageOptionsBody(options?: StageRequestOptions): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  addOption(body, "options", options?.qaOptions);
+  addOption(body, "speedRetake", options?.speedRetake);
+  addOption(body, "emotionTags", options?.emotionTags);
+  addOption(body, "speaker_mapping", options?.speakerMapping);
+  return body;
+}
 
 export async function postAudition(
   segments: SegmentInput[],
   from = "en",
   to = "es",
+  options?: StageRequestOptions,
 ): Promise<AuditionReport> {
-  const auditionSegments = segments.map((s) => ({
-    id: s.id,
-    text: s.text,
-    duration_seconds: s.duration_seconds ?? null,
-    speaker_id: s.speaker_id ?? null,
-  }));
   return postJson<AuditionReport>("/api/audition", {
-    segments: auditionSegments,
+    segments: segments.map((segment) => auditionSegmentBody(segment, options)),
     sourceLanguage: from,
     targetLanguage: to,
-  });
+    ...stageOptionsBody(options),
+  }, options?.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : undefined);
 }
 
 // Transcribe stage: WAV in, segments in the app input shape out. The ASR
@@ -410,6 +479,7 @@ export type TranscribeSegment = {
   text: string;
   duration_seconds: number;
   speaker?: string | null;
+  start_seconds?: number | null;
 };
 
 export type TranscribeResult = {
@@ -423,9 +493,43 @@ export type TranscribeResult = {
   usage_reported: boolean;
 };
 
-export async function postTranscribe(audio: File): Promise<TranscribeResult> {
+export interface DubExportPlacement {
+  id: string;
+  start_seconds: number;
+  audio: Blob;
+  file_name: string;
+}
+
+export async function postDubExport(
+  video: File,
+  segmentIds: string[],
+  placements: DubExportPlacement[],
+): Promise<Blob> {
   const form = new FormData();
-  form.append("audio", audio, audio.name || "audio.wav");
+  form.append("video", video, video.name || "original.mp4");
+  form.append("segment_ids", JSON.stringify(segmentIds));
+  form.append("placements", JSON.stringify(placements.map((placement, index) => ({
+    id: placement.id,
+    start_seconds: placement.start_seconds,
+    audio_field: `audio_${index}`,
+  }))));
+  placements.forEach((placement, index) => {
+    form.append(`audio_${index}`, placement.audio, placement.file_name);
+  });
+  const r = await fetch("/api/export-dub", { method: "POST", body: form });
+  if (!r.ok) {
+    const bodyText = await r.text().catch(() => "");
+    throw new Error(`POST /api/export-dub ${r.status}: ${bodyText.slice(0, 600)}`);
+  }
+  const blob = await r.blob();
+  if (blob.size === 0) throw new Error("POST /api/export-dub returned an empty MP4.");
+  return blob;
+}
+
+export async function postTranscribe(audio: File): Promise<TranscribeResult> {
+  const supportedAudio = await normalizeWavForTranscription(audio);
+  const form = new FormData();
+  form.append("audio", supportedAudio, supportedAudio.name || "audio.wav");
   const r = await fetch("/api/transcribe", { method: "POST", body: form });
   if (!r.ok) {
     const bodyText = await r.text().catch(() => "");
@@ -454,6 +558,52 @@ export type PipelineReport = {
   audition?: AuditionReport | null;
 };
 
+function pipelineSegmentBody(segment: SegmentInput) {
+  return {
+    id: segment.id,
+    text: segment.text,
+    duration_seconds: segment.duration_seconds ?? null,
+    speaker: segment.speaker_id ?? null,
+    start_seconds: segment.start_seconds ?? null,
+  };
+}
+
+function pipelineSceneSegmentBody(segment: SegmentInput) {
+  return {
+    id: segment.id,
+    text: segment.text,
+    frame_image_data_url: segment.frame_image_data_url ?? null,
+    concepts: segment.concepts ?? null,
+    speaker_id: segment.speaker_id ?? null,
+    speaker_label: segment.speaker_label ?? null,
+    frame_id: segment.frame_id ?? null,
+    timecode_seconds: segment.timecode_seconds ?? null,
+    frame_sha256: segment.frame_sha256 ?? null,
+    vision_enrichment: segment.vision_enrichment ?? null,
+  };
+}
+
+function pipelineBaseBody(
+  flags: { scene: boolean; audition: boolean },
+  from: string,
+  to: string,
+  options?: StageRequestOptions,
+): Record<string, unknown> {
+  return {
+    scene: flags.scene,
+    audition: flags.audition,
+    sourceLanguage: from,
+    targetLanguage: to,
+    ...stageOptionsBody(options),
+  };
+}
+
+async function addPipelineAudio(body: Record<string, unknown>, audio: File): Promise<void> {
+  const supportedAudio = await normalizeWavForTranscription(audio);
+  body.audio_base64 = await fileToBase64(supportedAudio);
+  body.audio_file_name = supportedAudio.name || "audio.wav";
+}
+
 export async function postPipeline(
   audio: File | null,
   segments: SegmentInput[],
@@ -461,39 +611,14 @@ export async function postPipeline(
   flags: { scene: boolean; audition: boolean },
   from = "en",
   to = "es",
+  options?: StageRequestOptions,
+  idempotencyKey?: string,
 ): Promise<PipelineReport> {
-  const body: Record<string, unknown> = {
-    scene: flags.scene,
-    audition: flags.audition,
-    sourceLanguage: from,
-    targetLanguage: to,
-  };
-  if (audio) {
-    body.audio_base64 = await fileToBase64(audio);
-    body.audio_file_name = audio.name || "audio.wav";
-  } else {
-    body.segments = segments.map((s) => ({
-      id: s.id,
-      text: s.text,
-      duration_seconds: s.duration_seconds ?? null,
-      speaker: s.speaker_id ?? null,
-    }));
-  }
-  if (sceneSegments.length > 0) {
-    body.scene_segments = sceneSegments.map((s) => ({
-      id: s.id,
-      text: s.text,
-      frame_image_data_url: s.frame_image_data_url ?? null,
-      concepts: s.concepts ?? null,
-      speaker_id: s.speaker_id ?? null,
-      speaker_label: s.speaker_label ?? null,
-      frame_id: s.frame_id ?? null,
-      timecode_seconds: s.timecode_seconds ?? null,
-      frame_sha256: s.frame_sha256 ?? null,
-      vision_enrichment: s.vision_enrichment ?? null,
-    }));
-  }
-  return postJson<PipelineReport>("/api/pipeline", body);
+  const body = pipelineBaseBody(flags, from, to, options);
+  if (audio) await addPipelineAudio(body, audio);
+  else body.segments = segments.map(pipelineSegmentBody);
+  if (sceneSegments.length > 0) body.scene_segments = sceneSegments.map(pipelineSceneSegmentBody);
+  return postJson<PipelineReport>("/api/pipeline", body, idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined);
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -507,6 +632,61 @@ function fileToBase64(file: File): Promise<string> {
     };
     reader.readAsDataURL(file);
   });
+}
+
+export interface CopilotSettings {
+  max_revisions?: number | null;
+  tolerance_percent?: number | null;
+  target_cps?: number | null;
+  speed_retake_enabled?: boolean | null;
+  speed_cap?: number | null;
+  emotion_tags_enabled?: boolean | null;
+}
+
+export interface CopilotSegmentUpdate {
+  id: string;
+  concepts?: string[] | null;
+  vision_enrichment?: boolean | null;
+  director_register?: string | null;
+  sign_source_text?: string | null;
+  sign_target_text?: string | null;
+}
+
+export interface CopilotProposal {
+  template: string;
+  explanation: string;
+  settings: CopilotSettings;
+  segment_updates: CopilotSegmentUpdate[];
+  missing_inputs: string[];
+  warnings: string[];
+  model: string;
+  usage?: { PromptTokens?: number; CompletionTokens?: number; TotalTokens?: number; prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null;
+  prompt_template_version: string;
+}
+
+export interface CopilotRequest {
+  goal: string;
+  source_language: string;
+  target_language: string;
+  settings: CopilotSettings;
+  segments: Array<{
+    id: string;
+    text: string;
+    duration_seconds?: number | null;
+    speaker_id?: string | null;
+    has_frame: boolean;
+    concepts?: string[] | null;
+    vision_enrichment: boolean;
+    director_register?: string | null;
+    has_sign_box: boolean;
+    sign_source_text?: string | null;
+    sign_target_text?: string | null;
+  }>;
+  report_summary?: string | null;
+}
+
+export async function postCopilotProposal(request: CopilotRequest): Promise<CopilotProposal> {
+  return postJson<CopilotProposal>("/api/copilot/propose", request);
 }
 
 export async function fetchStatus(): Promise<StatusResponse> {
@@ -537,13 +717,15 @@ export async function postTranslate(
 }
 
 function buildQaOptions(
-  options?: { maxAttempts?: number; toleranceFraction?: number; targetCps?: number },
+  options?: QaRequestOptions & { targetCps?: number },
 ): Record<string, unknown> | undefined {
   if (!options) return undefined;
   const opts: Record<string, unknown> = {};
   if (options.maxAttempts != null) opts.maxAttempts = options.maxAttempts;
   if (options.toleranceFraction != null) opts.toleranceFraction = options.toleranceFraction;
-  if (options.targetCps != null) opts.targetCharactersPerSecond = options.targetCps;
+  const cps = options.targetCharactersPerSecond ?? options.targetCps;
+  if (cps != null) opts.targetCharactersPerSecond = cps;
+  if (options.reasoningEffort != null) opts.reasoningEffort = options.reasoningEffort;
   return Object.keys(opts).length > 0 ? opts : undefined;
 }
 
@@ -551,7 +733,7 @@ export async function postQa(
   segments: SegmentInput[],
   from = "en",
   to = "es",
-  options?: { maxAttempts?: number; toleranceFraction?: number; targetCps?: number },
+  options?: QaRequestOptions & { targetCps?: number },
 ): Promise<QaReport> {
   const body: Record<string, unknown> = { segments, sourceLanguage: from, targetLanguage: to };
   const opts = buildQaOptions(options);

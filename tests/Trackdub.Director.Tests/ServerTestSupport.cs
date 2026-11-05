@@ -16,6 +16,8 @@ namespace Trackdub.Director.Tests;
 /// </summary>
 internal static class ServerTestSupport
 {
+    internal static string NewIdempotencyKey() => $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{Guid.NewGuid():D}";
+
     internal static HttpResponseMessage JsonOk(object payload)
     {
         string json = JsonSerializer.Serialize(payload);
@@ -95,6 +97,8 @@ internal static class ServerTestSupport
             {
                 services.RemoveAll<HttpClient>();
                 services.AddSingleton<HttpClient>(_ => new HttpClient(_handler) { Timeout = TimeSpan.FromSeconds(60) });
+                services.RemoveAll<PipelineIdempotencyStore>();
+                services.AddSingleton(_ => new PipelineIdempotencyStore());
             });
         }
     }

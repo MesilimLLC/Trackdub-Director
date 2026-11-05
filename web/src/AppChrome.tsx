@@ -71,45 +71,84 @@ export interface ToolbarProps {
   onScene: () => Promise<void>;
   onDirector: () => Promise<void>;
   onAudition: () => Promise<void>;
+  auditionRetryPending: boolean;
+  onNewAudition: () => void;
   onVisual: () => Promise<void>;
 }
 
-export function Toolbar({ segments, from, to, busy, fileInputRef, onFileChange, onLoadSample, onTranslate, onQa, onScene, onDirector, onAudition, onVisual }: ToolbarProps) {
-  const disabled = busy !== null || segments.length === 0;
+type StageButtonSpec = {
+  label: string;
+  busyLabel: string;
+  busyKind: string;
+  action: () => Promise<void>;
+};
+
+function StageButtons({ buttons, busy, disabled }: { buttons: StageButtonSpec[]; busy: BusyState; disabled: boolean }) {
+  return (
+    <>
+      {buttons.map((button) => (
+        <button key={button.busyKind} type="button" className="btn btn-primary" onClick={() => void button.action()} disabled={disabled}>
+          {busy === button.busyKind ? button.busyLabel : button.label}
+        </button>
+      ))}
+    </>
+  );
+}
+
+function AuditionControls(props: ToolbarProps & { disabled: boolean }) {
+  const label = props.busy === "audition"
+    ? "Running Audition…"
+    : props.auditionRetryPending ? "Retry same Audition request" : "Run Audition";
+  return (
+    <>
+      <button type="button" className="btn btn-primary" onClick={() => void props.onAudition()} disabled={props.disabled}>
+        {label}
+      </button>
+      {props.auditionRetryPending && (
+        <button type="button" className="btn" disabled={props.disabled} onClick={props.onNewAudition}>Start a new audition</button>
+      )}
+      {props.auditionRetryPending && (
+        <span className="toolbar-hint">A stored key is safe to retry for 20 minutes. After restart, the outcome may be unknown; a new audition can repeat paid calls.</span>
+      )}
+    </>
+  );
+}
+
+function FileControls({ fileInputRef, onFileChange, onLoadSample }: Pick<ToolbarProps, "fileInputRef" | "onFileChange" | "onLoadSample">) {
+  return (
+    <div className="toolbar-right">
+      <button type="button" className="btn" onClick={onLoadSample}>
+        Load sample
+      </button>
+      <label className="btn file-btn">
+        Load JSON
+        <input ref={fileInputRef} type="file" accept=".json,application/json" onChange={onFileChange} hidden />
+      </label>
+    </div>
+  );
+}
+
+export function Toolbar(props: ToolbarProps) {
+  const disabled = props.busy !== null || props.segments.length === 0;
+  const buttons: StageButtonSpec[] = [
+    { label: "Run Translate", busyLabel: "Translating…", busyKind: "translate", action: props.onTranslate },
+    { label: "Run QA", busyLabel: "Running QA…", busyKind: "qa", action: props.onQa },
+    { label: "Run Scene", busyLabel: "Running Scene…", busyKind: "scene", action: props.onScene },
+    { label: "Run Director", busyLabel: "Running Director…", busyKind: "director", action: props.onDirector },
+  ];
   return (
     <div className="toolbar">
       <div className="toolbar-left">
-        <button type="button" className="btn btn-primary" onClick={() => void onTranslate()} disabled={disabled}>
-          {busy === "translate" ? "Translating…" : "Run Translate"}
-        </button>
-        <button type="button" className="btn btn-primary" onClick={() => void onQa()} disabled={disabled}>
-          {busy === "qa" ? "Running QA…" : "Run QA"}
-        </button>
-        <button type="button" className="btn btn-primary" onClick={() => void onScene()} disabled={disabled}>
-          {busy === "scene" ? "Running Scene…" : "Run Scene"}
-        </button>
-        <button type="button" className="btn btn-primary" onClick={() => void onDirector()} disabled={disabled}>
-          {busy === "director" ? "Running Director…" : "Run Director"}
-        </button>
-        <button type="button" className="btn btn-primary" onClick={() => void onAudition()} disabled={disabled}>
-          {busy === "audition" ? "Running Audition…" : "Run Audition"}
-        </button>
-        <button type="button" className="btn btn-primary" onClick={() => void onVisual()} disabled={disabled}>
-          {busy === "visual" ? "Running Visual…" : "Run Visual"}
+        <StageButtons buttons={buttons} busy={props.busy} disabled={disabled} />
+        <AuditionControls {...props} disabled={disabled} />
+        <button type="button" className="btn btn-primary" onClick={() => void props.onVisual()} disabled={disabled}>
+          {props.busy === "visual" ? "Running Visual…" : "Run Visual"}
         </button>
         <span className="toolbar-hint">
-          {segments.length} segments · {from} → {to}
+          {props.segments.length} segments · {props.from} → {props.to}
         </span>
       </div>
-      <div className="toolbar-right">
-        <button type="button" className="btn" onClick={onLoadSample}>
-          Load sample
-        </button>
-        <label className="btn file-btn">
-          Load JSON
-          <input ref={fileInputRef} type="file" accept=".json,application/json" onChange={onFileChange} hidden />
-        </label>
-      </div>
+      <FileControls {...props} />
     </div>
   );
 }

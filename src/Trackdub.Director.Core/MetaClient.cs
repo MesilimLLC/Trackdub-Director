@@ -154,8 +154,8 @@ public sealed class MetaClient : IDisposable
         }
 
         usage = new TokenUsage(
-            ReadUsageInt(usageElement, "prompt_tokens"),
-            ReadUsageInt(usageElement, "completion_tokens"),
+            ReadUsageInt(usageElement, "prompt_tokens", "input_tokens"),
+            ReadUsageInt(usageElement, "completion_tokens", "output_tokens"),
             ReadUsageInt(usageElement, "total_tokens"));
         return true;
     }
@@ -182,6 +182,13 @@ public sealed class MetaClient : IDisposable
             && value.TryGetInt32(out int number)
             ? number
             : 0;
+
+    private static int ReadUsageInt(JsonElement obj, string name, string fallbackName)
+        => obj.TryGetProperty(name, out JsonElement value)
+            && value.ValueKind == JsonValueKind.Number
+            && value.TryGetInt32(out int number)
+                ? number
+                : ReadUsageInt(obj, fallbackName);
 
     private static TokenUsageDetail? ToUsageDetail(UsageDto? usage)
     {
@@ -566,11 +573,37 @@ public sealed class MetaClient : IDisposable
     {
         // Check cancellation first, so a cancelled call does not use up a budget reservation.
         cancellationToken.ThrowIfCancellationRequested();
-        _budget?.Reserve();
-        HttpResponseMessage response;
+        byte[]? content = request.Content is null
+            ? null
+            : await request.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+        for (int attempt = 0; ; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            _budget?.Reserve();
+            using HttpRequestMessage attemptRequest = CloneRequest(request, content);
+            HttpResponseMessage response = await SendOnceAsync(attemptRequest, cancellationToken).ConfigureAwait(false);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests && attempt < 2)
+            {
+                await DelayAndDisposeAsync(response, attempt, cancellationToken).ConfigureAwait(false);
+                continue;
+            }
+
+            ResponseOutcome outcome = await ReadResponseAsync(response, attempt, cancellationToken).ConfigureAwait(false);
+            if (outcome.Body is not null)
+            {
+                return outcome.Body;
+            }
+
+            await Task.Delay(outcome.RetryDelay, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<HttpResponseMessage> SendOnceAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
         try
         {
-            response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
         {
@@ -578,24 +611,105 @@ public sealed class MetaClient : IDisposable
         }
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new MetaApiException("Meta Model API request timed out.", ex);
+            // A timeout may happen after the provider has accepted and billed the request.
+            // Keep it indeterminate; do not automatically send the paid request again.
+            throw new MetaApiException("Meta Model API request timed out; the provider outcome is unknown, so it was not retried.", ex);
         }
+    }
 
+    private static async Task DelayAndDisposeAsync(HttpResponseMessage response, int attempt, CancellationToken cancellationToken)
+    {
+        TimeSpan delay = RetryDelay(response.Headers.RetryAfter, attempt);
+        response.Dispose();
+        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<ResponseOutcome> ReadResponseAsync(HttpResponseMessage response, int attempt, CancellationToken cancellationToken)
+    {
         using (response)
         {
-            string body = response.Content is null
-                ? string.Empty
-                : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
+            string body = await ReadBodyAsync(response, cancellationToken).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode)
             {
-                throw new MetaApiException(
-                    $"Meta Model API HTTP {(int)response.StatusCode}: {Truncate(new BodyText(body))}",
-                    ReadErrorUsage(body));
+                return new ResponseOutcome(body, TimeSpan.Zero);
             }
 
-            return body;
+            TokenUsage? errorUsage = ReadErrorUsage(body);
+            if (ShouldRetryTransientServerError(response.StatusCode, attempt, errorUsage))
+            {
+                return new ResponseOutcome(null, RetryDelay(response.Headers.RetryAfter, attempt));
+            }
+
+            throw new MetaApiException(
+                $"Meta Model API HTTP {(int)response.StatusCode}: {Truncate(new BodyText(body))}",
+                errorUsage);
         }
+    }
+
+    private static async Task<string> ReadBodyAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return response.Content is null
+                ? string.Empty
+                : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new MetaApiException($"Meta Model API response ended unexpectedly ({ex.Message}); provider outcome is unknown, so it was not retried.", ex);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new MetaApiException("Meta Model API response timed out; provider outcome is unknown, so it was not retried.", ex);
+        }
+    }
+
+    private readonly record struct ResponseOutcome(string? Body, TimeSpan RetryDelay);
+
+    private static HttpRequestMessage CloneRequest(HttpRequestMessage source, byte[]? content)
+    {
+        var clone = new HttpRequestMessage(source.Method, source.RequestUri)
+        {
+            Version = source.Version,
+            VersionPolicy = source.VersionPolicy,
+        };
+        foreach (KeyValuePair<string, IEnumerable<string>> header in source.Headers)
+        {
+            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        if (content is not null)
+        {
+            clone.Content = new ByteArrayContent(content);
+            if (source.Content is not null)
+            {
+                foreach (KeyValuePair<string, IEnumerable<string>> header in source.Content.Headers)
+                {
+                    clone.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+            }
+        }
+
+        return clone;
+    }
+
+    private static TimeSpan RetryDelay(System.Net.Http.Headers.RetryConditionHeaderValue? retryAfter, int attempt)
+    {
+        TimeSpan requested = retryAfter?.Delta
+            ?? (retryAfter?.Date is { } date ? date - DateTimeOffset.UtcNow : TimeSpan.FromMilliseconds(250 * (1 << attempt)));
+        double jitterMilliseconds = Random.Shared.Next(0, 251);
+        return TimeSpan.FromMilliseconds(Math.Clamp(requested.TotalMilliseconds + jitterMilliseconds, 0, 5000));
+    }
+
+    private static bool ShouldRetryTransientServerError(System.Net.HttpStatusCode statusCode, int attempt, TokenUsage? errorUsage)
+    {
+        // Only retry statuses a provider returns before doing paid work. A 502 or
+        // 504 can mean the request reached the provider and was billed even when
+        // the error body carries no usage, so resending could pay twice.
+        return attempt < 2
+            && errorUsage is null
+            && statusCode is System.Net.HttpStatusCode.InternalServerError
+                or System.Net.HttpStatusCode.ServiceUnavailable;
     }
 
     private static string ResolveModel(string? model)

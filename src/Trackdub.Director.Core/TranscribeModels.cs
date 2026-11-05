@@ -27,7 +27,8 @@ public sealed record TranscribeSegment(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("text")] string Text,
     [property: JsonPropertyName("duration_seconds")] double? DurationSeconds,
-    [property: JsonPropertyName("speaker")] string? Speaker = null);
+    [property: JsonPropertyName("speaker")] string? Speaker = null,
+    [property: JsonPropertyName("start_seconds")] double? StartSeconds = null);
 
 /// <summary>
 /// Raw ASR response as parsed by the client, before segment mapping. The endpoint

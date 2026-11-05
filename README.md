@@ -30,8 +30,8 @@ ElevenLabs stock voices.
 | Visual localisation | Repaints a crop of the sign and composites only the box back; pixels outside the box are machine-checked against the source | `muse-image-1.0` |
 | Static-shot gate | Extends one sign repaint across a whole shot, only if every frame's sign region still matches the repainted frame | none (reuses the one repaint) |
 
-`muse-voice-transcribe-1.0` was used during dataset preparation (3 calls,
-recorded in `docs/metrics-snapshot.md`); it is not called by the app.
+`muse-voice-transcribe-1.0` powers the browser workbench's WAV transcription step. It was also used during dataset preparation (3 calls,
+recorded in `docs/metrics-snapshot.md`).
 
 ## Measured results (VOA Lesson 10 coffee-shop segment)
 
@@ -75,6 +75,14 @@ Every figure comes from a report file in this repo; method in
   timing 22 of 40; Muse Glimmer ran as a recovery agent and recovered all
   4 refused attempts across 3 lines, with two winning lines telegraphic
   (`samples/spark-open/`, `samples/glimmer-recovery/`).
+- **Pacing probe (Nov 4):** model-generated pacing labels were unreliable:
+  six single-clip labels collapsed to `conversational`, and a four-clip
+  ranking reversed the measured speech-rate order. Keep measured speech rate
+  as the source of pacing judgments; see the [audio-pacing notes](samples/audio-pacing/NOTES.md).
+- **Reviser dataset audit (Nov 4):** the captured reports produced no
+  leakage-clean training pairs. All 14 failed-attempt/accepted-final pairs
+  came from six source lines shared with frozen benchmarks, so the training
+  and holdout files are correctly empty; see the [reviser notes](samples/finetune-reviser/NOTES.md).
 - **Tests:** 486 .NET tests executed and passed (484 listed cases) and
   12 web tests at `9ababf0`.
 
@@ -98,7 +106,8 @@ src/Trackdub.Director.Core/      Class library: MetaAuth (env-only auth), MetaCl
                                   SceneContextService (sam-3.1 + vision pass),
                                   DirectorAdaptationService, AuditionService (ElevenLabs TTS,
                                   measured audio), VisualLocalisationService (muse-image-1.0),
-                                  StaticShotCompositor (static-shot gate).
+                                  StaticShotCompositor (static-shot gate),
+                                  FfmpegDubExportService (muted-original MP4 export).
                                   No third-party packages; HttpClient + System.Text.Json only.
                                   API keys are never read from files and never logged.
 src/Trackdub.Director.Server/    ASP.NET Core minimal API referencing Core (see Server API).
@@ -106,10 +115,12 @@ src/Trackdub.Director.Server/    ASP.NET Core minimal API referencing Core (see 
                                   no key required to start; key only gates live endpoints.
 src/Trackdub.Director.Cli/       Console app (trackdub-director):
                                   smoke / translate / models / qa / sign-shot / meaning-eval / verify-only.
-web/                             React + Vite + TypeScript frontend. One screen:
-                                  header (key status, model, QA summary), line list with
-                                  per-line verdicts and expandable attempts, and Run Translate /
-                                  QA / Scene / Director / Audition / Visual.
+web/                             React + Vite + TypeScript frontend. A Windows-hosted
+                                  browser stage workbench: editable segments and media,
+                                  shared run settings, fixed stage workflows, evidence
+                                  downloads, audition audio playback, basic dubbed-MP4
+                                  export, a visual box editor, and an advisory Copilot that can only
+                                  propose settings for the user to apply.
                                   Dev proxy: Vite forwards /api to :5103.
 tests/Trackdub.Director.Tests/   xUnit. Live tests skipped without key; fake-handler
                                   estimator/QA tests; server endpoint tests (WebApplicationFactory).
@@ -145,6 +156,11 @@ Optional overrides: `META_MODEL` (default `muse-spark-1.1`),
 `META_MODEL_API_KEY` is accepted as a fallback for `META_API_KEY`.
 
 ## Running the app
+
+Run the backend on Windows for the full workbench. Frame decoding uses
+Windows Imaging Component (WIC); on another host OS the image-dependent
+stages fail closed instead of using a fallback codec. The browser is only
+the client and does not remove that backend requirement.
 
 ### Single-command mode (prod-like)
 
@@ -183,6 +199,63 @@ Vite config (`web/vite.config.ts`) proxies `http://localhost:5173/api/*` to
 `http://localhost:5103`, so the dev UI talks to the same API.
 
 To refresh the prod bundle after frontend changes: `cd web && npm run build`.
+
+## Browser stage workbench
+
+The browser surface is a stage workbench with a basic dubbed-MP4 export:
+the original picture with its audio omitted and the winning ElevenLabs takes
+placed at explicit start times. It is not a timeline editor or lip-sync
+system. It supports two ordinary-input journeys without hand-written JSON:
+
+1. **Dub:** type segments or transcribe a WAV, set languages and the shared
+   QA options, then run Translate, QA, Scene, Director, Audition, or the
+   fixed Pipeline template (Transcribe when audio is supplied, then QA,
+   Scene, and optional Audition). Valid WAVs are converted in the browser to
+   mono 16-bit PCM at 16 kHz when needed and checked again before the ASR
+   provider call. Transcribed speaker labels A/B default to Anna/Ashley; review
+   or change those mappings before audition. Winning and losing takes stream
+   from temporary server files with byte-range playback; files expire after an
+   hour, are capped at 512 MiB total, and are removed when the server stops.
+   Downloadable evidence JSON omits audio URLs.
+   Set each segment's **Start** time (ASR turns supply `start_seconds`),
+   choose the original MP4/MOV/M4V/WebM/MKV, and choose **Export dubbed
+   MP4**. Export refuses unless every segment has a start and a winning
+   take whose measured audio fits without overlapping another winner.
+2. **Visual:** upload a PNG, JPEG, or WebP frame (10 MiB, 4096 px, and
+   16,777,216-pixel limits), drag a sign box in original-image coordinates,
+   repaint it, inspect `outside_box_diff`, and download the localised PNG.
+
+Input edits invalidate only the evidence that depends on them. For example,
+changing only a Director register keeps the prerequisite QA evidence, while
+changing dialogue clears text-dependent reports and any pending Copilot
+proposal. The QA loop's `maxAttempts` setting is labelled **Maximum
+revisions**: it is the number of revisions allowed after the first attempt.
+
+Pipeline and standalone Audition reuse a browser-stored `Idempotency-Key` for
+20 minutes. In the running server process, retrying a dropped browser response
+returns the same result. The server also keeps a small local ledger of request
+keys, payload fingerprints, and timestamps (no request text or audio). After a
+server restart, reusing a recorded key reports an unknown provider outcome and
+does not execute the request again; if recovery storage is unavailable, paid
+requests fail closed. Set `TRACKDUB_IDEMPOTENCY_PATH` to choose the ledger path.
+Starting a new run can repeat paid stages, so check provider history first when
+the previous outcome is unknown.
+Meta chat retries HTTP 429 and 5xx responses that do not report billed usage,
+using bounded exponential backoff with jitter. Transcription retries 429 and
+one explicit HTTP 500. A 5xx response with usage data is surfaced without a
+retry. Timeouts and interrupted response bodies remain outcome-unknown and are
+not automatically resent. The optional Copilot makes one disclosed Meta call
+and returns a bounded, revision-bound settings proposal. **Apply settings** is
+the only action it can lead to; it never runs a stage, and there is no
+"Approve & run" path.
+Visual localisation edits one manually boxed still; moving, rotating,
+perspective-changing, and occluded signs are not tracked. Video-rate
+`sign-shot` packaging remains outside the browser workbench. Verify-only
+remains a CLI/server check over captured run folders already on
+the server disk, not a verifier for the current browser session. Dub export
+requires `ffmpeg` and `ffprobe` on the backend PATH (or `FFMPEG_PATH` and
+`FFPROBE_PATH`); the source video is capped at 200 MiB, and the output is
+H.264/AAC MP4 with no original audio track.
 
 ## Smoke test
 
@@ -302,8 +375,13 @@ working; a final pass rate below 100% means at least one line was reported as
 | POST | `/api/director-adaptation` | key | Register adaptation from scene context; adapted lines re-run both gates |
 | POST | `/api/audition` | key + `ELEVENLABS_API_KEY` | Synthesizes takes, measures audio against each window, casts or refuses per line |
 | POST | `/api/visual-localisation` | key | Frame + box + source/target text → localised frame with `outside_box_diff` |
+| POST | `/api/transcribe` | key | WAV audio → editable transcript segments |
+| POST | `/api/pipeline` | key (+ ElevenLabs for audition) | Fixed Transcribe → QA → Scene → optional Audition template |
+| POST | `/api/copilot/propose` | key | One advisory Meta call returning a bounded settings proposal; never runs a stage |
+| POST | `/api/verify-only` | none (local only) | Verifies a captured run already on the server disk; not the browser session |
+| POST | `/api/export-dub` | none (local only) | Multipart original video + explicit segment starts + winner WAVs → muted-original dubbed MP4; refuses missing, overlapping, or overrunning winners |
 
-`POST` bodies accept `segments` as `[{ id, text, duration_seconds? }]` plus
+`POST` bodies accept `segments` as `[{ id, text, duration_seconds?, start_seconds? }]` plus
 optional `sourceLanguage`/`source_language`/`from` and
 `targetLanguage`/`target_language`/`to` (default `en` → `es`). `POST /api/qa`
 also accepts `options: { maxAttempts, toleranceFraction, targetCharactersPerSecond, reasoningEffort }`.

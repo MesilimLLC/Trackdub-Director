@@ -1,4 +1,5 @@
 using System.Net;
+using System.Buffers.Binary;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
@@ -64,6 +65,25 @@ public sealed class AudioEndpointTests
         return form;
     }
 
+    private static byte[] SupportedWav()
+    {
+        byte[] wav = new byte[46];
+        "RIFF"u8.CopyTo(wav);
+        BinaryPrimitives.WriteUInt32LittleEndian(wav.AsSpan(4), (uint)(wav.Length - 8));
+        "WAVE"u8.CopyTo(wav.AsSpan(8));
+        "fmt "u8.CopyTo(wav.AsSpan(12));
+        BinaryPrimitives.WriteUInt32LittleEndian(wav.AsSpan(16), 16);
+        BinaryPrimitives.WriteUInt16LittleEndian(wav.AsSpan(20), 1);
+        BinaryPrimitives.WriteUInt16LittleEndian(wav.AsSpan(22), 1);
+        BinaryPrimitives.WriteUInt32LittleEndian(wav.AsSpan(24), 16000);
+        BinaryPrimitives.WriteUInt32LittleEndian(wav.AsSpan(28), 32000);
+        BinaryPrimitives.WriteUInt16LittleEndian(wav.AsSpan(32), 2);
+        BinaryPrimitives.WriteUInt16LittleEndian(wav.AsSpan(34), 16);
+        "data"u8.CopyTo(wav.AsSpan(36));
+        BinaryPrimitives.WriteUInt32LittleEndian(wav.AsSpan(40), 2);
+        return wav;
+    }
+
     [Fact]
     public async Task Transcribe_happy_path_returns_segments_with_verbatim_speakers_and_null_usage()
     {
@@ -71,7 +91,7 @@ public sealed class AudioEndpointTests
         using var factory = new ServerFactory(TranscribeHandler());
         using HttpClient client = factory.CreateClient();
 
-        using var form = AudioForm([82, 73, 70, 70, 1, 0, 0, 0]);
+        using var form = AudioForm(SupportedWav());
         HttpResponseMessage resp = await client.PostAsync("/api/transcribe", form);
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 
@@ -98,6 +118,31 @@ public sealed class AudioEndpointTests
 
         Assert.DoesNotContain("total_tokens", json, StringComparison.Ordinal);
         Assert.DoesNotContain("test-fake-key", json.ToLowerInvariant());
+    }
+
+    [Fact]
+    public async Task Transcribe_rejects_unsupported_wav_format_before_calling_meta()
+    {
+        using var auth = FakeAuth();
+        int calls = 0;
+        using var factory = new ServerFactory(new DelegatingHandlerStub((_, _) =>
+        {
+            calls++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        }));
+        using HttpClient client = factory.CreateClient();
+        byte[] stereo = SupportedWav();
+        BinaryPrimitives.WriteUInt16LittleEndian(stereo.AsSpan(22), 2);
+        BinaryPrimitives.WriteUInt32LittleEndian(stereo.AsSpan(28), 64000);
+        BinaryPrimitives.WriteUInt16LittleEndian(stereo.AsSpan(32), 4);
+
+        using var form = AudioForm(stereo);
+        HttpResponseMessage response = await client.PostAsync("/api/transcribe", form);
+        string body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("mono 16-bit PCM WAV", body, StringComparison.Ordinal);
+        Assert.Equal(0, calls);
     }
 
     [Fact]

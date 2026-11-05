@@ -71,7 +71,7 @@ public sealed class PipelineService
         if (request.AudioWav is null)
         {
             state.Stages.Add(new PipelineStageReport(StageTranscribe, PipelineStageStatus.NotRun, Note: "no audio supplied"));
-            state.Segments = request.Segments!.Select(s => new TranscribeSegment(s.Id, s.Text, s.DurationSeconds, s.Speaker)).ToArray();
+            state.Segments = request.Segments!.Select(s => new TranscribeSegment(s.Id, s.Text, s.DurationSeconds, s.Speaker, s.StartSeconds)).ToArray();
             if (state.Segments.Length == 0)
             {
                 throw new ArgumentException("Pipeline produced no segments to process.", nameof(request));
@@ -215,7 +215,7 @@ public sealed class PipelineService
         try
         {
             state.Audition = await auditionService.RunAsync(
-                BuildAuditionInputs(state),
+                BuildAuditionInputs(state, request.SpeakerMapping),
                 request.SourceLanguage,
                 request.TargetLanguage,
                 cancellationToken).ConfigureAwait(false);
@@ -255,13 +255,15 @@ public sealed class PipelineService
         return scene.Segments.FirstOrDefault(s => s.Status == SceneContextStatus.Failed);
     }
 
-    private static AuditionSegmentInput[] BuildAuditionInputs(PipelineRunState state)
+    private static AuditionSegmentInput[] BuildAuditionInputs(
+        PipelineRunState state,
+        IReadOnlyDictionary<string, string>? speakerMapping)
     {
         return state.Segments.Select(s => new AuditionSegmentInput(
             s.Id,
             s.Text,
             s.DurationSeconds,
-            s.Speaker,
+            SpeakerAssignment.Resolve(s.Speaker, speakerMapping),
             state.Scene?.Segments.FirstOrDefault(sc => sc.Id == s.Id)?.Context?.EmotionToneLabel,
             state.Scene?.Segments.FirstOrDefault(sc => sc.Id == s.Id)?.Context?.PacingLabel)).ToArray();
     }

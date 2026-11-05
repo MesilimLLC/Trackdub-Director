@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text.Json;
 using Trackdub.Director.Core;
 using static ApiResults;
 using static AuditionOutputs;
@@ -5,7 +7,7 @@ using static RequestParsing;
 using static RequestValidation;
 
 // Endpoint handlers for the HTTP API. Program.cs maps each one by name.
-internal static class ApiEndpoints
+internal static partial class ApiEndpoints
 {
     private const string EmptySegmentsMessage = "Request must include a non-empty 'segments' array of { id, text, duration_seconds? }.";
 
@@ -114,13 +116,15 @@ internal static class ApiEndpoints
         string from = ResolveLanguage(req.SourceLanguage, "en");
         string to = ResolveLanguage(req.TargetLanguage, "es");
 
-        IReadOnlyList<DirectorAdaptationSegmentInput> segments = req.Segments;
-        return await ApiHandlers.GuardAsync(async () =>
+        if (!TryBuildQaOptions(new QaApiRequest([], null, null, req.Options), to, out QaOptions? options, out string? optionsError))
         {
-            var service = new DirectorAdaptationService(client, QaOptions.FromEnvironment());
-            DirectorAdaptationBatch batch = await service.RunAsync(segments, from, to, ct).ConfigureAwait(false);
-            return Results.Json(batch);
-        }).ConfigureAwait(false);
+            return Results.BadRequest(new { error = optionsError });
+        }
+
+        IReadOnlyList<DirectorAdaptationSegmentInput> segments = req.Segments;
+        return await ApiHandlers.RunSerializedAsync(
+            () => ApiHandlers.GuardAsync(() => ApiHandlers.RunDirectorWithReasoningAsync(client, options, segments, from, to, ct)),
+            ct).ConfigureAwait(false);
     }
 
     internal static Task<IResult> VisualLocalisationAsync(HttpRequest request, VisualLocalisationService service, CancellationToken ct)
@@ -162,26 +166,28 @@ internal static class ApiEndpoints
         }).ConfigureAwait(false);
     }
 
-    internal static async Task<IResult> AuditionAsync(HttpRequest request, MetaClient client, ITtsProvider tts, CancellationToken ct)
+    internal static async Task<IResult> CopilotProposeAsync(HttpRequest request, CopilotService service, CancellationToken ct)
     {
-        var (req, readError) = await ApiHandlers.ReadOrBadRequestAsync(() => ReadAuditionRequestAsync(request, ct));
-        if (readError is not null)
+        CopilotRequest? req;
+        try
         {
-            return readError;
+            req = await request.ReadFromJsonAsync<CopilotRequest>(ct).ConfigureAwait(false);
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            return Results.BadRequest(new { error = $"Invalid JSON: {ex.Message}" });
         }
 
-        if (req is null || req.Segments.Count == 0)
+        if (req is null || string.IsNullOrWhiteSpace(req.Goal))
         {
-            return Results.BadRequest(new { error = "Request must include a non-empty 'segments' array of { id, text, duration_seconds?, speaker_id? }." });
+            return Results.BadRequest(new { error = "Copilot request must include a goal and workbench state." });
         }
 
-        string? validationError = ValidateAuditionSegments(req.Segments);
-        if (validationError is not null)
+        return await ApiHandlers.GuardAsync(async () =>
         {
-            return Results.BadRequest(new { error = validationError });
-        }
-
-        return await ApiHandlers.RunSerializedAsync(() => ApiHandlers.RunAuditionAsync(client, tts, req, ct), ct).ConfigureAwait(false);
+            CopilotProposal proposal = await service.ProposeAsync(req, ct).ConfigureAwait(false);
+            return Results.Json(proposal);
+        }).ConfigureAwait(false);
     }
 
     internal static async Task<IResult> TranscribeAsync(HttpRequest request, TranscribeService transcribeService, CancellationToken ct)
@@ -207,145 +213,28 @@ internal static class ApiEndpoints
             return Results.BadRequest(new { error = "Request must include a non-empty WAV file in the 'audio' field." });
         }
 
+        byte[] audioBytes;
+        await using (Stream uploaded = audio.OpenReadStream())
+        using (var buffer = new MemoryStream())
+        {
+            await uploaded.CopyToAsync(buffer, ct).ConfigureAwait(false);
+            audioBytes = buffer.ToArray();
+        }
+
+        string? formatError = WavAudioFormat.ValidateForTranscription(audioBytes);
+        if (formatError is not null)
+        {
+            return Results.BadRequest(new { error = formatError });
+        }
+
         return await ApiHandlers.GuardAsync(async () =>
         {
-            await using Stream stream = audio.OpenReadStream();
+            await using Stream stream = new MemoryStream(audioBytes, writable: false);
             TranscribeResult result = await transcribeService.TranscribeAsync(stream, audio.FileName, ct).ConfigureAwait(false);
             return Results.Json(result);
         }).ConfigureAwait(false);
     }
 
-    internal static async Task<IResult> PipelineAsync(HttpRequest request, MetaClient client, IMuseTranscribeClient transcribeClient, ITtsProvider tts, CancellationToken ct)
-    {
-        var (req, readError) = await ApiHandlers.ReadOrBadRequestAsync(() => ReadPipelineRequestAsync(request, ct));
-        if (readError is not null)
-        {
-            return readError;
-        }
-
-        if (req is null)
-        {
-            return Results.BadRequest(new { error = "Request body must be a JSON object with 'audio_base64' or a 'segments' array." });
-        }
-
-        string? inputError = ValidatePipelineInput(req, out byte[]? audio);
-        if (inputError is not null)
-        {
-            return Results.BadRequest(new { error = inputError });
-        }
-
-        string from = ResolveLanguage(req.SourceLanguage, "en");
-        string to = ResolveLanguage(req.TargetLanguage, "es");
-
-        var optionsReq = new QaApiRequest([], null, null, req.Options);
-        if (!TryBuildQaOptions(optionsReq, to, out QaOptions? options, out string? optionsError))
-        {
-            return Results.BadRequest(new { error = optionsError });
-        }
-
-        var pipelineRequest = ToPipelineRequest(req, audio, from, to);
-
-        return await ApiHandlers.RunSerializedAsync(
-            () => ApiHandlers.RunPipelineWithReasoningAsync(client, transcribeClient, tts, options, pipelineRequest, ct), ct).ConfigureAwait(false);
-    }
-
-    private static PipelineRequest ToPipelineRequest(PipelineApiRequest req, byte[]? audio, string from, string to)
-    {
-        return new PipelineRequest(
-            audio,
-            audio is null ? req.Segments : null,
-            req.SceneSegments,
-            Scene: req.Scene ?? true,
-            Audition: req.Audition ?? false,
-            SourceLanguage: from,
-            TargetLanguage: to,
-            AudioFileName: req.AudioFileName,
-            SpeedRetake: req.SpeedRetake,
-            EmotionTags: req.EmotionTags);
-    }
-
-    // Validates audio/segments/scene input; decodes audio when present. Returns an error message or null.
-    private static string? ValidatePipelineInput(PipelineApiRequest req, out byte[]? audio)
-    {
-        audio = null;
-        if (!string.IsNullOrWhiteSpace(req.AudioBase64))
-        {
-            string? audioError = TryDecodeAudio(req.AudioBase64, out audio);
-            if (audioError is not null)
-            {
-                return audioError;
-            }
-        }
-
-        string? segmentError = audio is null ? ValidatePipelineSegments(req.Segments) : null;
-        if (segmentError is not null)
-        {
-            return segmentError;
-        }
-
-        return ValidatePipelineScene(req.SceneSegments);
-    }
-
-    // Framed scene results are matched back to lines by id, so duplicate framed ids would
-    // hand an earlier line a later line's scene context.
-    private static string? ValidatePipelineScene(IReadOnlyList<SceneSegmentInput>? sceneSegments)
-    {
-        if (sceneSegments is not { Count: > 0 })
-        {
-            return null;
-        }
-
-        string? sceneError = ValidateSceneSegments(sceneSegments.ToArray());
-        if (sceneError is not null)
-        {
-            return sceneError;
-        }
-
-        bool hasDuplicateFramedId = sceneSegments
-            .Where(s => !string.IsNullOrWhiteSpace(s.FrameImageDataUrl))
-            .GroupBy(s => s.Id, StringComparer.Ordinal)
-            .Any(g => g.Count() > 1);
-        return hasDuplicateFramedId ? "Framed scene segment ids must be unique." : null;
-    }
-
-    private static string? TryDecodeAudio(string base64, out byte[]? audio)
-    {
-        try
-        {
-            audio = Convert.FromBase64String(base64.Trim());
-        }
-        catch (FormatException)
-        {
-            audio = null;
-            return "'audio_base64' is not valid base64.";
-        }
-
-        return audio.Length == 0 ? "'audio_base64' decoded to zero bytes." : null;
-    }
-
-    private static string? ValidatePipelineSegments(IReadOnlyList<TranscribeSegment>? segments)
-    {
-        if (segments is not { Count: > 0 })
-        {
-            return "Pipeline needs 'audio_base64' or a non-empty 'segments' array of { id, text, duration_seconds, speaker? }.";
-        }
-
-        if (segments.Any(s => s is null))
-        {
-            return "segments must not contain null elements.";
-        }
-
-        if (segments.Any(HasMissingIdOrText))
-        {
-            return "Each segment must have a non-empty 'id' and 'text'.";
-        }
-
-        return segments.Count > 100 ? "At most 100 segments are allowed per request." : null;
-    }
-
-    private static bool HasMissingIdOrText(TranscribeSegment s) => string.IsNullOrWhiteSpace(s.Id) || s.Text is null;
-
-    // SPA fallback: for non-/api routes, serve index.html if it exists (after a prod build).
     internal static async Task FallbackAsync(HttpContext ctx)
     {
         // Don't hijack API 404s

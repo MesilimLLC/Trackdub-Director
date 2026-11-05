@@ -34,7 +34,7 @@ export function SceneHeader({ context }: { context: DirectorContext | undefined 
   return (
     <>
       <div className="token-usage">
-        Speaker: {orDash(fields.speaker_label ?? fields.speaker_id)} · Emotion/tone: {orDash(fields.emotion_tone_label)}
+        Speaker: {orDash(fields.speaker_label ?? fields.speaker_id)} · Emotion/tone: {orDash(fields.emotion_tone_label)} · Pacing: {orDash(fields.pacing_label)}
       </div>
       <div className="token-usage">Speaker description: {orDash(fields.speaker_description)}</div>
       <div className="token-usage">On-screen text: {listOrDash(fields.on_screen_text)}</div>
@@ -111,20 +111,31 @@ export function SceneVisionFooter({ scene }: { scene: SceneSegmentResult }) {
   );
 }
 
+export function SceneBody({ scene }: { scene: SceneSegmentResult }) {
+  if (scene.status === "Failed") {
+    return (
+      <div className="meaning-issues">
+        <strong>Scene failed:</strong> {scene.error ?? "unknown error"}
+      </div>
+    );
+  }
+  return <SceneDetails scene={scene} />;
+}
+
+export function SceneGateLine({ scene }: { scene: SceneSegmentResult }) {
+  return (
+    <div className="token-usage">
+      Scene gate: model {scene.provenance.model_id} · template {scene.provenance.prompt_template_version} · {scene.provenance.timestamp_utc} · tokens{" "}
+      {scene.usage.total_tokens} · images {scene.images_processed}
+    </div>
+  );
+}
+
 export function ScenePanel({ seg, scene }: { seg: SegmentInput; scene: SceneSegmentResult }) {
   return (
     <div className="attempts-panel" aria-label={`Scene context for ${seg.id}`}>
-      {scene.status === "Failed" ? (
-        <div className="meaning-issues">
-          <strong>Scene failed:</strong> {scene.error ?? "unknown error"}
-        </div>
-      ) : (
-        <SceneDetails scene={scene} />
-      )}
-      <div className="token-usage">
-        Scene gate: model {scene.provenance.model_id} · template {scene.provenance.prompt_template_version} · {scene.provenance.timestamp_utc} · tokens{" "}
-        {scene.usage.total_tokens} · images {scene.images_processed}
-      </div>
+      <SceneBody scene={scene} />
+      <SceneGateLine scene={scene} />
       <SceneVisionFooter scene={scene} />
     </div>
   );

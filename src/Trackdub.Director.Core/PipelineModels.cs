@@ -45,7 +45,8 @@ public sealed record PipelineRequest(
     // enable the computed-speed retake or opt out of emotion tags. Null keeps
     // each lane's shipped default (speed retake off, emotion tags on).
     SpeedRetakeOptions? SpeedRetake = null,
-    EmotionTagOptions? EmotionTags = null);
+    EmotionTagOptions? EmotionTags = null,
+    IReadOnlyDictionary<string, string>? SpeakerMapping = null);
 
 /// <summary>
 /// One orchestrated run. Each lane's report keeps its existing shape and
