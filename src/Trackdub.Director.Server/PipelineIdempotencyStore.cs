@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 // Keeps paid request results briefly so a browser can replay a dropped response
 // without paying for the stages again. A small durable key ledger prevents a
@@ -12,11 +13,19 @@ internal sealed class PipelineIdempotencyStore
     private readonly object _gate = new();
     private readonly Dictionary<string, Entry> _entries = new(StringComparer.Ordinal);
     private readonly string? _persistencePath;
-    private bool _persistenceHealthy = true;
+    private readonly ILogger? _logger;
 
-    internal PipelineIdempotencyStore(string? persistencePath = null)
+    // A ledger that could not be read at startup stays fail-closed: writing over
+    // it could turn an ambiguous retry into a second paid request. A failed
+    // write is treated as transient and retried by the next request.
+    private bool _ledgerUnreadable;
+    private bool _writeFailed;
+    private bool _writeFailureLogged;
+
+    internal PipelineIdempotencyStore(string? persistencePath = null, ILogger? logger = null)
     {
         _persistencePath = persistencePath;
+        _logger = logger;
         LoadPersistedEntries();
     }
 
@@ -76,7 +85,14 @@ internal sealed class PipelineIdempotencyStore
             return ReplayExisting(existing, request);
         }
 
-        if (!_persistenceHealthy)
+        if (_ledgerUnreadable)
+        {
+            return RecoveryUnavailableResult();
+        }
+
+        // Retry a previously failed write before starting new paid work; a
+        // successful retry restores health without a restart.
+        if (_writeFailed && !PersistEntries())
         {
             return RecoveryUnavailableResult();
         }
@@ -136,8 +152,9 @@ internal sealed class PipelineIdempotencyStore
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException or NotSupportedException)
         {
             // Fail closed: losing the key ledger could turn an ambiguous retry
-            // into a second paid request.
-            _persistenceHealthy = false;
+            // into a second paid request. Never overwrite an unreadable ledger.
+            _ledgerUnreadable = true;
+            _logger?.LogError(ex, "Idempotency ledger {Path} could not be read; paid requests are disabled until it is repaired.", _persistencePath);
         }
     }
 
@@ -156,6 +173,7 @@ internal sealed class PipelineIdempotencyStore
 
     private bool PersistEntries()
     {
+        if (_ledgerUnreadable) return false;
         if (string.IsNullOrWhiteSpace(_persistencePath)) return true;
 
         string? directory = Path.GetDirectoryName(_persistencePath);
@@ -168,11 +186,19 @@ internal sealed class PipelineIdempotencyStore
                 .ToArray();
             File.WriteAllText(temporaryPath, JsonSerializer.Serialize(snapshot));
             File.Move(temporaryPath, _persistencePath, overwrite: true);
+            _writeFailed = false;
+            _writeFailureLogged = false;
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
-            _persistenceHealthy = false;
+            _writeFailed = true;
+            if (!_writeFailureLogged)
+            {
+                _writeFailureLogged = true;
+                _logger?.LogError(ex, "Idempotency ledger {Path} could not be written; paid requests are paused until a later write succeeds.", _persistencePath);
+            }
+
             try { File.Delete(temporaryPath); } catch (IOException) { } catch (UnauthorizedAccessException) { }
             return false;
         }

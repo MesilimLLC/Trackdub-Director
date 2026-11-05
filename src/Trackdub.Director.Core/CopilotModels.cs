@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Trackdub.Director.Core;
@@ -31,13 +32,57 @@ public sealed record CopilotRequest(
     [property: JsonPropertyName("segments")] CopilotSegmentSummary[] Segments,
     [property: JsonPropertyName("report_summary")] string? ReportSummary = null);
 
+// Presence is tracked separately from value for the fields the browser uses to
+// clear state (director register and sign text). The global serializer omits
+// nulls, so an explicit null proposed by the model would otherwise look like an
+// omitted field and the browser would not clear the existing value.
+[JsonConverter(typeof(CopilotSegmentUpdateConverter))]
 public sealed record CopilotSegmentUpdate(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("concepts")] string[]? Concepts = null,
     [property: JsonPropertyName("vision_enrichment")] bool? VisionEnrichment = null,
     [property: JsonPropertyName("director_register")] string? DirectorRegister = null,
     [property: JsonPropertyName("sign_source_text")] string? SignSourceText = null,
-    [property: JsonPropertyName("sign_target_text")] string? SignTargetText = null);
+    [property: JsonPropertyName("sign_target_text")] string? SignTargetText = null)
+{
+    [JsonIgnore] public bool DirectorRegisterSpecified { get; init; }
+    [JsonIgnore] public bool SignSourceTextSpecified { get; init; }
+    [JsonIgnore] public bool SignTargetTextSpecified { get; init; }
+}
+
+public sealed class CopilotSegmentUpdateConverter : JsonConverter<CopilotSegmentUpdate>
+{
+    public override CopilotSegmentUpdate Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        throw new NotSupportedException("Copilot segment updates are produced by the server, not read from JSON.");
+
+    public override void Write(Utf8JsonWriter writer, CopilotSegmentUpdate value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WriteString("id", value.Id);
+        if (value.Concepts is not null)
+        {
+            writer.WritePropertyName("concepts");
+            JsonSerializer.Serialize(writer, value.Concepts, options);
+        }
+
+        if (value.VisionEnrichment is not null)
+        {
+            writer.WriteBoolean("vision_enrichment", value.VisionEnrichment.Value);
+        }
+
+        WriteOptional(writer, "director_register", value.DirectorRegister, value.DirectorRegisterSpecified);
+        WriteOptional(writer, "sign_source_text", value.SignSourceText, value.SignSourceTextSpecified);
+        WriteOptional(writer, "sign_target_text", value.SignTargetText, value.SignTargetTextSpecified);
+        writer.WriteEndObject();
+    }
+
+    private static void WriteOptional(Utf8JsonWriter writer, string name, string? value, bool specified)
+    {
+        if (!specified) return;
+        if (value is null) writer.WriteNull(name);
+        else writer.WriteString(name, value);
+    }
+}
 
 public sealed record CopilotProposal(
     [property: JsonPropertyName("template")] string Template,

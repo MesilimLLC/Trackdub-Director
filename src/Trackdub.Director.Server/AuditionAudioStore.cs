@@ -77,7 +77,9 @@ internal sealed class AuditionAudioStore : IDisposable
         }
         catch (IOException)
         {
-            // Temporary audio is private to this process; a later start prunes stale roots.
+            // Temporary audio is private to this process. Disposal attempts to
+            // delete it; a process that exits without disposal leaves the root
+            // behind, and nothing prunes it later.
         }
         catch (UnauthorizedAccessException)
         {

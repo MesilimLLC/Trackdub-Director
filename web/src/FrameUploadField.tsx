@@ -54,6 +54,9 @@ export function FrameUploadField({
             frame_image_data_url: dataUrl,
             frame_id: expected.frame_id ?? file.name,
             frame_sha256: sha256,
+            // A sign box is defined against one frame, so a replacement frame
+            // must not inherit the old coordinates.
+            box: null,
           });
           onError(applied ? null : "Frame upload finished after that segment was replaced. Choose the frame again.");
         }).catch((error: unknown) => onError(error instanceof Error ? error.message : String(error)));

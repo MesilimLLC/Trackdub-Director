@@ -168,7 +168,12 @@ public sealed class CopilotService
             OptionalBool(item, "vision_enrichment", usage),
             ParseDirectorRegister(item, usage),
             OptionalNullableString(item, "sign_source_text", 300, usage),
-            OptionalNullableString(item, "sign_target_text", 300, usage));
+            OptionalNullableString(item, "sign_target_text", 300, usage))
+        {
+            DirectorRegisterSpecified = item.TryGetProperty("director_register", out _),
+            SignSourceTextSpecified = item.TryGetProperty("sign_source_text", out _),
+            SignTargetTextSpecified = item.TryGetProperty("sign_target_text", out _),
+        };
     }
 
     private static string RequireKnownSegmentId(

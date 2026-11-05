@@ -154,7 +154,7 @@ public static class AuditionOutputWriter
     private static AuditionTakeReport ToManifestTake(AuditionTakeReport take)
     {
         return take.AudioBytes is null || string.IsNullOrEmpty(take.AudioFileName)
-            ? take with { AudioFileName = null, AudioDataUrl = null, AudioTransportOmitted = null }
-            : take with { AudioSha256 = Convert.ToHexString(SHA256.HashData(take.AudioBytes)).ToLowerInvariant(), AudioDataUrl = null, AudioTransportOmitted = null };
+            ? take with { AudioFileName = null, AudioDataUrl = null, AudioUrl = null, AudioTransportOmitted = null }
+            : take with { AudioSha256 = Convert.ToHexString(SHA256.HashData(take.AudioBytes)).ToLowerInvariant(), AudioDataUrl = null, AudioUrl = null, AudioTransportOmitted = null };
     }
 }

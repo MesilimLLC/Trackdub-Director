@@ -100,9 +100,16 @@ public sealed class AuditionTransportTests : IDisposable
     [Fact]
     public async Task Manifest_strips_browser_audio_transport_fields()
     {
-        AuditionReport report = Report(Take(1, Encoding.ASCII.GetBytes("RIFFtransport"), winner: true));
-        _ = new AuditionAudioStore(_folder).Enrich(report);
-        string manifestPath = await AuditionOutputWriter.WriteAsync(report, _folder);
+        // The writer receives the raw report (it runs before Enrich moves bytes
+        // into the store), so seed the browser-only transport fields directly to
+        // prove the manifest drops them while still recording the take's hash.
+        AuditionTakeReport take = Take(1, Encoding.ASCII.GetBytes("RIFFtransport"), winner: true) with
+        {
+            AudioDataUrl = "data:audio/wav;base64,RIFFtransport",
+            AudioUrl = "/api/audition-audio/0123456789abcdef0123456789abcdef",
+            AudioTransportOmitted = "audio_storage_limit",
+        };
+        string manifestPath = await AuditionOutputWriter.WriteAsync(Report(take), _folder);
         string manifest = await File.ReadAllTextAsync(manifestPath);
 
         Assert.DoesNotContain("audio_data_url", manifest, StringComparison.Ordinal);

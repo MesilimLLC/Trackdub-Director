@@ -42,7 +42,9 @@ string? configuredIdempotencyPath = builder.Configuration["TRACKDUB_IDEMPOTENCY_
 string idempotencyPath = string.IsNullOrWhiteSpace(configuredIdempotencyPath)
     ? Path.Combine(stateRoot, "Trackdub.Director", "idempotency.json")
     : Path.GetFullPath(configuredIdempotencyPath);
-builder.Services.AddSingleton(_ => new PipelineIdempotencyStore(idempotencyPath));
+builder.Services.AddSingleton(sp => new PipelineIdempotencyStore(
+    idempotencyPath,
+    sp.GetRequiredService<ILogger<PipelineIdempotencyStore>>()));
 builder.Services.AddSingleton(_ => new AuditionAudioStore());
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
 {

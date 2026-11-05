@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Trackdub.Director.Core;
 using static Trackdub.Director.Tests.ServerTestSupport;
 
@@ -39,6 +40,27 @@ public sealed class CopilotServiceTests
         Assert.Equal(2, proposal.Settings.MaxRevisions);
         Assert.Equal("formal", Assert.Single(proposal.SegmentUpdates).DirectorRegister);
         Assert.Equal(30, proposal.Usage?.TotalTokens);
+    }
+
+    [Fact]
+    public void Proposal_serializes_explicit_nulls_but_omits_absent_fields()
+    {
+        CopilotProposal proposal = CopilotService.Parse(
+            """{"template":"director","explanation":"x","settings":{},"segment_updates":[{"id":"seg-1","director_register":null,"sign_source_text":"Hola"}],"missing_inputs":[],"warnings":[]}""",
+            Request(),
+            "muse-spark-1.1",
+            null);
+
+        string json = JsonSerializer.Serialize(
+            proposal,
+            new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
+        using JsonDocument doc = JsonDocument.Parse(json);
+        JsonElement update = doc.RootElement.GetProperty("segment_updates")[0];
+
+        Assert.Equal(JsonValueKind.Null, update.GetProperty("director_register").ValueKind);
+        Assert.Equal("Hola", update.GetProperty("sign_source_text").GetString());
+        Assert.False(update.TryGetProperty("sign_target_text", out _));
+        Assert.False(update.TryGetProperty("concepts", out _));
     }
 
     [Theory]

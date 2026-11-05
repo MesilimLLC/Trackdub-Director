@@ -703,10 +703,13 @@ public sealed class MetaClient : IDisposable
 
     private static bool ShouldRetryTransientServerError(System.Net.HttpStatusCode statusCode, int attempt, TokenUsage? errorUsage)
     {
-        int numericStatus = (int)statusCode;
+        // Only retry statuses a provider returns before doing paid work. A 502 or
+        // 504 can mean the request reached the provider and was billed even when
+        // the error body carries no usage, so resending could pay twice.
         return attempt < 2
             && errorUsage is null
-            && numericStatus is >= 500 and <= 599;
+            && statusCode is System.Net.HttpStatusCode.InternalServerError
+                or System.Net.HttpStatusCode.ServiceUnavailable;
     }
 
     private static string ResolveModel(string? model)

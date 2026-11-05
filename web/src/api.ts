@@ -420,8 +420,9 @@ export type AuditionReport = {
 
 type StageRequestOptions = AuditionRequestOptions & { speakerMapping?: SpeakerMapping; idempotencyKey?: string };
 
-function mappedSpeaker(segment: SegmentInput, options?: StageRequestOptions): string | null {
-  return options?.speakerMapping?.[segment.speaker_id ?? ""] || segment.speaker_id || null;
+// The server resolves speaker_mapping (SpeakerAssignment.Resolve); send the raw label.
+function mappedSpeaker(segment: SegmentInput): string | null {
+  return segment.speaker_id || null;
 }
 
 function emotionLabel(segment: SegmentInput, options?: StageRequestOptions): string | null {
@@ -437,7 +438,7 @@ function auditionSegmentBody(segment: SegmentInput, options?: StageRequestOption
     id: segment.id,
     text: segment.text,
     duration_seconds: segment.duration_seconds ?? null,
-    speaker_id: mappedSpeaker(segment, options),
+    speaker_id: mappedSpeaker(segment),
     emotion_tone_label: emotionLabel(segment, options),
     pacing_label: pacingLabel(segment, options),
   };
