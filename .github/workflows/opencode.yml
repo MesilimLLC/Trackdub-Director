@@ -173,7 +173,7 @@ jobs:
             zen:nemotron-3-ultra-free,
             openrouter:openrouter/free
           models-fix: >-
-            cf:@cf/deepseek-ai/deepseek-v4-flash-0731,
+            cf:@cf/deepseek-ai/deepseek-v4.1-flash-1017,
             cf:@cf/moonshotai/kimi-k2.7-code,
             cf:@cf/qwen/qwen3.8-27b,
             cf:@cf/openai/gpt-oss-120b,
