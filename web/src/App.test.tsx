@@ -58,6 +58,16 @@ const statusOk = {
   reasoningEffort: "low",
 };
 
+const signFields = { frame_image_data_url: "data:image/png;base64,dGVzdA==", box: { x1: 1, y1: 1, x2: 5, y2: 5 }, source_text: "STORE", target_text: "TIENDA" };
+
+async function loadLines(container: HTMLElement, lines: { text: string; [key: string]: unknown }[]) {
+  const file = new File([], "segments.json", { type: "application/json" });
+  Object.defineProperty(file, "text", { value: async () => JSON.stringify(lines) });
+  await act(async () => {
+    fireEvent.change(container.querySelector('input[accept=".json,application/json"]')!, { target: { files: [file] } });
+  });
+}
+
 const qaMock = {
   source_language: "en",
   target_language: "es",
@@ -199,6 +209,32 @@ describe("App smoke", () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  it("sends only prepared signs and displays results on their original lines", async () => {
+    const visual = { segments: [{ id: "sign", status: "Failed", error: "sign result", provenance: { model_id: "model", endpoint_host: "host", timestamp_utc: "time", prompt_template_version: "v1" }, usage: { total_tokens: 0 }, image_calls: 0 }] };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify(input.toString().includes("/api/status") ? statusOk : visual), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { container } = render(<App />);
+    await loadLines(container, [{ id: "dialogue", text: "Just dialogue", frame_image_data_url: signFields.frame_image_data_url }, { id: "sign", text: "Sign line", ...signFields }]);
+    fireEvent.click(screen.getByRole("button", { name: "Run Visual" }));
+    await screen.findByText(/sign result/);
+    const call = fetchMock.mock.calls.find(([input]) => input.toString().includes("/api/visual-localisation"));
+    expect(call).toBeDefined();
+    const request = call as unknown as [RequestInfo | URL, RequestInit];
+    expect(JSON.parse(request[1].body as string).segments.map((segment: { id: string }) => segment.id)).toEqual(["sign"]);
+    expect(within(getCard("sign")).getByText(/sign result/)).toBeInTheDocument();
+    expect(within(getCard("dialogue")).queryByText(/sign result/)).not.toBeInTheDocument();
+  });
+
+  it("explains incomplete signs without sending a Visual request", async () => {
+    const fetchMock = mockFetchForQa();
+    vi.stubGlobal("fetch", fetchMock);
+    const { container } = render(<App />);
+    await loadLines(container, [{ id: "sign", text: "Sign line", box: signFields.box, source_text: "STORE" }]);
+    fireEvent.click(screen.getByRole("button", { name: "Run Visual" }));
+    expect(await screen.findByText("Line 1 (sign) needs: frame, target text.")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => input.toString().includes("/api/visual-localisation"))).toBe(false);
+  });
+
   it("shows each visual result for duplicate segment ids in input order", async () => {
     const provenance = { model_id: "model", endpoint_host: "host", timestamp_utc: "time", prompt_template_version: "v1" };
     const visual = { segments: [
@@ -211,7 +247,7 @@ describe("App smoke", () => {
     }));
     const { container } = render(<App />);
     const file = new File([], "segments.json", { type: "application/json" });
-    Object.defineProperty(file, "text", { value: async () => JSON.stringify([{ id: "same", text: "First" }, { id: "same", text: "Second" }]) });
+    Object.defineProperty(file, "text", { value: async () => JSON.stringify([{ id: "same", text: "First", ...signFields }, { id: "same", text: "Second", ...signFields }]) });
     fireEvent.change(container.querySelector('input[accept=".json,application/json"]')!, { target: { files: [file] } });
     expect(await screen.findAllByText("First")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Run Visual" }));
@@ -227,7 +263,8 @@ describe("App smoke", () => {
       if (input.toString().includes("/api/status")) return Promise.resolve(new Response(JSON.stringify(statusOk), { status: 200 }));
       return new Promise<Response>((_, reject) => { rejectVisual = reject; });
     }));
-    render(<App />);
+    const { container } = render(<App />);
+    await loadLines(container, [{ id: "sign", text: "Sign line", ...signFields }]);
     fireEvent.click(screen.getByRole("button", { name: "Run Visual" }));
     if (invalidated) fireEvent.click(screen.getByRole("button", { name: "Load sample" }));
     await act(async () => { rejectVisual(new Error("visual request failed")); });
@@ -727,7 +764,8 @@ describe("App smoke", () => {
         return new Response("not found", { status: 404 });
       }),
     );
-    render(<App />);
+    const { container } = render(<App />);
+    await loadLines(container, [{ id: "seg-001", text: "Hello", ...signFields }, { id: "seg-002", text: "Action!", ...signFields }]);
     screen.getByRole("button", { name: "Run Visual" }).click();
     await waitFor(() => expect(screen.getByText("Visual: Localised")).toBeInTheDocument());
 

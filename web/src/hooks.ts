@@ -115,13 +115,42 @@ function pipelineSegments(report: PipelineReport, segments: SegmentInput[], audi
   });
 }
 
+function hasSignFields(segment: SegmentInput): boolean {
+  return Boolean(segment.box || segment.source_text?.trim() || segment.target_text?.trim());
+}
+
+function missingSignFields(segment: SegmentInput): string[] {
+  const fields = [
+    ["frame", segment.frame_image_data_url?.trim()],
+    ["box", segment.box],
+    ["source text", segment.source_text?.trim()],
+    ["target text", segment.target_text?.trim()],
+  ] as const;
+  return fields.filter(([, value]) => !value).map(([label]) => label);
+}
+
+function visualInputs(segments: SegmentInput[]) {
+  const selected = segments.map((segment, index) => ({ segment, index }))
+    .filter(({ segment }) => hasSignFields(segment));
+  if (!selected.length) throw new Error("Add a frame, box, source text, and target text for a sign before running Visual.");
+  for (const { segment, index } of selected) {
+    const missing = missingSignFields(segment);
+    if (missing.length) throw new Error(`Line ${index + 1} (${segment.id}) needs: ${missing.join(", ")}.`);
+  }
+  return selected;
+}
+
 export function useReports() {
   const [qa, setQa] = useState<QaReport | null>(null);
   const [batch, setBatch] = useState<TranslateBatch | null>(null);
   const [scene, setScene] = useState<SceneContextBatch | null>(null);
   const [director, setDirector] = useState<DirectorAdaptationBatch | null>(null);
   const [audition, setAudition] = useState<AuditionReport | null>(null);
-  const [visual, setVisual] = useState<VisualLocalisationBatch | null>(null);
+  const [visualState, setVisualState] = useState<{ report: VisualLocalisationBatch; indices: number[] } | null>(null);
+  const visual = visualState?.report ?? null;
+  const setVisual = useCallback((report: VisualLocalisationBatch | null, indices: number[] = []) => {
+    setVisualState(report ? { report, indices } : null);
+  }, []);
   const [pipeline, setPipeline] = useState<PipelineReport | null>(null);
 
   const clearKinds = useCallback((kinds: Iterable<ReportKind>) => {
@@ -135,7 +164,7 @@ export function useReports() {
       pipeline: () => setPipeline(null),
     };
     for (const kind of new Set(kinds)) setters[kind]();
-  }, []);
+  }, [setVisual]);
 
   const reset = useCallback(() => {
     clearKinds(["batch", "qa", "scene", "director", "audition", "visual", "pipeline"]);
@@ -147,7 +176,9 @@ export function useReports() {
   const batchById = useMemo(() => mapSegmentsById(reportSegments(batch), (s) => s.translation), [batch]);
   const directorById = useMemo(() => mapSegmentsById(reportSegments(director), (s) => s), [director]);
   const auditionById = useMemo(() => mapSegmentsById(reportSegments(audition), (s) => s), [audition]);
-  const visualById = useMemo(() => mapSegmentsByIndex(reportSegments(visual), (s) => s), [visual]);
+  const visualById = useMemo(() => visualState
+    ? new Map(visualState.report.segments.map((segment, index) => [visualState.indices[index], segment] as const))
+    : null, [visualState]);
 
   return {
     qa, setQa, batch, setBatch, scene, setScene, director, setDirector,
@@ -248,7 +279,7 @@ export interface ActionsContext {
   setScene: (scene: SceneContextBatch) => void;
   setDirector: (director: DirectorAdaptationBatch) => void;
   setAudition: (audition: AuditionReport) => void;
-  setVisual: (visual: VisualLocalisationBatch) => void;
+  setVisual: (visual: VisualLocalisationBatch, indices: number[]) => void;
   setPipeline: (report: PipelineReport) => void;
   loadSegments: (segments: SegmentInput[]) => void;
   audition: AuditionReport | null;
@@ -373,8 +404,9 @@ export function useActions(context: ActionsContext) {
     const requestId = nextRequestId(context.visualRequestRef);
     await run("visual", async () => {
       try {
-        const res = await postVisualLocalisation(segments);
-        if (requestId === context.visualRequestRef.current) setVisual(res);
+        const selected = visualInputs(segments);
+        const res = await postVisualLocalisation(selected.map(({ segment }) => segment));
+        if (requestId === context.visualRequestRef.current) setVisual(res, selected.map(({ index }) => index));
       } catch (error) {
         if (requestId === context.visualRequestRef.current) throw error;
       }
