@@ -22,7 +22,7 @@ export function PipelinePanel({ busy, pipeline, resetGeneration, segments, speak
   segments: SegmentInput[];
   speakerMapping: SpeakerMapping;
   onSpeakerMappingChange: (mapping: SpeakerMapping) => void;
-  onRun: (audio: File | null, flags: { scene: boolean; audition: boolean }, mapping: SpeakerMapping, idempotencyKey: string) => Promise<void>;
+  onRun: (audio: File | null, flags: { scene: boolean; audition: boolean }, mapping: SpeakerMapping, recovery: { key: string; onSuccess: () => void }) => Promise<void>;
   onTranscribe: (audio: File) => Promise<void>;
   onAudioChange: () => void;
   onRecoveryError: (message: string) => void;
@@ -38,14 +38,6 @@ export function PipelinePanel({ busy, pipeline, resetGeneration, segments, speak
     if (audioInputRef.current) audioInputRef.current.value = "";
   }, [resetGeneration]);
 
-  const pipelineSucceeded = Boolean(pipeline && pipeline.stages.every((stage) => stage.status !== "Failed"));
-  useEffect(() => {
-    if (pipelineSucceeded) {
-      clearPendingIdempotencyKey("pipeline");
-      setRetryKey(null);
-    }
-  }, [pipeline, pipelineSucceeded]);
-
   const chooseAudio = (next: File | null) => {
     setAudio(next);
     onAudioChange();
@@ -58,7 +50,11 @@ export function PipelinePanel({ busy, pipeline, resetGeneration, segments, speak
       return;
     }
     setRetryKey(key);
-    void onRun(audio, { scene: sceneOn, audition: auditionOn }, speakerMapping, key);
+    const onSuccess = () => {
+      if (readPendingIdempotencyKey("pipeline") === key) clearPendingIdempotencyKey("pipeline");
+      setRetryKey((current) => current === key ? null : current);
+    };
+    void onRun(audio, { scene: sceneOn, audition: auditionOn }, speakerMapping, { key, onSuccess });
   };
 
   return (

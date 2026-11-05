@@ -96,6 +96,25 @@ function reportSegments<T>(report: { segments: T[] } | null): T[] | undefined {
   return report?.segments;
 }
 
+function pipelineSucceeded(report: PipelineReport): boolean {
+  return report.stages.every((stage) => stage.status !== "Failed");
+}
+
+function pipelineSegments(report: PipelineReport, segments: SegmentInput[], audio: File | null): SegmentInput[] {
+  const priorById = new Map(segments.map((segment) => [segment.id, segment] as const));
+  return report.segments.map((segment) => {
+    const prior = audio ? undefined : priorById.get(segment.id);
+    return {
+      ...(prior ?? {}),
+      id: segment.id,
+      text: segment.text,
+      duration_seconds: segment.duration_seconds,
+      speaker_id: segment.speaker ?? prior?.speaker_id ?? null,
+      start_seconds: segment.start_seconds ?? prior?.start_seconds ?? null,
+    };
+  });
+}
+
 export function useReports() {
   const [qa, setQa] = useState<QaReport | null>(null);
   const [batch, setBatch] = useState<TranslateBatch | null>(null);
@@ -386,29 +405,17 @@ export function useActions(context: ActionsContext) {
   }, [context.copilotRequestRef, run]);
 
   const runPipeline = useCallback(
-    (audio: File | null, flags: { scene: boolean; audition: boolean }, speakerMapping: SpeakerMapping = {}, idempotencyKey?: string) =>
+    (audio: File | null, flags: { scene: boolean; audition: boolean }, speakerMapping: SpeakerMapping, recovery: { key: string; onSuccess: () => void }) =>
       run("pipeline", async () => {
         const requestId = nextRequestId(context.pipelineRequestRef);
-        const priorById = new Map(segments.map((s) => [s.id, s] as const));
-        const report = await postPipeline(audio, segments, segments, flags, from, to, { ...auditionOptions, speakerMapping }, idempotencyKey);
+        const report = await postPipeline(audio, segments, segments, flags, from, to, { ...auditionOptions, speakerMapping }, recovery.key);
         if (requestId !== context.pipelineRequestRef.current) return;
-        loadSegments(
-          report.segments.map((s) => {
-            const prior = audio ? undefined : priorById.get(s.id);
-            return {
-              ...(prior ?? {}),
-              id: s.id,
-              text: s.text,
-              duration_seconds: s.duration_seconds,
-              speaker_id: s.speaker ?? prior?.speaker_id ?? null,
-              start_seconds: s.start_seconds ?? prior?.start_seconds ?? null,
-            };
-          }),
-        );
+        loadSegments(pipelineSegments(report, segments, audio));
         setPipeline(report);
         if (report.qa) setQa(report.qa);
         if (report.scene) setScene(report.scene);
         if (report.audition) setAudition(report.audition);
+        if (pipelineSucceeded(report)) recovery.onSuccess();
       }),
     [context.pipelineRequestRef, run, segments, from, to, auditionOptions, setPipeline, loadSegments, setQa, setScene, setAudition],
   );
