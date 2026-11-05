@@ -2,3 +2,5 @@
 src/Trackdub.Director.Server/wwwroot/assets/
 /src/Trackdub.Director.Server/wwwroot/assets/
 **/wwwroot/assets/
+**/wwwroot/assets/*.js
+**/wwwroot/assets/*.css
