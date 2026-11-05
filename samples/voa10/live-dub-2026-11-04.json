@@ -1,0 +1,529 @@
+{
+  "description": "Derived summary of one local API and CLI run; raw media and provider responses remain local.",
+  "date_local": "2026-11-04",
+  "local_timezone": "America/Los_Angeles",
+  "api_worktree_commit": "cd0eac4a741a9e39951f5eb1d996c95083253591",
+  "input_video": "samples/voa10/media/coffee-shop.mp4",
+  "input_audio": "samples/voa10/media/coffee-shop-audio.wav",
+  "transcription": {
+    "segments": [
+      {
+        "id": "seg-001",
+        "text": "Hi Ashley.",
+        "duration_seconds": 1,
+        "speaker": "A",
+        "start_seconds": 0.22
+      },
+      {
+        "id": "seg-002",
+        "text": "Hello Anna. Which coffee shop? There are three coffee shops. Okay my apartment is across from a big department store.",
+        "duration_seconds": 9.4,
+        "speaker": "B",
+        "start_seconds": 1.5
+      },
+      {
+        "id": "seg-003",
+        "text": "A big department store? Ah I see it.",
+        "duration_seconds": 3.7,
+        "speaker": "C",
+        "start_seconds": 11.1
+      },
+      {
+        "id": "seg-004",
+        "text": "Okay bye Ashley see you soon.",
+        "duration_seconds": 2.6,
+        "speaker": "A",
+        "start_seconds": 14.78
+      },
+      {
+        "id": "seg-005",
+        "text": "Okay see you soon",
+        "duration_seconds": 1.8,
+        "speaker": "C",
+        "start_seconds": 17.82
+      }
+    ],
+    "manual_corrections": "Split the merged second turn using the annotated sample boundaries and assigned the six turns to the sample speakers."
+  },
+  "corrected_segments": [
+    {
+      "id": "voa10-001",
+      "text": "Hi Ashley.",
+      "start_seconds": 0.06,
+      "duration_seconds": 1.2,
+      "speaker": "anna"
+    },
+    {
+      "id": "voa10-002",
+      "text": "Hello Anna. Which coffee shop? There are three coffee shops.",
+      "start_seconds": 1.66,
+      "duration_seconds": 4.4,
+      "speaker": "ashley"
+    },
+    {
+      "id": "voa10-003",
+      "text": "Okay my apartment is across from a big department store.",
+      "start_seconds": 6.46,
+      "duration_seconds": 4.48,
+      "speaker": "anna"
+    },
+    {
+      "id": "voa10-004",
+      "text": "A big department store? Ah I see it.",
+      "start_seconds": 11.1,
+      "duration_seconds": 3.6,
+      "speaker": "ashley"
+    },
+    {
+      "id": "voa10-005",
+      "text": "Okay bye Ashley see you soon.",
+      "start_seconds": 14.78,
+      "duration_seconds": 2.6,
+      "speaker": "anna"
+    },
+    {
+      "id": "voa10-006",
+      "text": "Okay see you soon",
+      "start_seconds": 17.82,
+      "duration_seconds": 1.8,
+      "speaker": "ashley"
+    }
+  ],
+  "pipeline": {
+    "transcription_note": "ASR was run separately; pipeline received the manually corrected segments.",
+    "stages": [
+      {
+        "stage": "transcribe",
+        "status": "NotRun",
+        "note": "no audio supplied"
+      },
+      {
+        "stage": "qa",
+        "status": "Ran"
+      },
+      {
+        "stage": "scene",
+        "status": "Ran"
+      },
+      {
+        "stage": "audition",
+        "status": "Ran"
+      }
+    ],
+    "qa_totals": {
+      "total_segments": 6,
+      "first_pass_count": 6,
+      "final_pass_count": 6,
+      "total_revisions": 0,
+      "first_pass_rate": 1,
+      "final_pass_rate": 1,
+      "total_tokens": 4617,
+      "prompt_tokens": 2450,
+      "completion_tokens": 2167,
+      "failed_segments": 0
+    },
+    "scene_statuses": [
+      {
+        "id": "voa10-005",
+        "status": "Parsed"
+      }
+    ],
+    "audition_totals": {
+      "total_segments": 6,
+      "lines_cast": 6,
+      "takes_synthesized": 9,
+      "meta_calls": 15,
+      "translation_tokens": 1788,
+      "meaning_tokens": 4510,
+      "elevenlabs_characters": 336,
+      "elevenlabs_cap_hit": false,
+      "meta_cap_hit": false
+    },
+    "winners": [
+      {
+        "id": "voa10-001",
+        "speaker_id": "anna",
+        "take_number": 1,
+        "text": "Hola Ashley.",
+        "window_seconds": 1.2,
+        "measured_seconds": 1.12,
+        "timing_verdict": "Pass",
+        "meaning_verdict": "Pass"
+      },
+      {
+        "id": "voa10-002",
+        "speaker_id": "ashley",
+        "take_number": 1,
+        "text": "Hola Anna. ¿Cuál cafetería? Hay tres cafeterías.",
+        "window_seconds": 4.4,
+        "measured_seconds": 3.84,
+        "timing_verdict": "Pass",
+        "meaning_verdict": "Pass"
+      },
+      {
+        "id": "voa10-003",
+        "speaker_id": "anna",
+        "take_number": 1,
+        "text": "Bueno, mi apartamento está frente a unos grandes almacenes.",
+        "window_seconds": 4.48,
+        "measured_seconds": 4.08,
+        "timing_verdict": "Pass",
+        "meaning_verdict": "Pass"
+      },
+      {
+        "id": "voa10-004",
+        "speaker_id": "ashley",
+        "take_number": 1,
+        "text": "¿Una tienda departamental grande? Ah, ya la veo.",
+        "window_seconds": 3.6,
+        "measured_seconds": 3.76,
+        "timing_verdict": "Pass",
+        "meaning_verdict": "Pass"
+      },
+      {
+        "id": "voa10-005",
+        "speaker_id": "anna",
+        "take_number": 4,
+        "text": "Bueno, adiós Ashley, te veo pronto.",
+        "window_seconds": 2.6,
+        "measured_seconds": 2.8,
+        "timing_verdict": "Pass",
+        "meaning_verdict": "Pass"
+      },
+      {
+        "id": "voa10-006",
+        "speaker_id": "ashley",
+        "take_number": 1,
+        "text": "Ok, nos vemos pronto.",
+        "window_seconds": 1.8,
+        "measured_seconds": 1.84,
+        "timing_verdict": "Pass",
+        "meaning_verdict": "Pass"
+      }
+    ]
+  },
+  "export_placements": [
+    {
+      "id": "voa10-001",
+      "start_seconds": 0.06,
+      "audio_field": "audio_0"
+    },
+    {
+      "id": "voa10-002",
+      "start_seconds": 1.66,
+      "audio_field": "audio_1"
+    },
+    {
+      "id": "voa10-003",
+      "start_seconds": 6.46,
+      "audio_field": "audio_2"
+    },
+    {
+      "id": "voa10-004",
+      "start_seconds": 11.1,
+      "audio_field": "audio_3"
+    },
+    {
+      "id": "voa10-005",
+      "start_seconds": 14.9,
+      "audio_field": "audio_4"
+    },
+    {
+      "id": "voa10-006",
+      "start_seconds": 17.82,
+      "audio_field": "audio_5"
+    }
+  ],
+  "visual_localisation": {
+    "image_calls_total": 2,
+    "segments": [
+      {
+        "id": "horizontal",
+        "status": "Localised",
+        "box": {
+          "x1": 990,
+          "y1": 210,
+          "x2": 1158,
+          "y2": 420
+        },
+        "source_text": "DEPARTMENT STORE",
+        "target_text": "GRANDES ALMACENES",
+        "outside_box_diff": 0,
+        "image_calls": 1,
+        "provenance": {
+          "model_id": "muse-image-1.0",
+          "endpoint_host": "api.meta.ai",
+          "timestamp_utc": "2026-11-05T01:05:56.6389899Z",
+          "prompt_template_version": "image-edit-v2"
+        },
+        "usage": {
+          "prompt_tokens": 25546,
+          "completion_tokens": 1200,
+          "total_tokens": 26746
+        }
+      },
+      {
+        "id": "vertical",
+        "status": "Localised",
+        "box": {
+          "x1": 770,
+          "y1": 270,
+          "x2": 820,
+          "y2": 502
+        },
+        "source_text": "DEPARTMENT STORE",
+        "target_text": "GRANDES ALMACENES",
+        "outside_box_diff": 0,
+        "image_calls": 1,
+        "provenance": {
+          "model_id": "muse-image-1.0",
+          "endpoint_host": "api.meta.ai",
+          "timestamp_utc": "2026-11-05T01:06:13.7577633Z",
+          "prompt_template_version": "image-edit-v2"
+        },
+        "usage": {
+          "prompt_tokens": 25470,
+          "completion_tokens": 1276,
+          "total_tokens": 26746
+        }
+      }
+    ]
+  },
+  "static_shot": {
+    "horizontal": {
+      "stage": "static-shot-composite",
+      "status": "Composited",
+      "reason": null,
+      "box": {
+        "x1": 990,
+        "y1": 210,
+        "x2": 1158,
+        "y2": 420
+      },
+      "window": {
+        "start_seconds": 12.76,
+        "end_seconds": 14.48
+      },
+      "fps": 25,
+      "min_ssim_threshold": 0.95,
+      "max_block_luma_shift_threshold": 30,
+      "frames_checked": 43,
+      "ssim_min": 0.9952178956824043,
+      "ssim_min_frame": 361,
+      "ssim_mean": 0.9978,
+      "block_luma_shift_max": 3.347999999999871,
+      "block_luma_shift_max_frame": 354,
+      "first_failing_frame": null,
+      "frames_composited": 43,
+      "outside_box_diff_max": 0,
+      "image_calls": 0,
+      "timestamp_utc": "2026-11-05T01:08:32.2623564Z",
+      "frames": [
+        {"frame_index": 319, "time_seconds": 12.76, "ssim": 0.9984820099184595, "max_block_luma_shift": 1.9561250000000854, "pass": true},
+        {"frame_index": 320, "time_seconds": 12.8, "ssim": 0.9988919742714266, "max_block_luma_shift": 1.4635000000000389, "pass": true},
+        {"frame_index": 321, "time_seconds": 12.84, "ssim": 0.9992811077723718, "max_block_luma_shift": 1.5875624999999616, "pass": true},
+        {"frame_index": 322, "time_seconds": 12.88, "ssim": 0.9995400026666525, "max_block_luma_shift": 1.421875, "pass": true},
+        {"frame_index": 323, "time_seconds": 12.92, "ssim": 0.9998073317986848, "max_block_luma_shift": 0.984375, "pass": true},
+        {"frame_index": 324, "time_seconds": 12.96, "ssim": 0.9999584708465376, "max_block_luma_shift": 0.46668750000000614, "pass": true},
+        {"frame_index": 325, "time_seconds": 13, "ssim": 1, "max_block_luma_shift": 0, "pass": true},
+        {"frame_index": 326, "time_seconds": 13.04, "ssim": 0.9999665400892814, "max_block_luma_shift": 0.5734374999998408, "pass": true},
+        {"frame_index": 327, "time_seconds": 13.08, "ssim": 0.9998999977312363, "max_block_luma_shift": 1.2262500000000784, "pass": true},
+        {"frame_index": 328, "time_seconds": 13.12, "ssim": 0.9997612270775963, "max_block_luma_shift": 1.9803750000000377, "pass": true},
+        {"frame_index": 329, "time_seconds": 13.16, "ssim": 0.9997136864337317, "max_block_luma_shift": 1.9803750000000377, "pass": true},
+        {"frame_index": 330, "time_seconds": 13.2, "ssim": 0.9995370856578345, "max_block_luma_shift": 1.978000000000037, "pass": true},
+        {"frame_index": 331, "time_seconds": 13.24, "ssim": 0.9994106663688472, "max_block_luma_shift": 1.961687500000039, "pass": true},
+        {"frame_index": 332, "time_seconds": 13.28, "ssim": 0.9992637390376299, "max_block_luma_shift": 1.961687500000039, "pass": true},
+        {"frame_index": 333, "time_seconds": 13.32, "ssim": 0.9991570043310958, "max_block_luma_shift": 1.563874999999996, "pass": true},
+        {"frame_index": 334, "time_seconds": 13.36, "ssim": 0.9990743453262368, "max_block_luma_shift": 1.578125, "pass": true},
+        {"frame_index": 335, "time_seconds": 13.4, "ssim": 0.9989024858438289, "max_block_luma_shift": 2.25, "pass": true},
+        {"frame_index": 336, "time_seconds": 13.44, "ssim": 0.9988047238960189, "max_block_luma_shift": 2.0973749999999143, "pass": true},
+        {"frame_index": 337, "time_seconds": 13.48, "ssim": 0.9986061327673365, "max_block_luma_shift": 2.117687499999903, "pass": true},
+        {"frame_index": 338, "time_seconds": 13.52, "ssim": 0.9983146911043916, "max_block_luma_shift": 2.383312499999903, "pass": true},
+        {"frame_index": 339, "time_seconds": 13.56, "ssim": 0.9980477579727529, "max_block_luma_shift": 2.383312499999903, "pass": true},
+        {"frame_index": 340, "time_seconds": 13.6, "ssim": 0.9978956345676437, "max_block_luma_shift": 2.383312499999903, "pass": true},
+        {"frame_index": 341, "time_seconds": 13.64, "ssim": 0.997844598929701, "max_block_luma_shift": 2.383312499999903, "pass": true},
+        {"frame_index": 342, "time_seconds": 13.68, "ssim": 0.9977864496276273, "max_block_luma_shift": 2.383312499999903, "pass": true},
+        {"frame_index": 343, "time_seconds": 13.72, "ssim": 0.997704497320526, "max_block_luma_shift": 2.383312499999903, "pass": true},
+        {"frame_index": 344, "time_seconds": 13.76, "ssim": 0.9975474313579079, "max_block_luma_shift": 2.383312499999903, "pass": true},
+        {"frame_index": 345, "time_seconds": 13.8, "ssim": 0.9973283403860714, "max_block_luma_shift": 2.145750000000021, "pass": true},
+        {"frame_index": 346, "time_seconds": 13.84, "ssim": 0.9971444434946535, "max_block_luma_shift": 2.208250000000021, "pass": true},
+        {"frame_index": 347, "time_seconds": 13.88, "ssim": 0.9968114406984748, "max_block_luma_shift": 2.6052500000000407, "pass": true},
+        {"frame_index": 348, "time_seconds": 13.92, "ssim": 0.9963609718275253, "max_block_luma_shift": 2.5250625000000184, "pass": true},
+        {"frame_index": 349, "time_seconds": 13.96, "ssim": 0.9963859810041231, "max_block_luma_shift": 2.5681249999998954, "pass": true},
+        {"frame_index": 350, "time_seconds": 14, "ssim": 0.9960520982185534, "max_block_luma_shift": 2.832374999999871, "pass": true},
+        {"frame_index": 351, "time_seconds": 14.04, "ssim": 0.9959549022617812, "max_block_luma_shift": 2.832374999999871, "pass": true},
+        {"frame_index": 352, "time_seconds": 14.08, "ssim": 0.9958339575782053, "max_block_luma_shift": 2.832374999999871, "pass": true},
+        {"frame_index": 353, "time_seconds": 14.12, "ssim": 0.9958562006849113, "max_block_luma_shift": 3.051124999999871, "pass": true},
+        {"frame_index": 354, "time_seconds": 14.16, "ssim": 0.9957756373045017, "max_block_luma_shift": 3.347999999999871, "pass": true},
+        {"frame_index": 355, "time_seconds": 14.2, "ssim": 0.9958656107053503, "max_block_luma_shift": 2.9641874999998947, "pass": true},
+        {"frame_index": 356, "time_seconds": 14.24, "ssim": 0.9958528791413364, "max_block_luma_shift": 2.9641874999998947, "pass": true},
+        {"frame_index": 357, "time_seconds": 14.28, "ssim": 0.9959396024632865, "max_block_luma_shift": 2.995375000000223, "pass": true},
+        {"frame_index": 358, "time_seconds": 14.32, "ssim": 0.9956200845794262, "max_block_luma_shift": 3.1516874999998947, "pass": true},
+        {"frame_index": 359, "time_seconds": 14.36, "ssim": 0.9955814676631336, "max_block_luma_shift": 3.1516874999998947, "pass": true},
+        {"frame_index": 360, "time_seconds": 14.4, "ssim": 0.995468254673181, "max_block_luma_shift": 3.099625000000046, "pass": true},
+        {"frame_index": 361, "time_seconds": 14.44, "ssim": 0.9952178956824043, "max_block_luma_shift": 3.2785624999999357, "pass": true}
+      ]
+    },
+    "vertical_after_horizontal": {
+      "stage": "static-shot-composite",
+      "status": "Composited",
+      "reason": null,
+      "box": {
+        "x1": 770,
+        "y1": 270,
+        "x2": 820,
+        "y2": 502
+      },
+      "window": {
+        "start_seconds": 12.76,
+        "end_seconds": 14.48
+      },
+      "fps": 25,
+      "min_ssim_threshold": 0.95,
+      "max_block_luma_shift_threshold": 30,
+      "frames_checked": 43,
+      "ssim_min": 0.992292322632555,
+      "ssim_min_frame": 361,
+      "ssim_mean": 0.9963,
+      "block_luma_shift_max": 4.535343750000038,
+      "block_luma_shift_max_frame": 328,
+      "first_failing_frame": null,
+      "frames_composited": 43,
+      "outside_box_diff_max": 0,
+      "image_calls": 0,
+      "timestamp_utc": "2026-11-05T01:09:21.1576849Z",
+      "frames": [
+        {"frame_index": 319, "time_seconds": 12.76, "ssim": 0.9980609116509233, "max_block_luma_shift": 1.93162499999994, "pass": true},
+        {"frame_index": 320, "time_seconds": 12.8, "ssim": 0.9984877613955616, "max_block_luma_shift": 1.5743750000000034, "pass": true},
+        {"frame_index": 321, "time_seconds": 12.84, "ssim": 0.9989687404548205, "max_block_luma_shift": 1.5743750000000034, "pass": true},
+        {"frame_index": 322, "time_seconds": 12.88, "ssim": 0.9992821710557074, "max_block_luma_shift": 1.5743750000000034, "pass": true},
+        {"frame_index": 323, "time_seconds": 12.92, "ssim": 0.9996471676607054, "max_block_luma_shift": 1.5743750000000034, "pass": true},
+        {"frame_index": 324, "time_seconds": 12.96, "ssim": 0.9997503826340057, "max_block_luma_shift": 1.5743750000000034, "pass": true},
+        {"frame_index": 325, "time_seconds": 13, "ssim": 1, "max_block_luma_shift": 0, "pass": true},
+        {"frame_index": 326, "time_seconds": 13.04, "ssim": 0.9998258189957067, "max_block_luma_shift": 0.7748124999999959, "pass": true},
+        {"frame_index": 327, "time_seconds": 13.08, "ssim": 0.9985664904220418, "max_block_luma_shift": 2.820593750000029, "pass": true},
+        {"frame_index": 328, "time_seconds": 13.12, "ssim": 0.9967780198164635, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 329, "time_seconds": 13.16, "ssim": 0.9966514484038316, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 330, "time_seconds": 13.2, "ssim": 0.9964930979684201, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 331, "time_seconds": 13.24, "ssim": 0.9963074713164235, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 332, "time_seconds": 13.28, "ssim": 0.9963027420288293, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 333, "time_seconds": 13.32, "ssim": 0.9962414669023261, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 334, "time_seconds": 13.36, "ssim": 0.9962303204238083, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 335, "time_seconds": 13.4, "ssim": 0.9961595051274927, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 336, "time_seconds": 13.44, "ssim": 0.9961662513951943, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 337, "time_seconds": 13.48, "ssim": 0.9960876327476156, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 338, "time_seconds": 13.52, "ssim": 0.9961384932436261, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 339, "time_seconds": 13.56, "ssim": 0.9960786806162165, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 340, "time_seconds": 13.6, "ssim": 0.9960446887480949, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 341, "time_seconds": 13.64, "ssim": 0.9960167029837641, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 342, "time_seconds": 13.68, "ssim": 0.9960176572012245, "max_block_luma_shift": 4.535343750000038, "pass": true},
+        {"frame_index": 343, "time_seconds": 13.72, "ssim": 0.9960026573277815, "max_block_luma_shift": 3.8758437500000014, "pass": true},
+        {"frame_index": 344, "time_seconds": 13.76, "ssim": 0.9959352033993909, "max_block_luma_shift": 3.796875, "pass": true},
+        {"frame_index": 345, "time_seconds": 13.8, "ssim": 0.9962420675139854, "max_block_luma_shift": 3.6727187500000014, "pass": true},
+        {"frame_index": 346, "time_seconds": 13.84, "ssim": 0.9961847593845103, "max_block_luma_shift": 3.6727187500000014, "pass": true},
+        {"frame_index": 347, "time_seconds": 13.88, "ssim": 0.9959739408963032, "max_block_luma_shift": 3.6727187500000014, "pass": true},
+        {"frame_index": 348, "time_seconds": 13.92, "ssim": 0.9954615296258374, "max_block_luma_shift": 3.7023125000000476, "pass": true},
+        {"frame_index": 349, "time_seconds": 13.96, "ssim": 0.9953550046669932, "max_block_luma_shift": 3.8368125000000646, "pass": true},
+        {"frame_index": 350, "time_seconds": 14, "ssim": 0.9945973222859348, "max_block_luma_shift": 4.118062500000065, "pass": true},
+        {"frame_index": 351, "time_seconds": 14.04, "ssim": 0.994881373590161, "max_block_luma_shift": 3.838937500000071, "pass": true},
+        {"frame_index": 352, "time_seconds": 14.08, "ssim": 0.995039898993337, "max_block_luma_shift": 3.729562500000071, "pass": true},
+        {"frame_index": 353, "time_seconds": 14.12, "ssim": 0.9955049316933773, "max_block_luma_shift": 3.5633437500000014, "pass": true},
+        {"frame_index": 354, "time_seconds": 14.16, "ssim": 0.9956425924243182, "max_block_luma_shift": 3.6414687500000014, "pass": true},
+        {"frame_index": 355, "time_seconds": 14.2, "ssim": 0.9956302679684205, "max_block_luma_shift": 3.6414687500000014, "pass": true},
+        {"frame_index": 356, "time_seconds": 14.24, "ssim": 0.9956414725879064, "max_block_luma_shift": 3.6414687500000014, "pass": true},
+        {"frame_index": 357, "time_seconds": 14.28, "ssim": 0.9955328397787312, "max_block_luma_shift": 3.6414687500000014, "pass": true},
+        {"frame_index": 358, "time_seconds": 14.32, "ssim": 0.9930397314576531, "max_block_luma_shift": 3.938593749999967, "pass": true},
+        {"frame_index": 359, "time_seconds": 14.36, "ssim": 0.9930659670885812, "max_block_luma_shift": 3.938593749999967, "pass": true},
+        {"frame_index": 360, "time_seconds": 14.4, "ssim": 0.9927753596149557, "max_block_luma_shift": 3.938593749999967, "pass": true},
+        {"frame_index": 361, "time_seconds": 14.44, "ssim": 0.992292322632555, "max_block_luma_shift": 3.938593749999967, "pass": true}
+      ]
+    }
+  },
+  "output_probes": {
+    "app_export": {
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "duration": "20.000000",
+          "nb_frames": "500"
+        },
+        {
+          "codec_name": "aac",
+          "codec_type": "audio",
+          "duration": "20.000000",
+          "nb_frames": "939"
+        }
+      ],
+      "format": {
+        "duration": "20.000000"
+      }
+    },
+    "after_horizontal": {
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "duration": "20.000000",
+          "nb_frames": "500"
+        },
+        {
+          "codec_name": "aac",
+          "codec_type": "audio",
+          "duration": "19.989333",
+          "nb_frames": "938"
+        }
+      ],
+      "format": {
+        "duration": "20.000000"
+      }
+    },
+    "after_vertical": {
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "duration": "19.880000",
+          "nb_frames": "497"
+        },
+        {
+          "codec_name": "aac",
+          "codec_type": "audio",
+          "duration": "19.989333",
+          "nb_frames": "938"
+        }
+      ],
+      "format": {
+        "duration": "19.989333"
+      }
+    },
+    "manual_final": {
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "duration": "20.000000",
+          "nb_frames": "500"
+        },
+        {
+          "codec_name": "aac",
+          "codec_type": "audio",
+          "duration": "20.000000",
+          "nb_frames": "939"
+        }
+      ],
+      "format": {
+        "duration": "20.000000"
+      }
+    }
+  },
+  "final_audio_adts_sha256_matches_app_export": true,
+  "output_note": "The final viewing copy was manually reconstructed from the sign-shot window, original app export picture outside that window, and the app export audio; source credit and AI disclosure were added. Output media is local and not checked in.",
+  "local_output_sha256": {
+    "app_export": "c0a7f1818511e1cf4a8340db55329824da0632290bbabaf4a996e3cf35281e0d",
+    "after_horizontal": "2de85c6c17ecfa3954260d5a38ba6781184ab0621ac1008fa04a20bed531aef3",
+    "after_vertical": "9a9d63fd5b0c8e02478c0be0bd02c2f400326193ebd7b0d939b34a5ee78a380e",
+    "manual_final": "ca30499a4d00fe54e8addadee65230435775059f2a92911a0802604177356a4f"
+  },
+  "app_export_audio_adts_sha256": "26a5f1e64ae9c0d4956ed7336746d93deca7f3391313a0b80ed502d59d5608b2"
+}

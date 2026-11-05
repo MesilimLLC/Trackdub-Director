@@ -1,5 +1,9 @@
 # Metrics Snapshot: Trackdub-Director (Nov 2 freeze)
 
+This is a historical freeze: references to "current main" below mean main at
+the Nov 2 snapshot. For the later live dub and sign-shot run, see the
+[Nov 4 run notes](../samples/voa10/NOTES.md#6-live-dub-and-department-store-signs-nov-4-2026-pacific).
+
 Date: 2026-11-02 (freeze pass 2; reflects merged main including the Spark
 Open and Glimmer open-weight lanes).
 Main SHA: `9ababf0f0b550746f0a543a52a2bc6854d2a3298` (PR #21 Glimmer lane,

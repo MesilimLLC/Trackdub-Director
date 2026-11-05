@@ -162,3 +162,46 @@ rejected by crop.
    per the worksheet's v1 scope (live-call bound); flagged as v2 additions.
 
 Live-call tally: 1 transcribe + 4 SAM = 5 total. Zero translation/QA/director/TTS calls.
+
+## 6. Live dub and department-store signs (Nov 4, 2026 Pacific)
+
+This is a separate post-freeze run; the preparation results and call tally
+above remain historical. A compact [derived report](live-dub-2026-11-04.json)
+records the results and per-frame gate measurements. The source clip, generated
+audio, and output videos remain local and are not checked in. The API run used
+worktree commit `cd0eac4`; timestamps on the later sign-shot reports are Nov 5
+UTC (Nov 4 Pacific).
+
+- **Transcription and corrections:** the standalone Meta transcription of the
+  20-second WAV returned 5 turns. One turn combined dialogue from two speakers,
+  and another speaker was labelled `C`. The turn was split into 6 lines and
+  speaker assignments and boundaries were corrected using the annotated
+  sample above. The corrected segments were sent to the Pipeline API without
+  audio, so its transcribe stage correctly reports `NotRun` for that request.
+- **QA and audition:** QA passed all 6 lines on the first attempt. Audition
+  cast all 6 with 9 synthesized takes; `voa10-005` won on take 4. The report
+  records 15 Meta audition calls and 336 ElevenLabs characters. These are
+  report counts for this run, not a cost estimate or a quality guarantee.
+  One frame was supplied for Scene, which returned `Parsed`; Director and the
+  complete browser workflow were not exercised in this run.
+- **Export timing:** the winning `voa10-004` take measured 3.76 s in a 3.6 s
+  window and passed the configured 10% timing tolerance. At its 11.10 s start
+  it overlapped the next 14.78 s start by 0.08 s. The next start was manually
+  moved to 14.90 s before export. The app export was 20.00 s and 500 frames;
+  the six exported audio placements were compared with their winning takes.
+- **Department-store signs:** two Muse Image calls localized the horizontal
+  and vertical `DEPARTMENT STORE` signs to `GRANDES ALMACENES` in a frame at
+  13.00 s. Each still reported `outside_box_diff` 0. Separate static-shot
+  passes over 12.76–14.48 s each checked and composited 43 frames. Minimum
+  box SSIM was 0.9952 for the horizontal sign and 0.9923 for the vertical
+  sign on the second pass; each reported maximum outside-box difference 0
+  before video encoding. The COFFEE SHOP sign was not localized in this run.
+- **Packaging limitation:** after the first sign-shot pass, the video still
+  had 500 frames but its copied audio duration was 19.989333 s. After the
+  second pass, the video had 497 frames (19.88 s) and the container duration
+  was 19.989333 s. The CLI uses `-shortest`; the exact cause is not established.
+  A separate viewing copy was manually reconstructed with the sign-shot
+  window, the app export's picture outside it, and the app export's audio.
+  It has 500 frames over 20.00 s; the extracted AAC bitstream matched the app
+  export. Source credit and an AI-localization disclosure were added to that
+  viewing copy. This manual repair is not part of the browser export.

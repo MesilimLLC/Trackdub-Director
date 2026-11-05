@@ -68,6 +68,13 @@ Every figure comes from a report file in this repo; method in
   frame (`samples/voa10/sign-shot-report.json`). Starting the window one
   frame early takes in the previous shot (box SSIM 0.28), and the gate
   refuses and writes no video (`samples/voa10/sign-shot-refused-report.json`).
+- **Live dub and department-store signs (Nov 4, Pacific):** one local API
+  run cast all 6 lines after manual transcript and speaker corrections; QA
+  passed 6 of 6 on the first attempt. Two separately boxed department-store
+  signs passed the static-shot gate across 43 frames each. The sign-shot
+  outputs lost frames at the end after two passes, so the final viewing copy
+  required manual timeline reconstruction. See the [run notes](samples/voa10/NOTES.md#6-live-dub-and-department-store-signs-nov-4-2026-pacific) and
+  [derived report](samples/voa10/live-dub-2026-11-04.json).
 - **Open-weight lanes (opt-in, measured, never the default):** Muse Spark
   Open served as an independent meaning judge (73 of 75 agreement with the
   hosted judge), produced a gate-verified translation track for the 6 demo
@@ -250,7 +257,9 @@ the only action it can lead to; it never runs a stage, and there is no
 "Approve & run" path.
 Visual localisation edits one manually boxed still; moving, rotating,
 perspective-changing, and occluded signs are not tracked. Video-rate
-`sign-shot` packaging remains outside the browser workbench. Verify-only
+`sign-shot` packaging for fixed sign regions remains outside the browser
+workbench and must be run separately from the dub export. The dub export keeps
+the original picture; it does not automatically localise signs. Verify-only
 remains a CLI/server check over captured run folders already on
 the server disk, not a verifier for the current browser session. Dub export
 requires `ffmpeg` and `ffprobe` on the backend PATH (or `FFMPEG_PATH` and
@@ -438,6 +447,13 @@ Exit code 0 means composited (or passed, when `--output` is omitted), 2
 means refused. The report records per-frame SSIM and largest block shift, the first failing frame,
 and the largest outside-box pixel difference, counted on decoded frames
 before the lossy h264 encode.
+
+Check the output's duration and frame count, especially after consecutive
+passes. In the Nov 4 live run, two successful sign-shot passes reduced a
+500-frame export to 497 video frames; the CLI uses `-shortest` when muxing
+audio. The final viewing copy in that run was manually reconstructed with
+the original dub's remaining frames and audio. The exact cause of the frame
+loss has not been isolated; see the [run notes](samples/voa10/NOTES.md#6-live-dub-and-department-store-signs-nov-4-2026-pacific).
 
 ## Meaning eval
 
