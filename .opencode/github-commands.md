@@ -36,19 +36,16 @@ public comment. This has happened on this repo more than once and it is embarras
 
 The workflow probes and selects the agent model per command (see `.github/workflows/opencode.yml`):
 
-| Command      | Primary model                                                    | Fallback chain                                                                                                                      |
-| ------------ | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `/oc review` | `cloudflare-workers-ai/@cf/zai-org/glm-5.3` (CF-first)          | `cloudflare-workers-ai/@cf/deepseek-ai/deepseek-v4-pro-0813` → `cloudflare-workers-ai/@cf/openai/gpt-oss-120b`                      |
-| `/oc fix`    | `cloudflare-workers-ai/@cf/zai-org/glm-5.3-flash` (CF-first)    | `cloudflare-workers-ai/@cf/deepseek-ai/deepseek-v4-flash-0731` → `cloudflare-workers-ai/@cf/openai/gpt-oss-120b`                    |
+| Command      | Model                    |
+| ------------ | ------------------------ |
+| `/oc review` | `model_api/muse-spark-1.3` |
+| `/oc fix`    | `model_api/muse-ember-1.0` |
 
-Each model is probed with a minimal request before the run; a disabled or unavailable model
-falls through to the next in the chain. All models are `cloudflare-workers-ai/*`, probed
-through the Cloudflare Workers AI OpenAI-compatible endpoint (`api.cloudflare.com`) behind
-the `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_KEY` secrets. `/oc review` runs are short
-and judgment-heavy, so GLM 5.3 (Cloudflare) runs first, then falls back through
-DeepSeek V4 Pro (Cloudflare) and GPT-OSS-120B (Cloudflare). `/oc fix` runs are long agentic edit
-loops, so GLM 5.3 Flash (Cloudflare) runs first, then falls back through DeepSeek V4 Flash
-(Cloudflare) and GPT-OSS-120B (Cloudflare).
+Each model is probed with a minimal request before the run. All models are Meta Model API
+models (`meta:` probe-chain entries), probed through the Meta OpenAI-compatible endpoint
+(`https://api.meta.ai/v1`) behind the `MODEL_API_KEY` secret. `/oc review` runs are short
+and judgment-heavy, so Muse Spark runs them. `/oc fix` runs are long agentic edit loops,
+so Muse Ember runs them.
 
 ## Using context7
 
