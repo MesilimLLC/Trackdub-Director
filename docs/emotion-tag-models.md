@@ -81,9 +81,10 @@ repository and pin the artifact with a SHA-256.
 - There is no fixed emotion or pacing tag vocabulary, and no pacing parameter.
   The README describes speaking rate as a soft cue that the model adapts to from
   instructions.
-- Our code: `QwenTtsOptions.InstructText` exists, but `Qwen3TtsEngine` passes
-  `instruct: null`, so nothing sends it. The tokenizer has the instruct path,
-  but it has not been tested against our ONNX export.
+- In the Trackdub repo, `QwenTtsOptions.InstructText` exists, but
+  `Qwen3TtsEngine` passes `instruct: null`, so the option has no effect today.
+  The tokenizer has the instruct path, but it has not been tested against the
+  ONNX export Trackdub uses.
 
 ## Open questions
 
@@ -94,16 +95,21 @@ repository and pin the artifact with a SHA-256.
 3. Can Qwen2.5-Omni-7B fit alongside Qwen3-TTS on an L4, and does it reliably
    output our label vocabulary?
 4. Does the 1.7B ONNX model honor `instruct`? Test one segment with and without.
-5. Pace still has to come from measurement, whatever the labelling model.
+5. Wire `QwenTtsOptions.InstructText`, or a per-segment label, through
+   `Qwen3TtsEngine` in the Trackdub repo. Today the option is ignored.
+6. Pace still has to come from measurement, whatever the labelling model.
 
 ## Suggested order
 
-1. Internal probe, research only: emotion2vec+ (ONNX) and SenseVoice-Small on
-   the four `samples/emotion-probe-v4` lines in three conditions, scored against
-   the blind ratings.
-2. Qwen2.5-Omni-7B probe on the same clips, free-form labels mapped to our
-   vocabulary.
-3. Choose by blind ratings. Then do the license work for the winner.
+1. Qwen2.5-Omni-7B probe on the four `samples/emotion-probe-v4` lines in three
+   conditions, free-form labels mapped to our vocabulary and scored against the
+   blind ratings. Its license is the one that can ship.
+2. Ask counsel about the FunASR license (open question 1) in parallel.
+3. Internal comparison probe, research only: emotion2vec+ (ONNX) and
+   SenseVoice-Small on the same clips. Their results only inform a product
+   decision if counsel clears the license; otherwise they are a reference point
+   for the Qwen labels.
+4. Choose by blind ratings among the models that can ship.
 
 ## Sources
 
